@@ -4,74 +4,151 @@
 
 @layer base {
   :root {
+    /* Background and Text */
     --background: #ffffff;
-    --foreground: #000000;
-    
-    --card: #ffffff;
-    --card-foreground: #000000;
-    
-    --primary: #8b5cf6;
-    --primary-foreground: #ffffff;
-    
-    --secondary: #f3f4f6;
-    --secondary-foreground: #1f2937;
-    
-    --muted: #f3f4f6;
+    --foreground: #1f2937;
+    --muted: #f9fafb;
     --muted-foreground: #6b7280;
-    
-    --accent: #f3f4f6;
+
+    /* Components */
+    --card: #ffffff;
+    --card-foreground: #1f2937;
+
+    /* Primary Colors */
+    --primary: #2563eb; /* Vibrant Blue */
+    --primary-foreground: #ffffff;
+
+    --secondary: #4b5563; /* Muted Gray */
+    --secondary-foreground: #e5e7eb;
+
+    /* Accent */
+    --accent: #fbbf24; /* Bold Yellow */
     --accent-foreground: #1f2937;
-    
-    --destructive: #ef4444;
+
+    /* Status Colors */
+    --success: #10b981; /* Green */
+    --success-foreground: #ffffff;
+
+    --warning: #f59e0b; /* Amber */
+    --warning-foreground: #ffffff;
+
+    --destructive: #ef4444; /* Red */
     --destructive-foreground: #ffffff;
-    
+
+    /* Borders and Inputs */
     --border: #e5e7eb;
-    --input: #e5e7eb;
-    --ring: #8b5cf6;
+    --input: #f3f4f6;
+
+    /* Rings */
+    --ring: #2563eb;
+
+    /* Transition */
+    --transition: 0.3s ease-in-out;
   }
 
   .dark {
-    --background: #1a1a1a;
-    --foreground: #ffffff;
-    
-    --card: #2d2d2d;
-    --card-foreground: #ffffff;
-    
-    --primary: #8b5cf6;
+    /* Background and Text */
+    --background: #1a202c;
+    --foreground: #e2e8f0;
+    --muted: #2d3748;
+    --muted-foreground: #a0aec0;
+
+    /* Components */
+    --card: #2d3748;
+    --card-foreground: #e2e8f0;
+
+    /* Primary Colors */
+    --primary: #7c3aed; /* Neon Purple */
     --primary-foreground: #ffffff;
-    
-    --secondary: #374151;
-    --secondary-foreground: #f3f4f6;
-    
-    --muted: #374151;
-    --muted-foreground: #9ca3af;
-    
-    --accent: #374151;
-    --accent-foreground: #f3f4f6;
-    
-    --destructive: #ef4444;
+
+    --secondary: #4b5563; /* Muted Gray */
+    --secondary-foreground: #e5e7eb;
+
+    /* Accent */
+    --accent: #0ea5e9; /* Teal */
+    --accent-foreground: #ffffff;
+
+    /* Status Colors */
+    --success: #22c55e; /* Lime Green */
+    --success-foreground: #ffffff;
+
+    --warning: #eab308; /* Bright Yellow */
+    --warning-foreground: #1a202c;
+
+    --destructive: #b91c1c; /* Dark Red */
     --destructive-foreground: #ffffff;
-    
-    --border: #374151;
+
+    /* Borders and Inputs */
+    --border: #4b5563;
     --input: #374151;
-    --ring: #8b5cf6;
+
+    /* Rings */
+    --ring: #7c3aed;
+
+    /* Transition */
+    --transition: 0.3s ease-in-out;
   }
 }
 
 @layer components {
+  /* Card Component */
   .card {
-    @apply bg-card text-card-foreground;
+    @apply bg-card text-card-foreground shadow-md rounded-lg p-4 transition-all;
   }
 
+  /* Input Component */
   .input {
-    @apply bg-background border-input;
+    @apply bg-input border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:ring-ring focus:ring-2 focus:outline-none transition-all;
   }
 
+  /* Button Component */
   .button {
-    @apply bg-primary text-primary-foreground hover:bg-purple-700;
+    @apply inline-flex items-center justify-center rounded-md px-4 py-2 font-semibold shadow-sm text-sm transition-all;
+  }
+
+  /* Button Variants */
+  .button-primary {
+    @apply bg-primary text-primary-foreground hover:bg-blue-600 focus:ring-primary focus:ring-2 focus:outline-none;
+  }
+
+  .button-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-gray-600 focus:ring-secondary focus:ring-2 focus:outline-none;
+  }
+
+  .button-accent {
+    @apply bg-accent text-accent-foreground hover:bg-yellow-500 focus:ring-accent focus:ring-2 focus:outline-none;
+  }
+
+  .button-destructive {
+    @apply bg-destructive text-destructive-foreground hover:bg-red-600 focus:ring-destructive focus:ring-2 focus:outline-none;
+  }
+
+  /* Status Classes */
+  .success {
+    background-color: var(--success);
+    color: var(--success-foreground);
+  }
+
+  .warning {
+    background-color: var(--warning);
+    color: var(--warning-foreground);
+  }
+
+  .error {
+    background-color: var(--destructive);
+    color: var(--destructive-foreground);
+  }
+
+  /* Utility Classes */
+  .rounded {
+    @apply rounded-lg;
+  }
+
+  .shadow {
+    @apply shadow-md hover:shadow-lg transition-shadow;
   }
 }
 
 body {
-  @apply bg-background text-foreground;
+  @apply bg-background text-foreground transition-colors;
 }

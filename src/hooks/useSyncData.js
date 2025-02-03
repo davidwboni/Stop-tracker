@@ -1,12 +1,26 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { syncData } from '../services/firebase';
+import { useState, useEffect, useMemo } from "react";
+import { useAuth } from "../contexts/AuthContext";
+import { syncData } from "../services/firebase";
 
 export const useSyncData = (dataType) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { user } = useAuth();
+
+  const syncFunctions = useMemo(
+    () => ({
+      logs: {
+        fetch: syncData.subscribeToDeliveryLogs,
+        save: syncData.saveDeliveryLogs,
+      },
+      expenses: {
+        fetch: syncData.subscribeToExpenses,
+        save: syncData.saveExpenses,
+      },
+    }),
+    []
+  );
 
   useEffect(() => {
     if (!user) {
@@ -20,28 +34,23 @@ export const useSyncData = (dataType) => {
 
     const initSync = async () => {
       try {
-        // Load initial data from localStorage as fallback
+        if (!syncFunctions[dataType]) {
+          throw new Error(`Invalid dataType: ${dataType}`);
+        }
+
         const localData = localStorage.getItem(`delivery-${dataType}`);
         if (localData) {
           setData(JSON.parse(localData));
         }
 
-        // Subscribe to real-time updates
-        if (dataType === 'logs') {
-          unsubscribe = syncData.subscribeToDeliveryLogs(user.uid, (newData) => {
-            setData(newData);
-            localStorage.setItem(`delivery-${dataType}`, JSON.stringify(newData));
-          });
-        } else if (dataType === 'expenses') {
-          unsubscribe = syncData.subscribeToExpenses(user.uid, (newData) => {
-            setData(newData);
-            localStorage.setItem(`delivery-${dataType}`, JSON.stringify(newData));
-          });
-        }
+        unsubscribe = syncFunctions[dataType].fetch(user.uid, (newData) => {
+          setData(newData);
+          localStorage.setItem(`delivery-${dataType}`, JSON.stringify(newData));
+        });
 
         setLoading(false);
       } catch (err) {
-        setError(err);
+        setError(`Failed to sync data: ${err.message}`);
         setLoading(false);
       }
     };
@@ -53,24 +62,21 @@ export const useSyncData = (dataType) => {
         unsubscribe();
       }
     };
-  }, [user, dataType]);
+  }, [user, dataType, syncFunctions]);
 
   const updateData = async (newData) => {
-    if (!user) return;
+    if (!user || !syncFunctions[dataType]) {
+      setError(`Cannot update data for type: ${dataType}`);
+      return false;
+    }
 
     try {
-      if (dataType === 'logs') {
-        await syncData.saveDeliveryLogs(user.uid, newData);
-      } else if (dataType === 'expenses') {
-        await syncData.saveExpenses(user.uid, newData);
-      }
-      
-      // Update local storage as fallback
+      await syncFunctions[dataType].save(user.uid, newData);
       localStorage.setItem(`delivery-${dataType}`, JSON.stringify(newData));
       setData(newData);
       return true;
     } catch (err) {
-      setError(err);
+      setError(`Failed to update data: ${err.message}`);
       return false;
     }
   };
@@ -79,50 +85,7 @@ export const useSyncData = (dataType) => {
     data,
     loading,
     error,
-    updateData
-  };
-};
-
-export const useBackup = () => {
-  const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  const createBackup = async () => {
-    if (!user) return null;
-    
-    setLoading(true);
-    try {
-      const backup = await syncData.backupAllData(user.uid);
-      setLoading(false);
-      return backup;
-    } catch (err) {
-      setError(err);
-      setLoading(false);
-      return null;
-    }
-  };
-
-  const restoreBackup = async (backupData) => {
-    if (!user) return false;
-
-    setLoading(true);
-    try {
-      await syncData.restoreFromBackup(user.uid, backupData);
-      setLoading(false);
-      return true;
-    } catch (err) {
-      setError(err);
-      setLoading(false);
-      return false;
-    }
-  };
-
-  return {
-    createBackup,
-    restoreBackup,
-    loading,
-    error
+    updateData,
   };
 };
 
