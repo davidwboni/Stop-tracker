@@ -9,6 +9,9 @@ import {
   Settings,
   Calendar,
   Loader2,
+  Cloud,
+  CloudOff,
+  Save,
 } from "lucide-react";
 import { Alert, AlertDescription } from "./ui/alert";
 import PaymentConfig from "./PaymentConfig";
@@ -33,6 +36,7 @@ const StopTracker = () => {
     data: logs,
     loading: logsLoading,
     error: logsError,
+    syncStatus,
     updateData: updateLogs,
   } = useSyncData("logs");
 
@@ -149,6 +153,42 @@ const StopTracker = () => {
     [logs, updateLogs, displayAlert]
   );
 
+  // Render sync status indicator
+  const renderSyncStatus = () => {
+    switch (syncStatus) {
+      case "syncing":
+        return (
+          <div className="flex items-center text-sm text-blue-600 animate-pulse">
+            <Save className="w-4 h-4 mr-1" />
+            <span>Syncing...</span>
+          </div>
+        );
+      case "synced":
+        return (
+          <div className="flex items-center text-sm text-green-600">
+            <Cloud className="w-4 h-4 mr-1" />
+            <span>All changes saved</span>
+          </div>
+        );
+      case "offline":
+        return (
+          <div className="flex items-center text-sm text-amber-600">
+            <CloudOff className="w-4 h-4 mr-1" />
+            <span>Working offline (data saved locally)</span>
+          </div>
+        );
+      case "error":
+        return (
+          <div className="flex items-center text-sm text-red-600">
+            <CloudOff className="w-4 h-4 mr-1" />
+            <span>Sync error (data saved locally)</span>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
   // Loading state.
   if (logsLoading) {
     return (
@@ -184,6 +224,11 @@ const StopTracker = () => {
             <span className="hidden sm:inline">{tab.label}</span>
           </Button>
         ))}
+      </div>
+
+      {/* Sync Status */}
+      <div className="flex justify-end px-2">
+        {renderSyncStatus()}
       </div>
 
       {/* Tabs Content */}
