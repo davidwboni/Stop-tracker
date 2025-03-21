@@ -4,151 +4,133 @@
 
 @layer base {
   :root {
-    /* Background and Text */
-    --background: #ffffff;
-    --foreground: #1f2937;
-    --muted: #f9fafb;
-    --muted-foreground: #6b7280;
-
-    /* Components */
-    --card: #ffffff;
-    --card-foreground: #1f2937;
-
-    /* Primary Colors */
-    --primary: #2563eb; /* Vibrant Blue */
-    --primary-foreground: #ffffff;
-
-    --secondary: #4b5563; /* Muted Gray */
-    --secondary-foreground: #e5e7eb;
-
-    /* Accent */
-    --accent: #fbbf24; /* Bold Yellow */
-    --accent-foreground: #1f2937;
-
-    /* Status Colors */
-    --success: #10b981; /* Green */
-    --success-foreground: #ffffff;
-
-    --warning: #f59e0b; /* Amber */
-    --warning-foreground: #ffffff;
-
-    --destructive: #ef4444; /* Red */
-    --destructive-foreground: #ffffff;
-
-    /* Borders and Inputs */
-    --border: #e5e7eb;
-    --input: #f3f4f6;
-
-    /* Rings */
-    --ring: #2563eb;
-
-    /* Transition */
-    --transition: 0.3s ease-in-out;
+    /* Light mode color theme */
+    --background: #F5F5F7;
+    --foreground: #000000;
+    
+    --card: #FFFFFF;
+    --card-foreground: #000000;
+    
+    --primary: #007AFF;
+    --primary-foreground: #FFFFFF;
+    
+    --secondary: #5856D6;
+    --secondary-foreground: #FFFFFF;
+    
+    --muted: #E5E5EA;
+    --muted-foreground: #8E8E93;
+    
+    --accent: #34C759;
+    --accent-foreground: #FFFFFF;
+    
+    --destructive: #FF3B30;
+    --destructive-foreground: #FFFFFF;
+    
+    --border: #E5E5EA;
+    --input: #E5E5EA;
+    --ring: #007AFF;
   }
 
   .dark {
-    /* Background and Text */
-    --background: #1a202c;
-    --foreground: #e2e8f0;
-    --muted: #2d3748;
-    --muted-foreground: #a0aec0;
-
-    /* Components */
-    --card: #2d3748;
-    --card-foreground: #e2e8f0;
-
-    /* Primary Colors */
-    --primary: #7c3aed; /* Neon Purple */
-    --primary-foreground: #ffffff;
-
-    --secondary: #4b5563; /* Muted Gray */
-    --secondary-foreground: #e5e7eb;
-
-    /* Accent */
-    --accent: #0ea5e9; /* Teal */
-    --accent-foreground: #ffffff;
-
-    /* Status Colors */
-    --success: #22c55e; /* Lime Green */
-    --success-foreground: #ffffff;
-
-    --warning: #eab308; /* Bright Yellow */
-    --warning-foreground: #1a202c;
-
-    --destructive: #b91c1c; /* Dark Red */
-    --destructive-foreground: #ffffff;
-
-    /* Borders and Inputs */
-    --border: #4b5563;
-    --input: #374151;
-
-    /* Rings */
-    --ring: #7c3aed;
-
-    /* Transition */
-    --transition: 0.3s ease-in-out;
+    /* Dark mode color theme */
+    --background: #1C1C1E;
+    --foreground: #FFFFFF;
+    
+    --card: #2C2C2E;
+    --card-foreground: #FFFFFF;
+    
+    --primary: #0A84FF;
+    --primary-foreground: #FFFFFF;
+    
+    --secondary: #5E5CE6;
+    --secondary-foreground: #FFFFFF;
+    
+    --muted: #3A3A3C;
+    --muted-foreground: #AEAEB2;
+    
+    --accent: #30D158;
+    --accent-foreground: #FFFFFF;
+    
+    --destructive: #FF453A;
+    --destructive-foreground: #FFFFFF;
+    
+    --border: #3A3A3C;
+    --input: #3A3A3C;
+    --ring: #0A84FF;
   }
 }
 
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Apple-style animations and transitions */
+@layer utilities {
+  .transition-apple {
+    transition-property: all;
+    transition-timing-function: cubic-bezier(0.42, 0, 0.58, 1);
+    transition-duration: 300ms;
+  }
+  
+  .shadow-apple-button {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  }
+  
+  .shadow-apple-card {
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+}
+
+/* Custom styling for form elements to match Apple's design */
 @layer components {
-  /* Card Component */
-  .card {
-    @apply bg-card text-card-foreground shadow-md rounded-lg p-4 transition-all;
+  .input-apple {
+    @apply rounded-lg border border-input bg-card px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
   }
-
-  /* Input Component */
-  .input {
-    @apply bg-input border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:ring-ring focus:ring-2 focus:outline-none transition-all;
+  
+  .button-apple-primary {
+    @apply bg-primary text-primary-foreground rounded-full font-medium shadow-sm hover:opacity-90 transition-all duration-200;
   }
-
-  /* Button Component */
-  .button {
-    @apply inline-flex items-center justify-center rounded-md px-4 py-2 font-semibold shadow-sm text-sm transition-all;
+  
+  .button-apple-secondary {
+    @apply bg-muted text-muted-foreground rounded-full font-medium shadow-sm hover:opacity-90 transition-all duration-200;
   }
-
-  /* Button Variants */
-  .button-primary {
-    @apply bg-primary text-primary-foreground hover:bg-blue-600 focus:ring-primary focus:ring-2 focus:outline-none;
-  }
-
-  .button-secondary {
-    @apply bg-secondary text-secondary-foreground hover:bg-gray-600 focus:ring-secondary focus:ring-2 focus:outline-none;
-  }
-
-  .button-accent {
-    @apply bg-accent text-accent-foreground hover:bg-yellow-500 focus:ring-accent focus:ring-2 focus:outline-none;
-  }
-
-  .button-destructive {
-    @apply bg-destructive text-destructive-foreground hover:bg-red-600 focus:ring-destructive focus:ring-2 focus:outline-none;
-  }
-
-  /* Status Classes */
-  .success {
-    background-color: var(--success);
-    color: var(--success-foreground);
-  }
-
-  .warning {
-    background-color: var(--warning);
-    color: var(--warning-foreground);
-  }
-
-  .error {
-    background-color: var(--destructive);
-    color: var(--destructive-foreground);
-  }
-
-  /* Utility Classes */
-  .rounded {
-    @apply rounded-lg;
-  }
-
-  .shadow {
-    @apply shadow-md hover:shadow-lg transition-shadow;
+  
+  .card-apple {
+    @apply bg-card rounded-xl overflow-hidden shadow-apple border border-border/50;
   }
 }
 
-body {
-  @apply bg-background text-foreground transition-colors;
+/* Improved scrollbars for desktop */
+@media (min-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground;
+  }
+  
+  .dark ::-webkit-scrollbar-thumb {
+    @apply bg-muted;
+  }
+  
+  .dark ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground;
+  }
 }

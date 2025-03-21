@@ -15,7 +15,6 @@ exports.assignRoleOnSignup = functions.auth.user().onCreate(async (user) => {
     });
 
     // Log success
-    console.log(`User ${user.email} signed up with role 'free'.`);
   } catch (error) {
     console.error(`Error assigning role to user ${user.uid}:`, error);
     throw new functions.https.HttpsError(

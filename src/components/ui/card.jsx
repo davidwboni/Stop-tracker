@@ -1,37 +1,66 @@
-import * as React from "react"
+import React from "react";
 
-const Card = React.forwardRef(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={`rounded-lg border bg-card text-card-foreground shadow-sm ${className}`}
-    {...props}
-  />
-))
-Card.displayName = "Card"
+const Card = ({ className = "", children, ...props }) => {
+  return (
+    <div
+      className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm ${className}`}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+};
 
-const CardHeader = React.forwardRef(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={`flex flex-col space-y-1.5 p-6 ${className}`}
-    {...props}
-  />
-))
-CardHeader.displayName = "CardHeader"
+const CardHeader = ({ className = "", children, ...props }) => {
+  return (
+    <div
+      className={`p-6 border-b border-gray-100 dark:border-gray-700 ${className}`}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+};
 
-const CardTitle = React.forwardRef(({ className, children, ...props }, ref) => (
-  <h3
-    ref={ref}
-    className={`text-2xl font-semibold leading-none tracking-tight ${className}`}
-    {...props}
-  >
-    {children}
-  </h3>
-))
-CardTitle.displayName = "CardTitle"
+const CardTitle = ({ className = "", children, ...props }) => {
+  return (
+    <h3
+      className={`text-xl font-bold text-gray-900 dark:text-white ${className}`}
+      {...props}
+    >
+      {children}
+    </h3>
+  );
+};
 
-const CardContent = React.forwardRef(({ className, ...props }, ref) => (
-  <div ref={ref} className={`p-6 pt-0 ${className}`} {...props} />
-))
-CardContent.displayName = "CardContent"
+const CardDescription = ({ className = "", children, ...props }) => {
+  return (
+    <p
+      className={`mt-1 text-sm text-gray-500 dark:text-gray-400 ${className}`}
+      {...props}
+    >
+      {children}
+    </p>
+  );
+};
 
-export { Card, CardHeader, CardTitle, CardContent }
+const CardContent = ({ className = "", children, ...props }) => {
+  return (
+    <div className={`p-6 ${className}`} {...props}>
+      {children}
+    </div>
+  );
+};
+
+const CardFooter = ({ className = "", children, ...props }) => {
+  return (
+    <div
+      className={`p-6 border-t border-gray-100 dark:border-gray-700 ${className}`}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+};
+
+export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter };

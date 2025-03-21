@@ -43,9 +43,7 @@ const Login = () => {
 
       // Redirect based on role
       if (profile.role === "pro") {
-        console.log("Redirecting to Pro Dashboard...");
       } else {
-        console.log("Redirecting to Free Dashboard...");
       }
     } catch (err) {
       setError("Invalid email or password.");
