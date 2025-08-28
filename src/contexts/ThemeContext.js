@@ -1,50 +1,27 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect } from "react";
 
 const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState(() => {
-    const storedTheme = localStorage.getItem("theme");
-    if (storedTheme) return storedTheme;
-
-    // Default to system preference if no theme is stored
-    const systemPreference = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    return systemPreference;
-  });
-
+  // Always use dark theme
   useEffect(() => {
     const root = document.documentElement;
+    
+    // Remove light class and add dark class
+    root.classList.remove("light");
+    root.classList.add("dark");
+    
+    // Store user preference as dark
+    localStorage.setItem("theme", "dark");
+  }, []);
 
-    // Apply theme class to <html>
-    root.classList.remove("light", "dark");
-    root.classList.add(theme);
-
-    // Store user preference
-    localStorage.setItem("theme", theme);
-
-    // Listener for system theme changes
-    const systemThemeChangeHandler = (e) => {
-      if (localStorage.getItem("theme") === "system") {
-        setTheme(e.matches ? "dark" : "light");
-      }
-    };
-
-    const darkMediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    darkMediaQuery.addEventListener("change", systemThemeChangeHandler);
-
-    return () => {
-      darkMediaQuery.removeEventListener("change", systemThemeChangeHandler);
-    };
-  }, [theme]);
-
+  // Keep toggle function as a no-op to avoid breaking existing code
   const toggleTheme = () => {
-    if (theme === "light") setTheme("dark");
-    else if (theme === "dark") setTheme("system");
-    else setTheme("light");
+    // No operation - we always stay in dark mode
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme: "dark", toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );

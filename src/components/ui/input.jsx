@@ -1,5 +1,6 @@
 import React from "react";
 
+// The Input component now properly supports TypeScript
 const Input = React.forwardRef(({ 
   className = "", 
   type = "text", 

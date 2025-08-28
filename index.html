@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stop Tracker</title>
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #121726;
+            color: #ffffff;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        /* Header/Hero section */
+        .hero {
+            padding: 80px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        
+        .hero-content {
+            flex: 1;
+            min-width: 300px;
+            padding-right: 40px;
+        }
+        
+        .hero-image {
+            flex: 1;
+            min-width: 300px;
+            background-color: #121726;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+        
+        .hero-image img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            line-height: 1.2;
+        }
+        
+        h1 span {
+            color: #6B7AFF; /* Updated brand color */
+            display: block;
+        }
+        
+        p.lead {
+            font-size: 1.2rem;
+            margin-bottom: 40px;
+            opacity: 0.9;
+        }
+        
+        /* Buttons */
+        .btn {
+            display: inline-block;
+            background-color: #6B7AFF; /* Updated brand color */
+            color: #ffffff;
+            padding: 14px 30px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+        
+        /* Ensure .btn-light overrides .btn */
+        .btn.btn-light {
+            background-color: #ffffff;
+            color: #6B7AFF;
+        }
+        
+        .btn:hover {
+            background-color: #5562d6;
+            transform: translateY(-2px);
+        }
+        
+        /* Stats section */
+        .stats {
+            display: flex;
+            margin-top: 60px;
+            flex-wrap: wrap;
+        }
+        
+        .stat-item {
+            margin-right: 60px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        /* CTA Section */
+        .cta-section {
+            background-color: #6B7AFF; /* Updated brand color */
+            padding: 60px 0;
+            text-align: center;
+            margin-top: 80px;
+        }
+        
+        .cta-section h2 {
+            font-size: 2.2rem;
+            margin-bottom: 20px;
+        }
+        
+        .cta-section p {
+            font-size: 1.1rem;
+            margin-bottom: 30px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .btn-light {
+            background-color: #ffffff;
+            color: #6B7AFF !important; /* Ensuring color isn't overridden */
+            border: 2px solid #ffffff; /* Adding border for better visibility */
+            font-weight: bold; /* Making text bolder */
+            text-shadow: none; /* Prevent any text shadow */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Add shadow for depth */
+        }
+        
+        .btn-light:hover {
+            background-color: #f0f0f0;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3); /* Enhanced shadow on hover */
+        }
+        
+        /* Footer */
+        footer {
+            padding: 30px 0;
+            text-align: center;
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+        
+        footer a {
+            color: #ffffff;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        
+        footer a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Screenshot Carousel Styles */
+        .screenshot-carousel {
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .carousel-container {
+            position: relative;
+            width: 100%;
+            height: 500px;
+        }
+        
+        .carousel-slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            display: none;
+        }
+        
+        .carousel-slide.active {
+            opacity: 1;
+            display: block;
+        }
+        
+        .carousel-slide img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background-color: #121726;
+        }
+        
+        .carousel-nav {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            z-index: 10;
+        }
+        
+        .nav-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-dot.active {
+            background-color: #ffffff;
+            transform: scale(1.2);
+        }
+        
+        /* Mobile responsiveness for carousel */
+        @media (max-width: 768px) {
+            .carousel-container {
+                height: 400px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .carousel-container {
+                height: 350px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <section class="hero">
+            <div class="hero-content">
+                <h1>Track every stop. <span>Maximize your earnings.</span></h1>
+                <p class="lead">Stop Tracker helps delivery drivers monitor their deliveries, verify invoices, and ensure they're paid correctly for every stop.</p>
+                <a href="#signup" class="btn">Get Started</a>
+                
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-number">2,500+</div>
+                        <div class="stat-label">Active Drivers</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">£250K+</div>
+                        <div class="stat-label">Missing Pay Recovered</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">4.8/5</div>
+                        <div class="stat-label">App Rating</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="hero-image">
+                <!-- App screenshots carousel -->
+                <div class="screenshot-carousel">
+                    <div class="carousel-container">
+                        <div class="carousel-slide active">
+                            <img src="img/screenshots/screenshot1.jpg" alt="Stop Tracker Dashboard">
+                        </div>
+                        <div class="carousel-slide">
+                            <img src="img/screenshots/screenshot2.jpg" alt="Stop Tracker Invoice Screen">
+                        </div>
+                        <div class="carousel-slide">
+                            <img src="img/screenshots/screenshot3.jpg" alt="Stop Tracker Weekly Summary">
+                        </div>
+                        <div class="carousel-slide">
+                            <img src="img/screenshots/screenshot4.jpg" alt="Stop Tracker Recent Entries">
+                        </div>
+                        <div class="carousel-slide">
+                            <img src="img/screenshots/screenshot5.jpg" alt="Stop Tracker Stats View">
+                        </div>
+                    </div>
+                    <div class="carousel-nav">
+                        <span class="nav-dot active" data-slide="0"></span>
+                        <span class="nav-dot" data-slide="1"></span>
+                        <span class="nav-dot" data-slide="2"></span>
+                        <span class="nav-dot" data-slide="3"></span>
+                        <span class="nav-dot" data-slide="4"></span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+    
+    <div class="cta-section">
+        <div class="container">
+            <h2>Ready to maximize your delivery earnings?</h2>
+            <p>Join thousands of drivers who use Stop Tracker to ensure they're paid correctly for every delivery.</p>
+            <a href="#signup" class="btn btn-light">Sign Up Now</a>
+        </div>
+    </div>
+    
+    <footer>
+        <div class="container">
+            <p>
+                &copy; 2025 Stop Tracker | 
+                <a href="privacy.html">Privacy Policy</a> | 
+                <a href="terms.html">Terms of Service</a>
+            </p>
+        </div>
+    </footer>
+    
+    <script>
+        // Carousel functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const slides = document.querySelectorAll('.carousel-slide');
+            const dots = document.querySelectorAll('.nav-dot');
+            let currentSlide = 0;
+            
+            // Initialize carousel
+            showSlide(currentSlide);
+            
+            // Set up automatic rotation
+            setInterval(nextSlide, 5000);
+            
+            // Set up dot navigation
+            dots.forEach(dot => {
+                dot.addEventListener('click', () => {
+                    const slideIndex = parseInt(dot.getAttribute('data-slide'));
+                    showSlide(slideIndex);
+                });
+            });
+            
+            function showSlide(index) {
+                // Hide all slides
+                slides.forEach(slide => {
+                    slide.classList.remove('active');
+                });
+                
+                // Deactivate all dots
+                dots.forEach(dot => {
+                    dot.classList.remove('active');
+                });
+                
+                // Show current slide and activate current dot
+                slides[index].classList.add('active');
+                dots[index].classList.add('active');
+                
+                // Update current slide index
+                currentSlide = index;
+            }
+            
+            function nextSlide() {
+                let newIndex = currentSlide + 1;
+                if (newIndex >= slides.length) {
+                    newIndex = 0;
+                }
+                showSlide(newIndex);
+            }
+        });
+    </script>
+</body>
+</html>

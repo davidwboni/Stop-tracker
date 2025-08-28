@@ -38,6 +38,28 @@ export const getFromLocalStorage = (key) => {
   }
 };
 
+// Force refresh data from the server
+export const forceRefreshFromServer = async (db, path, userId) => {
+  try {
+    // Clear any cached data for this collection
+    const docRef = doc(db, path);
+    
+    // Force a server read
+    const docSnap = await getDoc(docRef, { source: 'server' });
+    
+    // Update localStorage with the latest data
+    if (docSnap.exists()) {
+      saveToLocalStorage(`${userId}-${path.split('/').pop()}`, docSnap.data());
+      return { success: true, data: docSnap.data() };
+    }
+    
+    return { success: false, error: 'Document does not exist' };
+  } catch (err) {
+    console.error('Error forcing refresh from server:', err);
+    return { success: false, error: err.message };
+  }
+};
+
 // Queue a transaction for later processing
 export const queueTransaction = (userId, transaction) => {
   try {

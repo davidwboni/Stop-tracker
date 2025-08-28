@@ -19,7 +19,19 @@ import { Input } from "./ui/input";
 
 const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff7f50", "#8b5cf6"];
 
-const Statistics = ({ logs }) => {
+// Define a type for the logs
+interface Log {
+  date: string;
+  stops: number;
+  total: number;
+  [key: string]: any;
+}
+
+interface StatisticsProps {
+  logs: Log[];
+}
+
+const Statistics = ({ logs }: StatisticsProps) => {
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
   const [metric, setMetric] = useState("stops");
 
@@ -39,8 +51,8 @@ const Statistics = ({ logs }) => {
     const totalEarnings = filteredLogs.reduce((sum, log) => sum + log.total, 0);
     const totalStops = filteredLogs.reduce((sum, log) => sum + log.stops, 0);
     const bestDay = filteredLogs.reduce(
-      (best, log) => (log.stops > (best?.stops || 0) ? log : best),
-      null
+      (best: Log | null, log) => (log.stops > (best?.stops || 0) ? log : best),
+      null as Log | null
     );
     return {
       totalEarnings,
@@ -73,7 +85,7 @@ const Statistics = ({ logs }) => {
             <Input
               type="date"
               value={dateRange.start}
-              onChange={(e) =>
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setDateRange({ ...dateRange, start: e.target.value })
               }
               placeholder="Start Date"
@@ -82,7 +94,7 @@ const Statistics = ({ logs }) => {
             <Input
               type="date"
               value={dateRange.end}
-              onChange={(e) =>
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setDateRange({ ...dateRange, end: e.target.value })
               }
               placeholder="End Date"

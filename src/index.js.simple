@@ -1,0 +1,26 @@
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import './index.css';
+
+const SimpleApp = () => {
+  return (
+    <div style={{ padding: '20px', fontFamily: 'Arial' }}>
+      <h1>Stop Tracker App - Test Page</h1>
+      <p>If you can see this, React is working correctly!</p>
+    </div>
+  );
+};
+
+// Check if root element exists
+const rootElement = document.getElementById('root');
+if (!rootElement) {
+  throw new Error('Root element not found');
+}
+
+const root = ReactDOM.createRoot(rootElement);
+
+root.render(
+  <React.StrictMode>
+    <SimpleApp />
+  </React.StrictMode>
+);

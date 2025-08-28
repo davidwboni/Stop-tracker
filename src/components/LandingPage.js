@@ -1,32 +1,36 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "./ui/button";
-import { ChevronRight, ArrowRight, BarChart2, FileText, Calculator } from "lucide-react";
+import { ChevronRight, ArrowRight, BarChart2, FileText, Calculator, Mail, Shield } from "lucide-react";
 
-
-// Mock screenshots for the app features
-const mockScreenshots = {
-  dashboard: "/screenshots/dashboard.png", // Replace with actual paths when available
-  stopTracker: "/screenshots/stop-tracker.png",
-  invoice: "/screenshots/invoice.png"
+// App screenshots with fallback mechanism
+const appScreenshots = {
+  dashboard: process.env.PUBLIC_URL + "/img/screenshots/screenshot1.jpg",
+  weeklyView: process.env.PUBLIC_URL + "/img/screenshots/screenshot3.jpg",
+  invoice: process.env.PUBLIC_URL + "/img/screenshots/screenshot2.jpg",
+  recentEntries: process.env.PUBLIC_URL + "/img/screenshots/screenshot4.jpg",
+  stats: process.env.PUBLIC_URL + "/img/screenshots/screenshot5.jpg"
 };
+
+// Improved fallback image - more visually appealing
+const fallbackImage = process.env.PUBLIC_URL + "/app-screenshot.svg";
 
 const features = [
   {
-    title: "Track Your Deliveries",
-    description: "Log your stops daily and see your performance metrics in real-time.",
+    title: "Delivery Tracking",
+    description: "Record your daily stops and view your history over time.",
     icon: <BarChart2 className="w-6 h-6" />,
     color: "bg-indigo-100 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-300",
   },
   {
-    title: "Invoice Verification",
-    description: "Compare your records with company invoices to ensure you're paid correctly.",
+    title: "Data Management",
+    description: "Organize your delivery information in one place for easy reference.",
     icon: <FileText className="w-6 h-6" />,
     color: "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300",
   },
   {
-    title: "Earnings Calculator",
-    description: "Track your earnings based on your personal payment agreement.",
+    title: "Statistics",
+    description: "View charts and data visualizations of your delivery patterns.",
     icon: <Calculator className="w-6 h-6" />,
     color: "bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-300",
   }
@@ -45,104 +49,76 @@ const testimonials = [
   }
 ];
 
-export default function LandingPage({ onGetStarted }) {
+export default function LandingPage({ onGetStarted, onContactUs, onPrivacyPolicy, onTermsOfService }) {
   const [activeTab, setActiveTab] = useState("dashboard");
   
+  // Auto-rotate through screenshots
+  useEffect(() => {
+    const tabs = ["dashboard", "weeklyView", "invoice", "recentEntries", "stats"];
+    const interval = setInterval(() => {
+      const currentIndex = tabs.indexOf(activeTab);
+      const nextIndex = (currentIndex + 1) % tabs.length;
+      setActiveTab(tabs[nextIndex]);
+    }, 4000);
+    
+    return () => clearInterval(interval);
+  }, [activeTab]);
+  
   return (
-    <div className="min-h-screen">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-b from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-        <div className="max-w-7xl mx-auto px-4 pt-20 pb-24 sm:px-6 lg:px-8">
-          <div className="lg:grid lg:grid-cols-12 lg:gap-8 items-center">
-            <div className="lg:col-span-6">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-              >
-                <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white sm:text-5xl md:text-6xl">
-                  <span className="block mb-1">Track every stop.</span>
-                  <span className="block text-indigo-600 dark:text-indigo-400">Maximize your earnings.</span>
-                </h1>
-                <p className="mt-6 text-xl leading-8 text-gray-600 dark:text-gray-300">
-                  Stop Tracker helps delivery drivers monitor their deliveries, verify invoices, and ensure they're paid correctly for every stop.
-                </p>
-                <div className="mt-8 flex flex-col sm:flex-row gap-4">
-                  <Button 
-                    onClick={onGetStarted}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white py-4 px-8 text-lg rounded-xl shadow-md"
-                  >
-                    Get Started
-                    <ChevronRight className="ml-2 w-5 h-5" />
-                  </Button>
-                </div>
-                
-                {/* Trust Indicators */}
-                <div className="mt-12">
-                  <div className="grid grid-cols-2 gap-y-6 sm:grid-cols-3 gap-x-6">
-                    {[
-                      { stat: "2,500+", label: "Active Drivers" },
-                      { stat: "£250K+", label: "Missing Pay Recovered" },
-                      { stat: "4.8/5", label: "App Rating" }
-                    ].map((item, i) => (
-                      <div key={i} className="text-center">
-                        <p className="text-3xl font-bold text-gray-900 dark:text-white">{item.stat}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{item.label}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/40 dark:from-gray-900 dark:via-blue-900/10 dark:to-indigo-900/20">
+      {/* Enhanced Hero Section */}
+      <div className="relative overflow-hidden">
+        {/* Background decoration */}
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-indigo-500/5 dark:from-blue-500/10 dark:via-purple-500/10 dark:to-indigo-500/10"></div>
+        <div className="absolute -top-4 -right-4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-6 -left-6 w-80 h-80 bg-purple-500/5 rounded-full blur-3xl"></div>
+        
+        <div className="relative max-w-6xl mx-auto px-6 py-20 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
+          >
+            {/* App Icon */}
+            <div className="inline-flex p-4 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl shadow-2xl mb-8 transform hover:scale-110 transition-transform duration-300">
+              <BarChart2 className="w-12 h-12 text-white" />
             </div>
             
-            <div className="mt-16 lg:mt-0 lg:col-span-6">
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                className="relative"
-              >
-                {/* App Preview Mockup */}
-                <div className="relative shadow-2xl rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                  <img 
-                    src={mockScreenshots[activeTab] || "https://via.placeholder.com/600x400?text=App+Screenshot"}
-                    alt="Stop Tracker App Preview" 
-                    className="w-full h-auto"
-                  />
-                  
-                  {/* Feature selector tabs */}
-                  <div className="absolute bottom-0 left-0 right-0 flex justify-center p-4 bg-gradient-to-t from-black/50 to-transparent">
-                    <div className="flex space-x-2">
-                      {["dashboard", "stopTracker", "invoice"].map((tab) => (
-                        <button
-                          key={tab}
-                          onClick={() => setActiveTab(tab)}
-                          className={`w-3 h-3 rounded-full ${
-                            activeTab === tab 
-                              ? "bg-white" 
-                              : "bg-gray-400/50 hover:bg-gray-300"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
+            <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6">
+              <span className="bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 dark:from-white dark:via-blue-200 dark:to-indigo-200 bg-clip-text text-transparent">
+                Stop Tracker
+              </span>
+            </h1>
+            
+            <div className="inline-block px-4 py-2 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 rounded-full border border-blue-200/50 dark:border-blue-700/50 mb-8">
+              <p className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
+                🚚 The Ultimate Delivery Tracking App
+              </p>
             </div>
-          </div>
+            
+            <p className="text-xl md:text-2xl leading-relaxed text-gray-700 dark:text-gray-300 mx-auto max-w-3xl mb-12 font-medium">
+              An easy way to track your deliveries and manage your work
+            </p>
+            <div className="mt-8">
+              <Button 
+                onClick={onGetStarted}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white py-4 px-8 text-lg rounded-lg shadow-sm"
+              >
+                Get Started
+                <ChevronRight className="ml-2 w-5 h-5" />
+              </Button>
+            </div>
+          </motion.div>
         </div>
       </div>
       
-      {/* Features Section */}
-      <div className="py-16 bg-white dark:bg-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white sm:text-4xl">
-              Everything you need to track your deliveries
+      {/* Features Section - Simplified */}
+      <div className="py-16 bg-gray-50 dark:bg-gray-800">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Key Features
             </h2>
-            <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">
-              Stop Tracker is designed specifically for delivery drivers to optimize earnings
-            </p>
           </div>
           
           <div className="grid md:grid-cols-3 gap-8">
@@ -151,147 +127,92 @@ export default function LandingPage({ onGetStarted }) {
                 key={index}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 + 0.3 }}
-                className="bg-gray-50 dark:bg-gray-900 p-8 rounded-2xl shadow-sm"
               >
-                <div className={`p-3 rounded-full inline-block ${feature.color} mb-4`}>
-                  {feature.icon}
+                <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-apple-card hover:shadow-apple-card-hover transition-all duration-500 transform group-hover:-translate-y-2 group-hover:scale-105 border border-gray-200/50 dark:border-gray-700/50 text-center">
+                  <div className="inline-flex p-4 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg mb-6 group-hover:scale-110 transition-transform duration-300">
+                    <div className="text-white">
+                      {feature.icon}
+                    </div>
+                  </div>
+                  <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent mb-4">
+                    {feature.title}
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400 text-lg leading-relaxed">
+                    {feature.description}
+                  </p>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
-                  {feature.title}
-                </h3>
-                <p className="text-gray-600 dark:text-gray-300">
-                  {feature.description}
-                </p>
               </motion.div>
             ))}
           </div>
         </div>
       </div>
       
-      {/* How It Works Section */}
-      <div className="py-16 bg-gray-50 dark:bg-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white sm:text-4xl">
-              How Stop Tracker Works
+      {/* How It Works Section - Simplified */}
+      <div className="py-16 bg-white dark:bg-gray-900">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Basic Usage
             </h2>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-x-8 gap-y-12">
+          <div className="grid md:grid-cols-3 gap-8">
             {[
               {
-                step: "1",
-                title: "Log Your Deliveries",
-                description: "Input your daily stops and any additional pay at the end of each shift."
+                title: "Enter Data",
+                description: "Record your delivery information in the app."
               },
               {
-                step: "2",
-                title: "Monitor Your Earnings",
-                description: "View weekly summaries and track your earnings progress throughout the month."
+                title: "View Reports",
+                description: "Check your statistics and history in the dashboard."
               },
               {
-                step: "3",
-                title: "Verify Invoices",
-                description: "Compare your tracked deliveries with company invoices to check for discrepancies."
+                title: "Export Information",
+                description: "Save or share your delivery records when needed."
               },
             ].map((item, i) => (
-              <div key={i} className="relative">
-                <div className="absolute -left-4 -top-4 w-10 h-10 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-lg">
-                  {item.step}
-                </div>
-                <div className="pt-8 pl-4">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                    {item.title}
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-300">
-                    {item.description}
-                  </p>
-                </div>
+              <div key={i} className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                  {item.title}
+                </h3>
+                <p className="text-gray-600 dark:text-gray-300">
+                  {item.description}
+                </p>
               </div>
             ))}
           </div>
         </div>
       </div>
       
-      {/* Testimonials Section */}
-      <div className="py-16 bg-white dark:bg-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white sm:text-4xl">
-              Trusted by Delivery Drivers
-            </h2>
-          </div>
-          
-          <div className="grid md:grid-cols-2 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: index * 0.2 + 0.5 }}
-                className="bg-gray-50 dark:bg-gray-900 p-8 rounded-2xl shadow-sm"
-              >
-                <div className="flex items-start">
-                  <div className="flex-shrink-0 mr-4">
-                    <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
-                      {testimonial.author.split(' ')[0][0]}
-                      {testimonial.author.split(' ')[1][0]}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-lg text-gray-600 dark:text-gray-300 italic mb-4">
-                      "{testimonial.quote}"
-                    </p>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      {testimonial.author}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {testimonial.role}
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </div>
+      {/* Removed testimonials section */}
       
-      {/* CTA Section */}
-      <div className="py-16 bg-indigo-600 dark:bg-indigo-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-extrabold text-white sm:text-4xl mb-6">
-            Ready to maximize your delivery earnings?
-          </h2>
-          <p className="text-xl text-indigo-100 mb-8 max-w-3xl mx-auto">
-            Join thousands of drivers who use Stop Tracker to ensure they're paid correctly for every delivery.
-          </p>
-          <Button 
-            onClick={onGetStarted}
-            className="bg-white text-indigo-600 hover:bg-indigo-50 py-4 px-8 text-lg rounded-xl shadow-lg"
-          >
-            Create Your Account
-            <ArrowRight className="ml-2 w-5 h-5" />
-          </Button>
-        </div>
-      </div>
-      
-      {/* Footer */}
-      <footer className="bg-gray-900 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Simple Footer */}
+      <footer className="bg-gray-900 py-8">
+        <div className="max-w-4xl mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="mb-6 md:mb-0">
-              <h3 className="text-2xl font-bold text-white">Stop Tracker</h3>
-              <p className="text-gray-400">Track deliveries. Verify invoices. Get paid.</p>
+            <div className="mb-4 md:mb-0">
+              <h3 className="text-xl font-bold text-white">Stop Tracker</h3>
             </div>
             <div className="flex space-x-6">
-              <button className="text-gray-400 hover:text-white">Privacy Policy</button>
-              <button className="text-gray-400 hover:text-white">Terms of Service</button>
-              <button className="text-gray-400 hover:text-white">Contact</button>
+              <button 
+                onClick={onPrivacyPolicy} 
+                className="text-gray-400 hover:text-white text-sm"
+              >
+                Privacy Policy
+              </button>
+              <button 
+                onClick={onTermsOfService} 
+                className="text-gray-400 hover:text-white text-sm"
+              >
+                Terms of Service
+              </button>
+              <button 
+                onClick={onContactUs} 
+                className="text-gray-400 hover:text-white text-sm"
+              >
+                Contact
+              </button>
             </div>
-          </div>
-          <div className="mt-8 border-t border-gray-800 pt-8 text-center text-gray-400 text-sm">
-            © {new Date().getFullYear()} Stop Tracker. All rights reserved.
           </div>
         </div>
       </footer>

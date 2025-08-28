@@ -40,7 +40,8 @@ const Profile = ({ userId, onLogout, onHome, updateProfilePic }) => {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const userDoc = await getDoc(doc(db, "users", userId));
+        // Force a fresh read from server to get latest data
+        const userDoc = await getDoc(doc(db, "users", userId), { source: 'server' });
         if (userDoc.exists()) {
           const data = userDoc.data();
           setUserData(data);
@@ -55,6 +56,22 @@ const Profile = ({ userId, onLogout, onHome, updateProfilePic }) => {
       } catch (err) {
         console.error("Error fetching user data:", err);
         setError("Failed to load profile data");
+        
+        // Fallback to cache if server read fails
+        try {
+          const userDoc = await getDoc(doc(db, "users", userId));
+          if (userDoc.exists()) {
+            const data = userDoc.data();
+            setUserData(data);
+            setFormData({
+              displayName: data.displayName || "",
+              email: data.email || "",
+              bio: data.bio || ""
+            });
+          }
+        } catch (fallbackErr) {
+          console.error("Fallback error:", fallbackErr);
+        }
       } finally {
         setLoading(false);
       }
@@ -82,7 +99,7 @@ const Profile = ({ userId, onLogout, onHome, updateProfilePic }) => {
     }));
   };
   
-  // Handle profile picture upload
+  // Handle profile picture upload with improved error handling and caching
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -100,36 +117,55 @@ const Profile = ({ userId, onLogout, onHome, updateProfilePic }) => {
     }
     
     setUpdating(true);
+    setError(null);
+    
     try {
-      const storageRef = ref(storage, `users/${userId}/profile`);
+      // Create a unique file name to prevent caching issues
+      const timestamp = new Date().getTime();
+      const storageRef = ref(storage, `users/${userId}/profile_${timestamp}`);
+      
+      // Upload the file
       await uploadBytes(storageRef, file);
+      
+      // Get download URL
       const downloadURL = await getDownloadURL(storageRef);
       
-      // Update Firestore
+      // Force a pre-fetch of the image to ensure it's cached
+      const img = new Image();
+      img.src = downloadURL;
+      
+      // Wait a moment to ensure image is processed before updating DB
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Update Firestore with timestamp to ensure update is tracked
       await updateDoc(doc(db, "users", userId), {
-        photoURL: downloadURL
+        photoURL: downloadURL,
+        photoUpdatedAt: timestamp
       });
       
       // Update Auth profile
-      await updateProfile(auth.currentUser, {
-        photoURL: downloadURL
-      });
+      if (auth.currentUser) {
+        await updateProfile(auth.currentUser, {
+          photoURL: downloadURL
+        });
+      }
       
-      // Update local state
+      // Update local state with fresh URL to avoid caching
+      const cachedURL = `${downloadURL}?t=${timestamp}`;
       setUserData(prev => ({
         ...prev,
-        photoURL: downloadURL
+        photoURL: cachedURL
       }));
       
-      // Update parent component
+      // Update parent component with cache-busting URL
       if (updateProfilePic) {
-        updateProfilePic(downloadURL);
+        updateProfilePic(cachedURL);
       }
       
       setSuccess("Profile picture updated successfully");
     } catch (err) {
       console.error("Error uploading image:", err);
-      setError("Failed to upload image");
+      setError("Failed to upload image: " + (err.message || "Unknown error"));
     } finally {
       setUpdating(false);
     }
@@ -149,11 +185,12 @@ const Profile = ({ userId, onLogout, onHome, updateProfilePic }) => {
       // Update Firestore
       await updateDoc(doc(db, "users", userId), {
         displayName: formData.displayName,
-        bio: formData.bio || ""
+        bio: formData.bio || "",
+        updatedAt: new Date().toISOString()
       });
       
       // Update Auth profile if display name changed
-      if (formData.displayName !== userData.displayName) {
+      if (formData.displayName !== userData.displayName && auth.currentUser) {
         await updateProfile(auth.currentUser, {
           displayName: formData.displayName
         });
@@ -170,7 +207,7 @@ const Profile = ({ userId, onLogout, onHome, updateProfilePic }) => {
       setEditMode(false);
     } catch (err) {
       console.error("Error updating profile:", err);
-      setError("Failed to update profile");
+      setError("Failed to update profile: " + (err.message || "Unknown error"));
     } finally {
       setUpdating(false);
     }
@@ -222,41 +259,49 @@ const Profile = ({ userId, onLogout, onHome, updateProfilePic }) => {
   }
   
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-6xl mx-auto">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="space-y-6"
+        transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
+        className="space-y-8"
       >
         {/* Profile Card */}
-        <Card>
-          <CardHeader className="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white">
-            <CardTitle className="flex items-center">
-              <User className="mr-2" />
+        <Card className="overflow-hidden shadow-apple-card hover:shadow-apple-card-hover transition-all duration-500 border-0">
+          <CardHeader className="relative bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 text-white py-12 overflow-hidden">
+            <div className="absolute inset-0 bg-black/10"></div>
+            <div className="absolute -top-4 -right-4 w-32 h-32 bg-white/10 rounded-full"></div>
+            <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-white/5 rounded-full"></div>
+            
+            <CardTitle className="relative z-10 flex items-center text-3xl font-bold">
+              <div className="p-4 bg-white/20 rounded-2xl mr-4 backdrop-blur-sm">
+                <User className="w-8 h-8" />
+              </div>
               Your Profile
             </CardTitle>
+            <p className="relative z-10 text-blue-100 mt-3 text-lg font-medium">Manage your account settings and track your achievements</p>
           </CardHeader>
-          <CardContent className="pt-8">
-            <div className="flex flex-col md:flex-row gap-8 items-start">
+          <CardContent className="p-10 bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50">
+            <div className="flex flex-col lg:flex-row gap-12 items-start">
               {/* Profile Picture */}
-              <div className="flex flex-col items-center">
-                <div className="relative group">
-                  <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 mb-4">
+              <div className="flex flex-col items-center lg:items-start">
+                <div className="relative group mb-6">
+                  <div className="w-40 h-40 rounded-3xl overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 shadow-2xl ring-4 ring-white/50 dark:ring-gray-600/50 group-hover:ring-blue-300 dark:group-hover:ring-blue-600 transition-all duration-300">
                     {userData?.photoURL ? (
                       <img 
                         src={userData.photoURL} 
                         alt="Profile" 
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        key={userData.photoURL}
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400">
-                        <User className="w-16 h-16" />
+                        <User className="w-20 h-20" />
                       </div>
                     )}
                   </div>
-                  <label className="absolute bottom-4 right-0 bg-indigo-600 text-white p-2 rounded-full cursor-pointer hover:bg-indigo-700 transition-colors">
-                    <Camera className="w-4 h-4" />
+                  <label className="absolute -bottom-2 -right-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-3 rounded-2xl cursor-pointer hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 transform hover:scale-110 shadow-lg">
+                    <Camera className="w-5 h-5" />
                     <input 
                       type="file" 
                       className="hidden" 
@@ -265,11 +310,19 @@ const Profile = ({ userId, onLogout, onHome, updateProfilePic }) => {
                       disabled={updating}
                     />
                   </label>
+                  {updating && (
+                    <div className="absolute inset-0 bg-black/20 rounded-3xl flex items-center justify-center">
+                      <Loader2 className="w-8 h-8 text-white animate-spin" />
+                    </div>
+                  )}
                 </div>
-                <div className="text-center mb-4">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {userData?.role === 'pro' ? 'Pro Member' : 'Free User'}
-                  </p>
+                <div className="text-center lg:text-left">
+                  <div className="inline-flex items-center px-4 py-2 rounded-2xl bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 border border-blue-200/50 dark:border-blue-700/50">
+                    <Award className="w-4 h-4 mr-2 text-blue-600 dark:text-blue-400" />
+                    <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                      {userData?.role === 'pro' ? 'Pro Member' : 'Free User'}
+                    </span>
+                  </div>
                 </div>
               </div>
               
@@ -330,7 +383,7 @@ const Profile = ({ userId, onLogout, onHome, updateProfilePic }) => {
                       <Button
                         onClick={handleUpdateProfile}
                         disabled={updating}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                        className="bg-blue-500 hover:bg-blue-600 text-white"
                       >
                         {updating ? (
                           <>
@@ -364,7 +417,7 @@ const Profile = ({ userId, onLogout, onHome, updateProfilePic }) => {
                     <div>
                       <Button
                         onClick={() => setEditMode(true)}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                        className="bg-blue-500 hover:bg-blue-600 text-white"
                       >
                         Edit Profile
                       </Button>
@@ -391,44 +444,54 @@ const Profile = ({ userId, onLogout, onHome, updateProfilePic }) => {
         </Card>
         
         {/* Achievements Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Award className="mr-2" />
-              Achievements
-            </CardTitle>
+        <Card className="shadow-apple-card border-0 bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50">
+          <CardHeader className="pb-6">
+            <div className="flex items-center">
+              <div className="p-3 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-2xl mr-4 shadow-lg">
+                <Award className="w-6 h-6 text-white" />
+              </div>
+              <CardTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+                Achievements
+              </CardTitle>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CardContent className="px-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {achievements.map((achievement, index) => (
-                <div 
+                <motion.div 
                   key={index}
-                  className={`p-4 rounded-lg border flex items-center gap-4 ${
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1, duration: 0.5 }}
+                  className={`group p-6 rounded-3xl border-2 flex items-center gap-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
                     achievement.unlocked 
-                      ? "border-indigo-200 bg-indigo-50 dark:border-indigo-800 dark:bg-indigo-900/30" 
-                      : "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50"
+                      ? "border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 dark:border-blue-700 dark:from-blue-900/20 dark:to-indigo-900/20 hover:shadow-blue-200/50" 
+                      : "border-gray-200 bg-gray-50/50 dark:border-gray-700 dark:bg-gray-800/30 hover:border-gray-300 dark:hover:border-gray-600"
                   }`}
                 >
-                  <div className={`p-3 rounded-full ${
+                  <div className={`p-4 rounded-2xl transition-all duration-300 group-hover:scale-110 ${
                     achievement.unlocked 
-                      ? "bg-indigo-100 text-indigo-600 dark:bg-indigo-800 dark:text-indigo-200" 
+                      ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg" 
                       : "bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
                   }`}>
                     {achievement.icon}
                   </div>
-                  <div>
-                    <h3 className={`font-medium ${
+                  <div className="flex-1">
+                    <h3 className={`font-bold text-lg mb-1 ${
                       achievement.unlocked 
-                        ? "text-indigo-900 dark:text-indigo-100" 
+                        ? "text-blue-900 dark:text-blue-100" 
                         : "text-gray-500 dark:text-gray-400"
                     }`}>
                       {achievement.name}
                     </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
                       {achievement.description}
                     </p>
                   </div>
-                </div>
+                  {achievement.unlocked && (
+                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  )}
+                </motion.div>
               ))}
             </div>
           </CardContent>
@@ -457,7 +520,7 @@ const Profile = ({ userId, onLogout, onHome, updateProfilePic }) => {
                   variant={userData?.role === 'pro' ? 'outline' : 'default'}
                   className={userData?.role === 'pro' 
                     ? 'bg-gray-100 dark:bg-gray-800' 
-                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'}
+                    : 'bg-blue-500 hover:bg-blue-600 text-white'}
                   disabled={userData?.role === 'pro'}
                 >
                   {userData?.role === 'pro' ? 'Current Plan' : 'Upgrade to Pro'}

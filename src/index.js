@@ -1,9 +1,11 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { RouterProvider } from 'react-router-dom';
 import './index.css';
-import App from './App';
+import router from './router';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { DataProvider } from './contexts/DataContext';
 
 // Check if root element exists
 const rootElement = document.getElementById('root');
@@ -17,7 +19,9 @@ root.render(
   <React.StrictMode>
     <AuthProvider>
       <ThemeProvider>
-        <App />
+        <DataProvider>
+          <RouterProvider router={router} />
+        </DataProvider>
       </ThemeProvider>
     </AuthProvider>
   </React.StrictMode>

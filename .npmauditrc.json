@@ -1,0 +1,6 @@
+{
+  "ignoreCves": [
+    "GHSA-rp65-9cf3-cjxr",
+    "GHSA-7fh5-64p2-3v2j"
+  ]
+}

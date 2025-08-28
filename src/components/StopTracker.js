@@ -16,7 +16,7 @@ import {
 import { Alert, AlertDescription } from "./ui/alert";
 import PaymentConfig from "./PaymentConfig";
 import StatsOverview from "./StatsOverview";
-import WeeklySummary from "./WeeklySummary";
+import WeeklyStats from "./WeeklyStats";
 import EntriesList from "./EntriesList";
 import InvoiceComparison from "./InvoiceComparison";
 import { useSyncData } from "../hooks/useSyncData";
@@ -292,7 +292,7 @@ const StopTracker = () => {
 
       {activeTab === "stats" && logs && <StatsOverview logs={logs} />}
       {activeTab === "invoice" && <InvoiceComparison logs={logs} />}
-      {activeTab === "weekly" && <WeeklySummary logs={logs} />}
+      {activeTab === "weekly" && <WeeklyStats logs={logs} />}
       {activeTab === "settings" && (
         <PaymentConfig currentConfig={paymentConfig} onSave={setPaymentConfig} />
       )}

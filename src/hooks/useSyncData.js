@@ -1,12 +1,12 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { syncData } from "../services/firebase";
 
 /**
- * Custom hook for syncing data with Firestore and handling offline capabilities
+ * Enhanced custom hook for syncing data with Firestore with better cross-device sync
  * @param {string} dataType - The type of data to sync ('logs', 'settings', etc.)
  * @param {Object} initialData - Optional initial data to use
- * @returns {Object} - Data, loading state, error state, and update function
+ * @returns {Object} - Data, loading state, error state, sync status, and update function
  */
 export const useSyncData = (dataType, initialData = null) => {
   const { user } = useAuth();
@@ -14,9 +14,14 @@ export const useSyncData = (dataType, initialData = null) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [syncStatus, setSyncStatus] = useState('loading');
+  const [lastSyncTime, setLastSyncTime] = useState(null);
   const unsubscribeRef = useRef(null);
   const isMountedRef = useRef(true);
   const pendingTransactionsRef = useRef([]);
+  const syncTimeoutRef = useRef(null);
+
+  // Map dataType to collection name for consistency
+  const collectionName = dataType === 'logs' ? 'deliveryLogs' : dataType;
 
   // Check if we have valid data type
   const isValidDataType = ['logs', 'settings', 'expenses'].includes(dataType);
@@ -27,8 +32,75 @@ export const useSyncData = (dataType, initialData = null) => {
     
     return () => {
       isMountedRef.current = false;
+      // Clear any pending timeouts
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
     };
   }, []);
+
+  // Function to force a refresh from server
+  const forceRefresh = useCallback(async () => {
+    if (!user || !navigator.onLine) return false;
+    
+    try {
+      setSyncStatus('syncing');
+      
+      // Use the appropriate method based on data type
+      if (dataType === 'logs') {
+        // Process any pending logs transactions first
+        await syncData.processPendingTransactions(user.uid);
+        
+        // Then get fresh server data
+        const result = await syncData.forceRefreshAllData(user.uid);
+        
+        if (result.success) {
+          // Get the refreshed data from localStorage
+          const cachedData = localStorage.getItem(`${user.uid}-deliveryLogs`);
+          if (cachedData) {
+            const parsed = JSON.parse(cachedData);
+            if (parsed.logs) {
+              if (isMountedRef.current) {
+                setData(parsed.logs);
+                setSyncStatus('synced');
+                setLastSyncTime(Date.now());
+              }
+            }
+          }
+          return true;
+        }
+      } else if (dataType === 'settings') {
+        // Similar process for settings
+        await syncData.processPendingTransactions(user.uid);
+        const result = await syncData.forceRefreshAllData(user.uid);
+        
+        if (result.success) {
+          const cachedData = localStorage.getItem(`${user.uid}-settings`);
+          if (cachedData) {
+            const parsed = JSON.parse(cachedData);
+            if (isMountedRef.current) {
+              setData(parsed);
+              setSyncStatus('synced');
+              setLastSyncTime(Date.now());
+            }
+          }
+          return true;
+        }
+      }
+      
+      if (isMountedRef.current) {
+        setSyncStatus('error');
+      }
+      return false;
+    } catch (err) {
+      console.error(`Error force refreshing ${dataType}:`, err);
+      if (isMountedRef.current) {
+        setError(`Failed to refresh ${dataType}: ${err.message}`);
+        setSyncStatus('error');
+      }
+      return false;
+    }
+  }, [user, dataType]);
 
   // Subscribe to real-time updates
   useEffect(() => {
@@ -49,7 +121,7 @@ export const useSyncData = (dataType, initialData = null) => {
 
     // Try to load from localStorage first for immediate UI display
     try {
-      const cachedData = localStorage.getItem(`${user.uid}-${dataType}`);
+      const cachedData = localStorage.getItem(`${user.uid}-${collectionName}`);
       if (cachedData) {
         const parsed = JSON.parse(cachedData);
         if (dataType === 'logs' && parsed.logs) {
@@ -70,6 +142,10 @@ export const useSyncData = (dataType, initialData = null) => {
             setData(newData);
             setSyncStatus(status || 'synced');
             setLoading(false);
+            
+            if (status === 'synced') {
+              setLastSyncTime(Date.now());
+            }
           }
         });
       } else if (dataType === 'settings') {
@@ -78,6 +154,10 @@ export const useSyncData = (dataType, initialData = null) => {
             setData(newData);
             setSyncStatus(status || 'synced');
             setLoading(false);
+            
+            if (status === 'synced') {
+              setLastSyncTime(Date.now());
+            }
           }
         });
       } else if (dataType === 'expenses') {
@@ -100,7 +180,42 @@ export const useSyncData = (dataType, initialData = null) => {
         unsubscribeRef.current();
       }
     };
-  }, [user, dataType, isValidDataType]);
+  }, [user, dataType, isValidDataType, collectionName]);
+
+  // Periodic background refresh to ensure cross-device sync
+  useEffect(() => {
+    if (!user || !navigator.onLine) return;
+    
+    // Set up periodic refresh (every 5 minutes)
+    const setupPeriodicRefresh = () => {
+      // Clear any existing timeout
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+      
+      // Set new timeout for refresh
+      syncTimeoutRef.current = setTimeout(async () => {
+        // Only refresh if we've been synced for more than 5 minutes or have never synced
+        const shouldRefresh = !lastSyncTime || (Date.now() - lastSyncTime > 5 * 60 * 1000);
+        
+        if (shouldRefresh && navigator.onLine) {
+          console.log(`Performing periodic background refresh for ${dataType}`);
+          await forceRefresh();
+        }
+        
+        // Setup next refresh
+        setupPeriodicRefresh();
+      }, 5 * 60 * 1000); // 5 minutes
+    };
+    
+    setupPeriodicRefresh();
+    
+    return () => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+    };
+  }, [user, dataType, lastSyncTime, forceRefresh]);
 
   // Handle syncing pending transactions when online
   useEffect(() => {
@@ -114,30 +229,23 @@ export const useSyncData = (dataType, initialData = null) => {
         const transactions = JSON.parse(pending);
         if (transactions.length === 0) return;
         
+        const relevantTx = transactions.filter(tx => 
+          tx.type === dataType || 
+          tx.collection === collectionName
+        );
+        
+        if (relevantTx.length === 0) return;
+        
         setSyncStatus('syncing');
         
-        // Process transactions for this data type
-        for (const tx of transactions) {
-          if (tx.type === dataType) {
-            if (tx.type === 'logs') {
-              await syncData.saveDeliveryLogs(user.uid, tx.data);
-            } else if (tx.type === 'settings') {
-              await syncData.saveSettings(user.uid, tx.data);
-            }
-          }
-        }
+        // Process transactions using the enhanced processor
+        await syncData.processPendingTransactions(user.uid);
         
-        // Remove processed transactions of this type
-        const updatedTransactions = transactions.filter(tx => tx.type !== dataType);
+        // Force a refresh to ensure we have latest data
+        await forceRefresh();
         
-        if (updatedTransactions.length === 0) {
-          localStorage.removeItem(`${user.uid}-pendingTransactions`);
-        } else {
-          localStorage.setItem(`${user.uid}-pendingTransactions`, JSON.stringify(updatedTransactions));
-        }
-        
-        pendingTransactionsRef.current = updatedTransactions;
         setSyncStatus('synced');
+        setLastSyncTime(Date.now());
       } catch (err) {
         console.error('Error processing pending transactions:', err);
         setSyncStatus('error');
@@ -158,10 +266,10 @@ export const useSyncData = (dataType, initialData = null) => {
     return () => {
       window.removeEventListener('online', handleOnline);
     };
-  }, [user, dataType]);
+  }, [user, dataType, collectionName, forceRefresh]);
 
   /**
-   * Update the data both in Firestore and local state with improved offline handling
+   * Update the data with improved cross-device synchronization
    * @param {*} newData - The new data to save
    * @returns {Promise<boolean>} - Success status
    */
@@ -177,37 +285,10 @@ export const useSyncData = (dataType, initialData = null) => {
       // Update local state immediately for responsive UI
       if (isMountedRef.current) {
         setData(newData);
+        setSyncStatus('syncing');
       }
       
-      // Always store in localStorage first for offline capability
-      if (dataType === 'logs') {
-        localStorage.setItem(`${user.uid}-${dataType}`, JSON.stringify({ logs: newData }));
-      } else {
-        localStorage.setItem(`${user.uid}-${dataType}`, JSON.stringify(newData));
-      }
-      
-      // If offline, queue the change for later sync
-      if (!navigator.onLine) {
-        const transaction = {
-          type: dataType,
-          data: newData,
-          timestamp: new Date().toISOString()
-        };
-        
-        // Add to pending transactions queue
-        const pendingTx = [...pendingTransactionsRef.current, transaction];
-        pendingTransactionsRef.current = pendingTx;
-        
-        localStorage.setItem(`${user.uid}-pendingTransactions`, JSON.stringify(pendingTx));
-        
-        if (isMountedRef.current) {
-          setSyncStatus('offline');
-        }
-        
-        return true; // Return success even in offline mode
-      }
-      
-      // If online, attempt to sync with Firebase
+      // Use the appropriate Firebase method
       let result;
       if (dataType === 'logs') {
         result = await syncData.saveDeliveryLogs(user.uid, newData);
@@ -223,20 +304,21 @@ export const useSyncData = (dataType, initialData = null) => {
 
       if (isMountedRef.current) {
         setSyncStatus(result.isOnline ? 'synced' : 'offline');
+        if (result.isOnline) {
+          setLastSyncTime(Date.now());
+        }
       }
       
       return true;
     } catch (err) {
       console.error(`Error updating ${dataType}:`, err);
       
-      // Even on error, if we have saved to localStorage, return success
       if (isMountedRef.current) {
         setError(`Failed to update ${dataType}: ${err.message}`);
         setSyncStatus('error');
       }
       
-      // Return true if we at least saved locally
-      return localStorage.getItem(`${user.uid}-${dataType}`) !== null;
+      return false;
     }
   };
 
@@ -245,7 +327,9 @@ export const useSyncData = (dataType, initialData = null) => {
     loading,
     error,
     syncStatus,
-    updateData
+    updateData,
+    forceRefresh,
+    lastSyncTime
   };
 };
 

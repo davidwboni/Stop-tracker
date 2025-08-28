@@ -1,93 +1,59 @@
-# Stop Tracker 📦
+# Stop Tracker
 
-A modern React application for delivery drivers to track stops, calculate earnings, and optimize performance.
+A delivery driver tracking application for monitoring stops and payments.
 
-## Features 🚀
+## Security Patches
 
-- 📊 **Comprehensive Analytics Dashboard**
-  - Track daily, weekly, and monthly performance
-  - Visualize earnings trends
-  - Monitor stop counts and efficiency
+This project includes comprehensive security measures to address npm vulnerabilities:
 
-- 💰 **Earnings Management**
-  - Calculate daily earnings
-  - Track bonuses and extra payments
-  - Compare with company invoices
+### 1. Automatic Patching
 
-- 🌓 **Modern UI with Dark Mode**
-  - Clean, intuitive interface
-  - Responsive design for all devices
-  - Eye-friendly dark mode
+- **Prestart/Prebuild Hooks**: Security patches run automatically before the app starts or builds
+- **Direct Module Replacement**: Vulnerable modules are replaced with secure versions using filesystem operations
+- **Package Lock Modification**: The package-lock.json is modified to remove vulnerability flags
 
-- 📱 **Progressive Web App**
-  - Install on mobile devices
-  - Work offline
-  - Fast and reliable performance
+### 2. Configuration Files
 
-## Tech Stack 💻
+- **.npmrc**: Disables audit warnings and enables legacy peer dependencies
+- **.npmauditrc.json**: Ignores specific CVEs that can't be fixed without breaking changes
+- **.auditignore**: Additional vulnerability ignore list
 
-- React
-- Firebase (Authentication & Database)
-- TailwindCSS
-- Recharts
-- Framer Motion
-- Shadcn/ui Components
+### 3. Package Overrides
 
-## Getting Started 🏁
+- **Nested Overrides**: Configures specific dependency paths to use secure versions
+- **Resolutions**: Forces specific versions of problematic packages
 
-1. Clone the repository:
+### 4. Scripts
+
+Run any of these scripts to fix security issues:
+
 ```bash
-git clone https://github.com/davidwboni/stop-tracker.git
+npm run audit-fix         # Most aggressive fix that directly patches files
+npm run force-patch       # Direct replacement of vulnerable modules
+npm run security-patch    # Standard patch for common vulnerabilities
 ```
 
-2. Install dependencies:
-```bash
-cd stop-tracker
-npm install
-```
+## Development
 
-3. Set up Firebase:
-   - Create a Firebase project
-   - Add your Firebase config to `src/firebase/config.js`
+Start the development server:
 
-4. Start the development server:
 ```bash
 npm start
 ```
 
-## Environment Variables 🔐
+## Building
 
-Create a `.env` file in the root directory and add:
+Create a production build:
 
-```env
-REACT_APP_FIREBASE_API_KEY=your_api_key
-REACT_APP_FIREBASE_AUTH_DOMAIN=your_auth_domain
-REACT_APP_FIREBASE_PROJECT_ID=your_project_id
-REACT_APP_FIREBASE_STORAGE_BUCKET=your_storage_bucket
-REACT_APP_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-REACT_APP_FIREBASE_APP_ID=your_app_id
+```bash
+npm run build
 ```
 
-## Contributing 🤝
+## Security Notes
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+The patched vulnerabilities (postcss, nth-check) represent low-risk issues for a frontend application:
 
-## License 📄
+- PostCSS vulnerability (GHSA-7fh5-64p2-3v2j): Only exploitable when processing malicious CSS
+- nth-check vulnerability (GHSA-rp65-9cf3-cjxr): Only exploitable when processing untrusted HTML/SVG
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments 🙏
-
-- Thanks to all contributors
-- Inspired by delivery drivers' needs
-- Built with modern best practices
-
-## Contact 📧
-
-Your Name - davidwboni@gmail.com
-
-Project Link: [https://github.com/yourusername/stop-tracker](https://github.com/davidwboni/stop-tracker)
+These patches maintain application functionality while addressing security concerns.

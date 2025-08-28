@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service - Stop Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --card-dark: #1e293b;
+            --text-light: #e5e7eb;
+            --accent-blue: #3b82f6;
+            --blue-gradient-from: #2563eb;
+            --blue-gradient-to: #1d4ed8;
+            --border-dark: #334155;
+            --text-gray: #94a3b8;
+            --text-white: #ffffff;
+        }
+        
+        /* Dark theme is default, light theme is optional */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-main: var(--bg-dark);
+                --card-main: var(--card-dark);
+                --text-main: var(--text-light);
+            }
+        }
+        
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg-main: #f8fafc;
+                --card-main: #ffffff;
+                --text-main: #1e293b;
+                --border-dark: #e2e8f0;
+                --text-gray: #64748b;
+            }
+        }
+        
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 2rem 1rem;
+        }
+        
+        .container {
+            max-width: 64rem;
+            margin: 0 auto;
+        }
+        
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            color: var(--text-gray);
+            background: transparent;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .back-button:hover {
+            color: var(--text-main);
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .back-button svg {
+            margin-right: 0.5rem;
+            width: 1rem;
+            height: 1rem;
+        }
+        
+        .card {
+            background-color: var(--card-main);
+            border-radius: 0.75rem;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .card-header {
+            background: linear-gradient(to right, var(--blue-gradient-from), var(--blue-gradient-to));
+            padding: 1.5rem;
+            color: white;
+        }
+        
+        .card-title {
+            display: flex;
+            align-items: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        
+        .card-title svg {
+            margin-right: 0.5rem;
+            width: 1.5rem;
+            height: 1.5rem;
+        }
+        
+        .last-updated {
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+        }
+        
+        .card-content {
+            padding: 1.5rem;
+        }
+        
+        h2 {
+            color: var(--text-main);
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+            font-size: 1.25rem;
+        }
+        
+        h3 {
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-main);
+            font-weight: 600;
+            font-size: 1.125rem;
+        }
+        
+        p, ul {
+            margin-bottom: 1rem;
+            color: var(--text-gray);
+        }
+        
+        ul {
+            padding-left: 1.5rem;
+        }
+        
+        li {
+            margin-bottom: 0.5rem;
+        }
+        
+        a {
+            color: var(--accent-blue);
+            text-decoration: none;
+        }
+        
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-button">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back
+        </a>
+        
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    Terms of Service
+                </div>
+                <p class="last-updated">Last Updated: March 22, 2025</p>
+            </div>
+            
+            <div class="card-content">
+                <p>Welcome to Stop Tracker. By accessing or using our service, you agree to be bound by these Terms of Service ("Terms"). Please read them carefully.</p>
+                
+                <h2>1. Acceptance of Terms</h2>
+                <p>By accessing or using the Stop Tracker application ("App"), website, or any services provided by Stop Tracker (collectively, the "Services"), you agree to be bound by these Terms. If you do not agree to all of these Terms, you may not use the Services.</p>
+                
+                <h2>2. Description of Service</h2>
+                <p>Stop Tracker is an application designed to help delivery drivers track their stops, monitor earnings, and ensure accurate payment. The App provides tools for recording deliveries, calculating earnings, and maintaining delivery history.</p>
+                
+                <h2>3. User Accounts</h2>
+                <h3>3.1 Registration</h3>
+                <p>To use certain features of the Services, you must register for an account. You agree to provide accurate, current, and complete information during the registration process and to update such information to keep it accurate, current, and complete.</p>
+                
+                <h3>3.2 Account Security</h3>
+                <p>You are responsible for safeguarding your password and for all activities that occur under your account. You agree to notify Stop Tracker immediately of any unauthorized use of your account.</p>
+                
+                <h2>4. User Data and Privacy</h2>
+                <h3>4.1 Data Collection</h3>
+                <p>We collect and process data as described in our Privacy Policy. By using our Services, you consent to such processing and you warrant that all data provided by you is accurate.</p>
+                
+                <h3>4.2 Data Ownership</h3>
+                <p>You retain all rights to your delivery data. We do not claim ownership of the information you upload, but you grant us a license to use this data to provide and improve the Services.</p>
+                
+                <h2>5. User Conduct</h2>
+                <p>You agree not to:</p>
+                <ul>
+                    <li>Use the Services for any illegal purpose</li>
+                    <li>Upload or transmit viruses or malicious code</li>
+                    <li>Attempt to gain unauthorized access to the Services</li>
+                    <li>Use the Services in a way that could damage, disable, or impair the Services</li>
+                    <li>Impersonate any person or entity</li>
+                </ul>
+                
+                <h2>6. Payment and Billing</h2>
+                <h3>6.1 Fees</h3>
+                <p>Use of the basic Services is free. Premium features may require payment of fees as described within the App.</p>
+                
+                <h3>6.2 Subscription Terms</h3>
+                <p>If you choose to purchase a premium subscription, payment will be charged to your selected payment method at confirmation of purchase and at the beginning of each subscription period.</p>
+                
+                <h3>6.3 Cancellation</h3>
+                <p>You may cancel your subscription at any time through your account settings. Cancellations take effect at the end of the current billing period.</p>
+                
+                <h2>7. Intellectual Property</h2>
+                <h3>7.1 Our Intellectual Property</h3>
+                <p>The Services and all materials therein, including, without limitation, software, images, text, graphics, illustrations, logos, patents, trademarks, service marks, copyrights, photographs, audio, videos, and music (the "Stop Tracker Content"), and all intellectual property rights related thereto, are the exclusive property of Stop Tracker and its licensors.</p>
+                
+                <h3>7.2 License to Use</h3>
+                <p>Subject to these Terms, Stop Tracker grants you a limited, non-exclusive, non-transferable, non-sublicensable license to use the Services for your personal, non-commercial purposes.</p>
+                
+                <h2>8. Limitation of Liability</h2>
+                <p>To the maximum extent permitted by law, in no event shall Stop Tracker be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from your access to or use of or inability to access or use the Services.</p>
+                
+                <h2>9. Disclaimer of Warranties</h2>
+                <p>The Services are provided "as is" and "as available" without warranties of any kind, either express or implied, including, but not limited to, implied warranties of merchantability, fitness for a particular purpose, or non-infringement.</p>
+                
+                <h2>10. Changes to Terms</h2>
+                <p>We reserve the right to modify these Terms at any time. If we make material changes to these Terms, we will notify you by email or by posting a notice on our website prior to the changes becoming effective.</p>
+                
+                <h2>11. Termination</h2>
+                <p>We may terminate or suspend your account and access to the Services immediately, without prior notice or liability, for any reason whatsoever, including without limitation if you breach these Terms.</p>
+                
+                <h2>12. Governing Law</h2>
+                <p>These Terms shall be governed by the laws of the United Kingdom, without respect to its conflict of laws principles.</p>
+                
+                <h2>13. Contact Us</h2>
+                <p>If you have any questions about these Terms, please contact us at:</p>
+                <p>Email: support@stoptracker.com<br>
+                Address: 123 Delivery Street, London, UK</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
