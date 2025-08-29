@@ -421,7 +421,7 @@ const ModernDashboard = () => {
         <p className="text-sm text-gray-500 dark:text-gray-400">
           Created with ❤️ by{' '}
           <a
-            href="https://linkedin.com/in/davidwboni" 
+            href="https://www.linkedin.com/in/davidwboni/" 
             target="_blank"
             rel="noopener noreferrer"
             className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-semibold transition-colors duration-200 hover:underline"
