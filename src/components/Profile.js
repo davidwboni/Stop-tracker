@@ -306,34 +306,34 @@ const Profile = ({ userId, onLogout, onHome, updateProfilePic }) => {
   }
   
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
-        className="space-y-8"
+        className="space-y-6 sm:space-y-8"
       >
         {/* Profile Card */}
         <Card className="overflow-hidden shadow-apple-card hover:shadow-apple-card-hover transition-all duration-500 border-0">
-          <CardHeader className="relative bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 text-white py-12 overflow-hidden">
+          <CardHeader className="relative bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 text-white py-8 sm:py-12 overflow-hidden">
             <div className="absolute inset-0 bg-black/10"></div>
             <div className="absolute -top-4 -right-4 w-32 h-32 bg-white/10 rounded-full"></div>
             <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-white/5 rounded-full"></div>
             
-            <CardTitle className="relative z-10 flex items-center text-3xl font-bold">
-              <div className="p-4 bg-white/20 rounded-2xl mr-4 backdrop-blur-sm">
-                <User className="w-8 h-8" />
+            <CardTitle className="relative z-10 flex items-center text-2xl sm:text-3xl font-bold">
+              <div className="p-3 sm:p-4 bg-white/20 rounded-2xl mr-3 sm:mr-4 backdrop-blur-sm">
+                <User className="w-6 h-6 sm:w-8 sm:h-8" />
               </div>
               Your Profile
             </CardTitle>
-            <p className="relative z-10 text-blue-100 mt-3 text-lg font-medium">Manage your account settings and track your achievements</p>
+            <p className="relative z-10 text-blue-100 mt-2 sm:mt-3 text-base sm:text-lg font-medium">Manage your account settings and track your achievements</p>
           </CardHeader>
-          <CardContent className="p-10 bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50">
-            <div className="flex flex-col lg:flex-row gap-12 items-start">
+          <CardContent className="p-4 sm:p-6 lg:p-10 bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50">
+            <div className="flex flex-col lg:flex-row gap-6 sm:gap-8 lg:gap-12 items-center lg:items-start">
               {/* Profile Picture */}
               <div className="flex flex-col items-center lg:items-start">
                 <div className="relative group mb-6">
-                  <div className="w-40 h-40 rounded-3xl overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 shadow-2xl ring-4 ring-white/50 dark:ring-gray-600/50 group-hover:ring-blue-300 dark:group-hover:ring-blue-600 transition-all duration-300">
+                  <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-3xl overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 shadow-2xl ring-4 ring-white/50 dark:ring-gray-600/50 group-hover:ring-blue-300 dark:group-hover:ring-blue-600 transition-all duration-300">
                     {userData?.photoURL ? (
                       <img 
                         src={userData.photoURL} 
@@ -343,12 +343,12 @@ const Profile = ({ userId, onLogout, onHome, updateProfilePic }) => {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400">
-                        <User className="w-20 h-20" />
+                        <User className="w-16 h-16 sm:w-20 sm:h-20" />
                       </div>
                     )}
                   </div>
-                  <label className="absolute -bottom-2 -right-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-3 rounded-2xl cursor-pointer hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 transform hover:scale-110 shadow-lg">
-                    <Camera className="w-5 h-5" />
+                  <label className="absolute -bottom-2 -right-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-2 sm:p-3 rounded-2xl cursor-pointer hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 transform hover:scale-110 shadow-lg">
+                    <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
                     <input 
                       type="file" 
                       className="hidden" 

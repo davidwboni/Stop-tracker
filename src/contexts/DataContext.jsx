@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { syncData } from '../services/firebase';
+import { syncData, db } from '../services/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 // Create context with default values
 const DataContext = createContext({
@@ -51,34 +52,52 @@ export const DataProvider = ({ children }) => {
         let retries = 0;
         const maxRetries = 3;
         
-        while (!data && retries < maxRetries) {
-          try {
-            data = await syncData.forceRefreshAllData(user.uid);
-            break;
-          } catch (fetchErr) {
-            console.warn(`Fetch attempt ${retries + 1} failed:`, fetchErr);
-            retries++;
-            if (retries < maxRetries) {
-              // Wait a bit before retrying
-              await new Promise(r => setTimeout(r, 1000 * retries));
+        // Try to get logs directly from the sync service
+        try {
+          // Get delivery logs
+          const userDocRef = doc(db, 'users', user.uid, 'deliveryLogs', 'data');
+          const userDoc = await getDoc(userDocRef);
+          
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            const userLogs = userData.logs || [];
+            console.log("Successfully loaded logs:", userLogs.length);
+            setLogs(userLogs);
+            setIsNewUser(userLogs.length === 0);
+          } else {
+            setLogs([]);
+            setIsNewUser(true);
+          }
+
+          // Get payment config from main user document
+          const mainUserDocRef = doc(db, 'users', user.uid);
+          const mainUserDoc = await getDoc(mainUserDocRef);
+          if (mainUserDoc.exists() && mainUserDoc.data().paymentConfig) {
+            setPaymentConfig(mainUserDoc.data().paymentConfig);
+          }
+          
+        } catch (directErr) {
+          console.warn("Direct fetch failed, trying force refresh:", directErr);
+          
+          // Fallback to force refresh
+          while (!data && retries < maxRetries) {
+            try {
+              data = await syncData.forceRefreshAllData(user.uid);
+              break;
+            } catch (fetchErr) {
+              console.warn(`Fetch attempt ${retries + 1} failed:`, fetchErr);
+              retries++;
+              if (retries < maxRetries) {
+                await new Promise(r => setTimeout(r, 1000 * retries));
+              }
             }
           }
-        }
-        
-        // If we got data, update the state
-        if (data && data.logs) {
-          console.log("Successfully loaded logs:", data.logs.length);
-          setLogs(data.logs);
-          setIsNewUser(data.logs.length === 0);
           
-          // Update paymentConfig if it exists
-          if (data.paymentConfig) {
-            setPaymentConfig(data.paymentConfig);
+          // If still no data, set empty
+          if (!data) {
+            console.warn("Could not fetch fresh data, using fallback");
+            setLogs([]);
           }
-        } else {
-          // If no data after retries, try to get from cache or set empty
-          console.warn("Could not fetch fresh data, using fallback");
-          setLogs([]);
         }
       } catch (err) {
         console.error("Error loading data:", err);
@@ -97,7 +116,7 @@ export const DataProvider = ({ children }) => {
     setLogs(newLogs);
     if (user?.uid) {
       try {
-        await syncData.updateLogs(user.uid, newLogs);
+        await syncData.saveDeliveryLogs(user.uid, newLogs);
       } catch (err) {
         console.error("Error updating logs:", err);
       }
