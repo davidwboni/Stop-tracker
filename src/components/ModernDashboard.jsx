@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Card } from "./ui/card";
+import { motion } from "framer-motion";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
 import { 
@@ -107,7 +108,7 @@ const WelcomeMessage = ({ userName, isNewUser, todayAlreadyLogged }) => {
   
   return (
     <div 
-      className="relative overflow-hidden bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-600 text-white p-8 rounded-2xl shadow-xl mb-8 sticky top-0 z-10"
+      className="relative overflow-hidden bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-600 text-white p-8 rounded-2xl shadow-xl mb-8"
       style={{
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         backdropFilter: 'blur(20px)'

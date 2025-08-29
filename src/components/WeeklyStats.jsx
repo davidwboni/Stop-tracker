@@ -143,13 +143,17 @@ const WeeklyStats = ({ logs = [] }) => {
     <motion.div
       whileHover={{ y: -8, scale: 1.02 }}
       transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
-      className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-apple-card hover:shadow-apple-card-hover border border-gray-200/50 dark:border-gray-700/50 group cursor-pointer"
+      className="bg-white/95 dark:bg-gray-800/95 rounded-3xl p-6 shadow-apple-card hover:shadow-apple-card-hover border border-gray-200/50 dark:border-gray-700/50 group cursor-pointer backdrop-blur-sm"
+      style={{
+        background: 'linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.92) 100%)',
+        backdropFilter: 'blur(20px)',
+      }}
     >
       <div className="flex justify-between items-start mb-4">
         <div className="flex-1">
-          <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 tracking-wide mb-2">{title}</h3>
-          <p className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent group-hover:from-blue-600 group-hover:to-indigo-600 transition-all duration-300">{value}</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 tracking-wide mb-2">{title}</h3>
+          <p className="text-3xl font-bold text-gray-900 dark:text-white transition-all duration-300">{value}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{subtitle}</p>
         </div>
         <div className={`p-4 rounded-2xl ${gradient || 'bg-gradient-to-br from-blue-500 to-indigo-600'} shadow-lg group-hover:scale-110 transition-transform duration-300`}>
           <Icon className="w-6 h-6 text-white" />
@@ -159,8 +163,8 @@ const WeeklyStats = ({ logs = [] }) => {
         <div className="flex items-center pt-3 border-t border-gray-200/50 dark:border-gray-700/50">
           <div className={`flex items-center text-sm font-semibold px-3 py-1 rounded-full ${
             change >= 0 
-              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' 
-              : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
+              : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
           }`}>
             {change >= 0 ? <TrendingUp className="w-4 h-4 mr-1" /> : <TrendingDown className="w-4 h-4 mr-1" />}
             {Math.abs(change)}% vs last week
