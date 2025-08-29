@@ -171,6 +171,53 @@ const Profile = ({ userId, onLogout, onHome, updateProfilePic }) => {
     }
   };
   
+  // Handle data export
+  const handleExportData = async () => {
+    try {
+      setUpdating(true);
+      
+      // Get user's delivery data
+      const userDoc = await getDoc(doc(db, "users", userId));
+      if (!userDoc.exists()) {
+        throw new Error("No user data found");
+      }
+      
+      const userData = userDoc.data();
+      const exportData = {
+        profile: {
+          displayName: userData.displayName || '',
+          email: userData.email || '',
+          bio: userData.bio || '',
+          createdAt: userData.createdAt || ''
+        },
+        deliveryLogs: userData.logs || [],
+        paymentConfig: userData.paymentConfig || {},
+        exportedAt: new Date().toISOString()
+      };
+      
+      // Create and download JSON file
+      const dataStr = JSON.stringify(exportData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `stop-tracker-data-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      URL.revokeObjectURL(url);
+      setSuccess("Data exported successfully!");
+      
+    } catch (err) {
+      console.error("Error exporting data:", err);
+      setError("Failed to export data: " + (err.message || "Unknown error"));
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   // Handle profile update
   const handleUpdateProfile = async () => {
     if (!formData.displayName) {
@@ -535,8 +582,19 @@ const Profile = ({ userId, onLogout, onHome, updateProfilePic }) => {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline">
-                    Export Data
+                  <Button 
+                    variant="outline"
+                    onClick={handleExportData}
+                    disabled={updating}
+                  >
+                    {updating ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Exporting...
+                      </>
+                    ) : (
+                      'Export Data'
+                    )}
                   </Button>
                   <Button
                     variant="destructive"

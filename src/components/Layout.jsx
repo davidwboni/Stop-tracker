@@ -104,7 +104,7 @@ const Layout = () => {
         </div>
       </header>
       
-      <main className="max-w-6xl mx-auto py-8 px-4 flex-grow overflow-y-auto">
+      <main className="max-w-6xl mx-auto pt-4 pb-8 px-4 flex-grow overflow-y-auto">
         <ErrorBoundary>
           <div className="transition-all duration-500 ease-out">
             <Outlet />

@@ -40,10 +40,11 @@ const DashboardCard = ({ title, value, description, icon: Icon, color, trend, on
   return (
     <div 
       onClick={onClick}
-      className={`bg-white/90 dark:bg-gray-800/90 rounded-xl p-6 shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-2 hover:scale-105 cursor-pointer group backdrop-blur-sm border border-white/20 dark:border-gray-700/50 ${onClick ? 'hover:shadow-xl active:scale-95' : ''}`}
+      className={`rounded-xl p-6 shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-2 hover:scale-105 cursor-pointer group backdrop-blur-sm border border-white/20 dark:border-gray-700/50 ${onClick ? 'hover:shadow-xl active:scale-95' : ''}`}
       style={{
-        background: `linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 100%)`,
+        background: `linear-gradient(135deg, rgba(103, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.05) 50%, rgba(99, 102, 241, 0.1) 100%)`,
         backdropFilter: 'blur(20px)',
+        borderImage: 'linear-gradient(135deg, rgba(103, 126, 234, 0.3), rgba(118, 75, 162, 0.2)) 1'
       }}
     >
       <div className="flex justify-between items-start">
@@ -419,14 +420,14 @@ const ModernDashboard = () => {
       {/* Creator Credit */}
       <div className="text-center mt-8 mb-4">
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          Created with ❤️ by{' '}
+          made with &lt;3 by{' '}
           <a
             href="https://www.linkedin.com/in/davidwboni/" 
             target="_blank"
             rel="noopener noreferrer"
             className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-semibold transition-colors duration-200 hover:underline"
           >
-            David Boni
+            david boni
           </a>
         </p>
       </div>
