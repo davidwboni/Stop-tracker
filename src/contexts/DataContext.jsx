@@ -9,6 +9,7 @@ const DataContext = createContext({
   loading: true,
   syncing: false,
   isNewUser: false,
+  paymentConfig: null,
   forceSync: () => Promise.resolve(false)
 });
 
@@ -20,6 +21,11 @@ export const DataProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [isNewUser, setIsNewUser] = useState(false);
+  const [paymentConfig, setPaymentConfig] = useState({
+    cutoffPoint: 110,
+    rateBeforeCutoff: 1.98,
+    rateAfterCutoff: 1.48
+  });
 
   // Initial data load - with error handling and retry mechanism
   useEffect(() => {
@@ -64,6 +70,11 @@ export const DataProvider = ({ children }) => {
           console.log("Successfully loaded logs:", data.logs.length);
           setLogs(data.logs);
           setIsNewUser(data.logs.length === 0);
+          
+          // Update paymentConfig if it exists
+          if (data.paymentConfig) {
+            setPaymentConfig(data.paymentConfig);
+          }
         } else {
           // If no data after retries, try to get from cache or set empty
           console.warn("Could not fetch fresh data, using fallback");
@@ -106,6 +117,10 @@ export const DataProvider = ({ children }) => {
         setLogs(refreshedData.logs);
       }
       
+      if (refreshedData && refreshedData.paymentConfig) {
+        setPaymentConfig(refreshedData.paymentConfig);
+      }
+      
       return true;
     } catch (err) {
       console.error("Error syncing data:", err);
@@ -121,6 +136,7 @@ export const DataProvider = ({ children }) => {
     loading,
     syncing,
     isNewUser,
+    paymentConfig,
     forceSync
   };
 

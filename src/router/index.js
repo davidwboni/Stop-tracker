@@ -1,5 +1,5 @@
 import React from 'react';
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createBrowserRouter, Navigate, useNavigate } from 'react-router-dom';
 
 // Layout
 import Layout from '../components/Layout';
@@ -23,6 +23,38 @@ import WeeklyStats from '../components/WeeklyStats';
 import ProtectedRoute from './ProtectedRoute';
 import PublicRoute from './PublicRoute';
 
+// Create wrapper components for public routes with navigation
+const ContactUsPublic = () => {
+  const navigate = useNavigate();
+  return <ContactUs onBack={() => navigate('/')} />;
+};
+
+const PrivacyPolicyPublic = () => {
+  const navigate = useNavigate();
+  return <PrivacyPolicy onBack={() => navigate('/')} />;
+};
+
+const TermsOfServicePublic = () => {
+  const navigate = useNavigate();
+  return <TermsOfService onBack={() => navigate('/')} />;
+};
+
+// Create wrapper components for protected routes with navigation
+const ContactUsProtected = () => {
+  const navigate = useNavigate();
+  return <ContactUs onBack={() => navigate('/app/dashboard')} />;
+};
+
+const PrivacyPolicyProtected = () => {
+  const navigate = useNavigate();
+  return <PrivacyPolicy onBack={() => navigate('/app/dashboard')} />;
+};
+
+const TermsOfServiceProtected = () => {
+  const navigate = useNavigate();
+  return <TermsOfService onBack={() => navigate('/app/dashboard')} />;
+};
+
 const router = createBrowserRouter([
   // Public routes
   {
@@ -31,9 +63,9 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <LandingPage onGetStarted={() => window.location.href = '/login'} onContactUs={() => window.location.href = '/contact'} onPrivacyPolicy={() => window.location.href = '/privacy'} onTermsOfService={() => window.location.href = '/terms'} /> },
       { path: 'login', element: <Auth /> },
-      { path: 'contact', element: <ContactUs /> },
-      { path: 'privacy', element: <PrivacyPolicy /> },
-      { path: 'terms', element: <TermsOfService /> },
+      { path: 'contact', element: <ContactUsPublic /> },
+      { path: 'privacy', element: <PrivacyPolicyPublic /> },
+      { path: 'terms', element: <TermsOfServicePublic /> },
     ],
   },
   
