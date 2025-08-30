@@ -7,6 +7,13 @@ const AppNavigation = () => {
   const location = useLocation();
   const currentPath = location.pathname;
   
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
+  
   const navItems = [
     { path: '/app/dashboard', icon: Home, label: 'Home', color: 'from-blue-500 to-indigo-600' },
     { path: '/app/profile', icon: User, label: 'Profile', color: 'from-purple-500 to-pink-600' },
@@ -26,8 +33,21 @@ const AppNavigation = () => {
           return (
             <button
               key={item.path}
-              onClick={() => navigate(item.path)}
-              className={`relative flex flex-col items-center p-3 rounded-2xl transition-all duration-300 transform hover:scale-110 min-w-0 flex-1 max-w-24 ${
+              onClick={() => {
+                if (item.path === '/app/dashboard') {
+                  // If already on dashboard, scroll to top; otherwise navigate first then scroll
+                  if (currentPath.includes('dashboard') || currentPath === '/app') {
+                    scrollToTop();
+                  } else {
+                    navigate(item.path);
+                    // Small delay to ensure navigation happens first
+                    setTimeout(scrollToTop, 100);
+                  }
+                } else {
+                  navigate(item.path);
+                }
+              }}
+              className={`relative flex flex-col items-center p-3 rounded-2xl transition-all duration-300 transform hover:scale-110 active:scale-95 min-w-0 flex-1 max-w-24 touch-manipulation ${
                 isActive 
                   ? 'text-white shadow-lg' 
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'

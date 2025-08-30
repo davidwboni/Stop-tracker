@@ -142,45 +142,45 @@ const PaymentConfig = ({ config = {} }) => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
       >
         <Card className="overflow-hidden shadow-apple-card hover:shadow-apple-card-hover transition-all duration-500 border-0">
-          <CardHeader className="relative bg-gradient-to-br from-green-500 via-emerald-500 to-teal-600 text-white py-12 overflow-hidden">
+          <CardHeader className="relative bg-gradient-to-br from-green-500 via-emerald-500 to-teal-600 text-white py-6 sm:py-12 overflow-hidden">
             <div className="absolute inset-0 bg-black/10"></div>
             <div className="absolute -top-4 -right-4 w-32 h-32 bg-white/10 rounded-full"></div>
             <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-white/5 rounded-full"></div>
             
-            <CardTitle className="relative z-10 flex items-center text-3xl font-bold mb-3">
-              <div className="p-4 bg-white/20 rounded-2xl mr-4 backdrop-blur-sm">
-                <Settings className="w-8 h-8" />
+            <CardTitle className="relative z-10 flex flex-col sm:flex-row sm:items-center text-2xl sm:text-3xl font-bold mb-3">
+              <div className="p-3 sm:p-4 bg-white/20 rounded-2xl mb-3 sm:mb-0 sm:mr-4 backdrop-blur-sm self-start">
+                <Settings className="w-6 h-6 sm:w-8 sm:h-8" />
               </div>
-              Payment Settings
+              <span className="leading-tight">Payment Settings</span>
             </CardTitle>
-            <p className="relative z-10 text-green-100 text-lg font-medium">Configure your delivery payment rates and thresholds</p>
+            <p className="relative z-10 text-green-100 text-base sm:text-lg font-medium leading-relaxed">Configure your delivery payment rates and thresholds</p>
           </CardHeader>
-          <CardContent className="p-10 bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50">
-            <div className="mb-8 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-3xl border-2 border-blue-100 dark:border-blue-800">
-              <div className="flex gap-4 items-start">
-                <div className="p-3 bg-blue-500 rounded-2xl">
-                  <HelpCircle className="w-6 h-6 text-white" />
+          <CardContent className="p-4 sm:p-6 lg:p-10 bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50">
+            <div className="mb-6 sm:mb-8 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border-2 border-blue-100 dark:border-blue-800">
+              <div className="flex gap-3 sm:gap-4 items-start">
+                <div className="p-2 sm:p-3 bg-blue-500 rounded-xl sm:rounded-2xl flex-shrink-0">
+                  <HelpCircle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
-                <div>
-                  <h4 className="text-xl font-bold text-blue-900 dark:text-blue-100 mb-2">Customize Your Payment Rates</h4>
-                  <p className="text-blue-700 dark:text-blue-300 leading-relaxed">Set different rates for different stop thresholds. Many drivers are paid at a higher rate up to a certain number of stops, then a lower rate after that. This helps you track your exact earnings.</p>
+                <div className="min-w-0">
+                  <h4 className="text-lg sm:text-xl font-bold text-blue-900 dark:text-blue-100 mb-2">Customize Your Payment Rates</h4>
+                  <p className="text-sm sm:text-base text-blue-700 dark:text-blue-300 leading-relaxed">Set different rates for different stop thresholds. Many drivers are paid at a higher rate up to a certain number of stops, then a lower rate after that. This helps you track your exact earnings.</p>
                 </div>
               </div>
             </div>
         
-            <div className="space-y-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-3 bg-gradient-to-br from-green-500 to-teal-600 rounded-2xl">
-                  <Target className="w-6 h-6 text-white" />
+            <div className="space-y-4 sm:space-y-6">
+              <div className="flex items-center gap-3 mb-4 sm:mb-6">
+                <div className="p-2 sm:p-3 bg-gradient-to-br from-green-500 to-teal-600 rounded-xl sm:rounded-2xl flex-shrink-0">
+                  <Target className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">Your Payment Thresholds</h3>
+                <h3 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent leading-tight">Your Payment Thresholds</h3>
               </div>
               
               {thresholds.map((threshold, index) => (
@@ -189,40 +189,46 @@ const PaymentConfig = ({ config = {} }) => {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1, duration: 0.5 }}
-                  className={`group p-6 rounded-3xl border-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
+                  className={`group p-4 sm:p-6 rounded-2xl sm:rounded-3xl border-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
                     index === thresholds.length - 1 
                       ? "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border-gray-200 dark:border-gray-700"
                       : "bg-white dark:bg-gray-800 border-green-200 dark:border-green-700 hover:border-green-300 dark:hover:border-green-600 shadow-apple-button"
                   }`}
                 >
                 {index < thresholds.length - 1 ? (
-                  <div className="flex flex-wrap items-center gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-xl">
-                        <DollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-4">
+                    {/* Mobile: Stack vertically, Desktop: Row */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-3 flex-1">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-xl flex-shrink-0">
+                          <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 dark:text-green-400" />
+                        </div>
+                        <span className="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">Pay £</span>
+                        <div className="w-20 sm:w-28">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            value={threshold.rate.toString()}
+                            onChange={(e) => handleThresholdChange(index, 'rate', e.target.value)}
+                            className="h-10 sm:h-12 bg-white dark:bg-gray-700 border-2 border-green-200 dark:border-green-700 rounded-lg sm:rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-200 dark:focus:ring-green-800 text-center font-bold transition-all duration-300 text-sm sm:text-base touch-manipulation"
+                          />
+                        </div>
                       </div>
-                      <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">Pay £</span>
-                      <div className="w-28">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0.01"
-                          value={threshold.rate.toString()}
-                          onChange={(e) => handleThresholdChange(index, 'rate', e.target.value)}
-                          className="h-12 bg-white dark:bg-gray-700 border-2 border-green-200 dark:border-green-700 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-200 dark:focus:ring-green-800 text-center font-bold transition-all duration-300"
-                        />
+                      
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <span className="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">per stop up to</span>
+                        <div className="w-20 sm:w-28">
+                          <Input
+                            type="number"
+                            min="1"
+                            value={threshold.stopCount.toString()}
+                            onChange={(e) => handleThresholdChange(index, 'stopCount', e.target.value)}
+                            className="h-10 sm:h-12 bg-white dark:bg-gray-700 border-2 border-green-200 dark:border-green-700 rounded-lg sm:rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-200 dark:focus:ring-green-800 text-center font-bold transition-all duration-300 text-sm sm:text-base touch-manipulation"
+                          />
+                        </div>
+                        <span className="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">stops</span>
                       </div>
-                      <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">per stop up to</span>
-                      <div className="w-28">
-                        <Input
-                          type="number"
-                          min="1"
-                          value={threshold.stopCount.toString()}
-                          onChange={(e) => handleThresholdChange(index, 'stopCount', e.target.value)}
-                          className="h-12 bg-white dark:bg-gray-700 border-2 border-green-200 dark:border-green-700 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-200 dark:focus:ring-green-800 text-center font-bold transition-all duration-300"
-                        />
-                      </div>
-                      <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">stops</span>
                     </div>
                   
                     {thresholds.length > 2 && (
@@ -230,29 +236,31 @@ const PaymentConfig = ({ config = {} }) => {
                         size="icon"
                         variant="ghost"
                         onClick={() => removeThreshold(index)}
-                        className="text-red-500 ml-auto"
+                        className="text-red-500 self-end sm:self-center touch-manipulation min-h-[44px] min-w-[44px]"
                       >
                         <MinusCircle size={18} />
                       </Button>
                     )}
                   </div>
               ) : (
-                <div className="flex items-center gap-3 justify-center">
-                  <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-xl">
-                    <DollarSign className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-center">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-xl flex-shrink-0">
+                      <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-400" />
+                    </div>
+                    <span className="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">After that, pay £</span>
+                    <div className="w-20 sm:w-28">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        value={threshold.rate.toString()}
+                        onChange={(e) => handleThresholdChange(index, 'rate', e.target.value)}
+                        className="h-10 sm:h-12 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-lg sm:rounded-xl focus:border-gray-500 focus:ring-2 focus:ring-gray-200 dark:focus:ring-gray-800 text-center font-bold transition-all duration-300 text-sm sm:text-base touch-manipulation"
+                      />
+                    </div>
+                    <span className="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">per stop</span>
                   </div>
-                  <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">After that, pay £</span>
-                  <div className="w-28">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      value={threshold.rate.toString()}
-                      onChange={(e) => handleThresholdChange(index, 'rate', e.target.value)}
-                      className="h-12 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-gray-500 focus:ring-2 focus:ring-gray-200 dark:focus:ring-gray-800 text-center font-bold transition-all duration-300"
-                    />
-                  </div>
-                  <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">per stop</span>
                 </div>
               )}
                 </motion.div>
@@ -260,11 +268,10 @@ const PaymentConfig = ({ config = {} }) => {
           
           <Button
             variant="outline"
-            size="sm"
             onClick={addThreshold}
-            className="mt-2"
+            className="mt-4 sm:mt-2 min-h-[44px] touch-manipulation px-4 py-2"
           >
-            <PlusCircle size={16} className="mr-1" />
+            <PlusCircle size={16} className="mr-2" />
             Add Threshold
           </Button>
         </div>
@@ -281,20 +288,20 @@ const PaymentConfig = ({ config = {} }) => {
           </div>
         )}
         
-            <div className="mt-10 pt-8 border-t border-gray-200 dark:border-gray-700">
+            <div className="mt-6 sm:mt-10 pt-6 sm:pt-8 border-t border-gray-200 dark:border-gray-700">
               <Button
                 onClick={saveConfig}
                 disabled={saving}
-                className="w-full h-14 bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 text-white font-semibold text-lg rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02]"
+                className="w-full min-h-[48px] h-12 sm:h-14 bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 active:scale-95 text-white font-semibold text-base sm:text-lg rounded-xl sm:rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] touch-manipulation"
               >
                 {saving ? (
                   <>
-                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-white border-t-transparent mr-3"></div>
+                    <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-2 border-white border-t-transparent mr-2 sm:mr-3"></div>
                     Saving Settings...
                   </>
                 ) : (
                   <>
-                    <Save className="w-6 h-6 mr-3" /> 
+                    <Save className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-3" /> 
                     Save Payment Settings
                   </>
                 )}

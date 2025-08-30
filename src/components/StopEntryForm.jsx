@@ -369,26 +369,26 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                     transition={{ delay: index * 0.1 }}
                     className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-apple-button hover:shadow-apple-card transition-all duration-300 hover:-translate-y-1"
                   >
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex-1">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start space-y-3 sm:space-y-0 mb-3">
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center mb-2">
-                          <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg mr-2">
+                          <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg mr-2 flex-shrink-0">
                             <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                           </div>
-                          <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
+                          <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate">
                             {new Date(log.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </p>
                         </div>
                         
-                        <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-2">
-                          <div className="p-1 bg-indigo-100 dark:bg-indigo-900/30 rounded mr-2">
+                        <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-2 flex-wrap">
+                          <div className="p-1 bg-indigo-100 dark:bg-indigo-900/30 rounded mr-2 flex-shrink-0">
                             <Truck className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
                           </div>
                           <span className="font-medium">{log.stops} stops</span>
                           {log.extra > 0 && (
                             <>
                               <span className="mx-2 text-gray-400">•</span>
-                              <div className="p-1 bg-green-100 dark:bg-green-900/30 rounded mr-1">
+                              <div className="p-1 bg-green-100 dark:bg-green-900/30 rounded mr-1 flex-shrink-0">
                                 <DollarSign className="w-3 h-3 text-green-600 dark:text-green-400" />
                               </div>
                               <span className="font-medium">£{log.extra.toFixed(2)} extra</span>
@@ -398,7 +398,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                         
                         {log.notes && (
                           <div className="flex items-start text-xs text-gray-500 dark:text-gray-400">
-                            <div className="p-1 bg-purple-100 dark:bg-purple-900/30 rounded mr-2 mt-0.5">
+                            <div className="p-1 bg-purple-100 dark:bg-purple-900/30 rounded mr-2 mt-0.5 flex-shrink-0">
                               <FileText className="w-2.5 h-2.5 text-purple-600 dark:text-purple-400" />
                             </div>
                             <p className="line-clamp-2 font-medium">{log.notes}</p>
@@ -406,7 +406,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                         )}
                       </div>
                       
-                      <div className="ml-4 text-right">
+                      <div className="sm:ml-4 text-left sm:text-right flex-shrink-0">
                         <div className="inline-block px-3 py-1 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full">
                           <p className="font-bold text-white text-sm">
                             £{log.total?.toFixed(2) || '0.00'}

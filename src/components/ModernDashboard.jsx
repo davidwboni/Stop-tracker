@@ -296,19 +296,19 @@ const ModernDashboard = () => {
                     transition={{ delay: index * 0.1 }}
                     className="bg-gradient-to-r from-gray-50 to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10 p-4 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 hover:shadow-apple-button transition-all duration-300"
                   >
-                    <div className="flex justify-between items-center">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-3 sm:space-y-0">
                       <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+                        <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex-shrink-0">
                           <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                         </div>
-                        <div>
-                          <p className="font-semibold text-gray-900 dark:text-white">{new Date(log.date).toLocaleDateString()}</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-900 dark:text-white truncate">{new Date(log.date).toLocaleDateString()}</p>
                           <p className="text-sm text-gray-600 dark:text-gray-400">{log.stops} stops</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-bold text-emerald-600 dark:text-emerald-400">£{log.total?.toFixed(2) || '0.00'}</p>
-                        {log.extra > 0 && <p className="text-xs text-gray-500">+£{log.extra} extra</p>}
+                      <div className="text-right sm:text-right text-left sm:ml-4 flex-shrink-0">
+                        <p className="font-bold text-emerald-600 dark:text-emerald-400 text-lg">£{log.total?.toFixed(2) || '0.00'}</p>
+                        {log.extra > 0 && <p className="text-xs text-gray-500">+£{log.extra.toFixed(2)} extra</p>}
                       </div>
                     </div>
                   </motion.div>

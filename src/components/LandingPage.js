@@ -133,7 +133,7 @@ export default function LandingPage({ onGetStarted, onContactUs, onPrivacyPolicy
   }, [activeTab]);
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative">
       {/* Animated Background */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-r from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse"></div>
@@ -142,7 +142,7 @@ export default function LandingPage({ onGetStarted, onContactUs, onPrivacyPolicy
       </div>
 
       {/* Stunning Hero Section */}
-      <div className="relative min-h-screen flex items-center justify-center px-4">
+      <div className="relative min-h-screen flex items-center justify-center px-4 py-8">
         <motion.div
           className="max-w-6xl mx-auto text-center z-10"
           style={{ y, opacity }}
@@ -198,7 +198,7 @@ export default function LandingPage({ onGetStarted, onContactUs, onPrivacyPolicy
           >
             <Button 
               onClick={onGetStarted}
-              className="bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white px-8 py-4 text-lg rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 font-semibold group"
+              className="bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 active:scale-95 text-white px-8 py-4 text-lg rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 font-semibold group min-h-[48px] touch-manipulation"
             >
               Start Tracking Now
               <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -216,7 +216,7 @@ export default function LandingPage({ onGetStarted, onContactUs, onPrivacyPolicy
                 localStorage.setItem('guestSession', JSON.stringify(guestData));
                 onGetStarted(); // This will navigate to the app
               }}
-              className="bg-white/10 backdrop-blur-md border-white/30 text-white hover:bg-white/20 px-8 py-4 text-lg rounded-2xl transition-all duration-300 group"
+              className="bg-white/10 backdrop-blur-md border-white/30 text-white hover:bg-white/20 active:scale-95 px-8 py-4 text-lg rounded-2xl transition-all duration-300 group min-h-[48px] touch-manipulation"
             >
               Try Demo
               <Zap className="ml-2 w-5 h-5 group-hover:text-yellow-400 transition-colors" />
@@ -425,7 +425,7 @@ export default function LandingPage({ onGetStarted, onContactUs, onPrivacyPolicy
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Button 
                 onClick={onGetStarted}
-                className="bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white px-12 py-4 text-xl rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 font-bold group"
+                className="bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 active:scale-95 text-white px-12 py-4 text-xl rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 font-bold group min-h-[48px] touch-manipulation"
               >
                 Get Started Now - It's Free!
                 <ArrowRight className="ml-3 w-6 h-6 group-hover:translate-x-1 transition-transform" />
@@ -464,13 +464,13 @@ export default function LandingPage({ onGetStarted, onContactUs, onPrivacyPolicy
               <div className="space-y-4">
                 <button 
                   onClick={onPrivacyPolicy} 
-                  className="block text-gray-400 hover:text-emerald-400 transition-colors duration-200"
+                  className="block text-gray-400 hover:text-emerald-400 active:text-emerald-300 transition-colors duration-200 py-2 touch-manipulation"
                 >
                   Privacy Policy
                 </button>
                 <button 
                   onClick={onTermsOfService} 
-                  className="block text-gray-400 hover:text-emerald-400 transition-colors duration-200"
+                  className="block text-gray-400 hover:text-emerald-400 active:text-emerald-300 transition-colors duration-200 py-2 touch-manipulation"
                 >
                   Terms of Service
                 </button>
@@ -482,7 +482,7 @@ export default function LandingPage({ onGetStarted, onContactUs, onPrivacyPolicy
               <div className="space-y-4">
                 <button 
                   onClick={onContactUs} 
-                  className="block text-gray-400 hover:text-emerald-400 transition-colors duration-200"
+                  className="block text-gray-400 hover:text-emerald-400 active:text-emerald-300 transition-colors duration-200 py-2 touch-manipulation"
                 >
                   Contact Us
                 </button>

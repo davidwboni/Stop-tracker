@@ -141,32 +141,29 @@ const WeeklyStats = ({ logs = [] }) => {
   
   const StatCard = ({ title, value, subtitle, icon: Icon, change, color, gradient }) => (
     <motion.div
-      whileHover={{ y: -8, scale: 1.02 }}
+      whileHover={{ y: -4, scale: 1.01 }}
       transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
-      className="bg-white/95 dark:bg-gray-800/95 rounded-3xl p-6 shadow-apple-card hover:shadow-apple-card-hover border border-gray-200/50 dark:border-gray-700/50 group cursor-pointer backdrop-blur-sm"
-      style={{
-        background: 'linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.92) 100%)',
-        backdropFilter: 'blur(20px)',
-      }}
+      className="bg-white dark:bg-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-apple-card hover:shadow-apple-card-hover border-2 border-gray-200 dark:border-gray-700 group cursor-pointer"
     >
-      <div className="flex justify-between items-start mb-4">
-        <div className="flex-1">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 tracking-wide mb-2">{title}</h3>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white transition-all duration-300">{value}</p>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{subtitle}</p>
+      {/* Mobile-friendly layout - stack on small screens */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0 mb-3 sm:mb-4">
+        <div className="flex-1 min-w-0">
+          <h3 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white tracking-wide mb-1 sm:mb-2 uppercase">{title}</h3>
+          <p className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white transition-all duration-300 leading-none">{value}</p>
+          <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 mt-1 font-medium">{subtitle}</p>
         </div>
-        <div className={`p-4 rounded-2xl ${gradient || 'bg-gradient-to-br from-blue-500 to-indigo-600'} shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-          <Icon className="w-6 h-6 text-white" />
+        <div className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl ${gradient || 'bg-gradient-to-br from-blue-500 to-indigo-600'} shadow-lg group-hover:scale-110 transition-transform duration-300 self-start sm:self-auto flex-shrink-0`}>
+          <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
         </div>
       </div>
       {change !== undefined && (
-        <div className="flex items-center pt-3 border-t border-gray-200/50 dark:border-gray-700/50">
-          <div className={`flex items-center text-sm font-semibold px-3 py-1 rounded-full ${
+        <div className="flex items-center pt-2 sm:pt-3 border-t-2 border-gray-200 dark:border-gray-700">
+          <div className={`flex items-center text-xs sm:text-sm font-black px-2 sm:px-3 py-1 rounded-full ${
             change >= 0 
-              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
-              : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+              ? 'bg-green-600 text-white' 
+              : 'bg-red-600 text-white'
           }`}>
-            {change >= 0 ? <TrendingUp className="w-4 h-4 mr-1" /> : <TrendingDown className="w-4 h-4 mr-1" />}
+            {change >= 0 ? <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> : <TrendingDown className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />}
             {Math.abs(change)}% vs last week
           </div>
         </div>
@@ -231,44 +228,41 @@ const WeeklyStats = ({ logs = [] }) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 px-4 sm:px-0">
       {/* Week Navigation */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between px-6">
-          <CardTitle className="text-lg">Weekly Summary</CardTitle>
-          <div className="flex items-center space-x-2">
+      <Card className="shadow-apple-card border-2 border-gray-200 dark:border-gray-700">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 sm:px-6 pb-4">
+          <CardTitle className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-0">Weekly Summary</CardTitle>
+          <div className="flex items-center justify-center space-x-2">
             <Button 
               onClick={handlePrevWeek} 
               variant="ghost" 
-              size="sm" 
-              className="h-8 w-8 p-0"
+              className="h-10 w-10 p-0 rounded-full border-2 border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 touch-manipulation"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-5 w-5" />
             </Button>
             <Button 
               onClick={handleCurrentWeek} 
               variant="outline" 
-              size="sm"
-              className={`text-xs ${weekOffset === 0 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' : ''}`}
+              className={`text-xs sm:text-sm font-bold px-3 sm:px-4 py-2 min-h-[40px] touch-manipulation ${weekOffset === 0 ? 'bg-blue-600 text-white border-blue-600' : 'border-2'}`}
             >
               Current Week
             </Button>
             <Button 
               onClick={handleNextWeek} 
               variant="ghost" 
-              size="sm" 
-              className="h-8 w-8 p-0"
+              className="h-10 w-10 p-0 rounded-full border-2 border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 touch-manipulation"
               disabled={weekOffset >= 0}
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-5 w-5" />
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="px-6">
-          <h3 className="text-xl font-semibold text-center mb-6">{selectedWeek.formatted}</h3>
+        <CardContent className="px-4 sm:px-6">
+          <h3 className="text-lg sm:text-xl font-black text-center mb-4 sm:mb-6 text-gray-900 dark:text-white bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">{selectedWeek.formatted}</h3>
           
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          {/* Stats Grid - Mobile optimized */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
             <StatCard 
               title="Total Stops" 
               value={weekSummary.totalStops}
@@ -301,31 +295,28 @@ const WeeklyStats = ({ logs = [] }) => {
             />
           </div>
           
-          {/* Chart Type Selector */}
-          <div className="flex justify-center space-x-2 mb-4">
+          {/* Chart Type Selector - Mobile friendly */}
+          <div className="flex justify-center space-x-2 mb-4 sm:mb-6">
             <Button
               onClick={() => setChartType("bar")}
               variant={chartType === "bar" ? "primary" : "outline"}
-              size="sm"
-              className="text-xs"
+              className={`text-xs sm:text-sm font-bold px-3 sm:px-4 py-2 min-h-[40px] touch-manipulation ${chartType === "bar" ? 'bg-blue-600 text-white' : 'border-2'}`}
             >
-              Bar
+              Bar Chart
             </Button>
             <Button
               onClick={() => setChartType("area")}
               variant={chartType === "area" ? "primary" : "outline"}
-              size="sm"
-              className="text-xs"
+              className={`text-xs sm:text-sm font-bold px-3 sm:px-4 py-2 min-h-[40px] touch-manipulation ${chartType === "area" ? 'bg-blue-600 text-white' : 'border-2'}`}
             >
-              Area
+              Area Chart
             </Button>
             <Button
               onClick={() => setChartType("line")}
               variant={chartType === "line" ? "primary" : "outline"}
-              size="sm"
-              className="text-xs"
+              className={`text-xs sm:text-sm font-bold px-3 sm:px-4 py-2 min-h-[40px] touch-manipulation ${chartType === "line" ? 'bg-blue-600 text-white' : 'border-2'}`}
             >
-              Line
+              Line Chart
             </Button>
           </div>
           
