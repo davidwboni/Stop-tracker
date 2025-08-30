@@ -46,6 +46,7 @@ const ProfileWrapper = () => {
   return (
     <Profile 
       userId={user.uid}
+      user={user}  // Pass the full user object so Profile can handle guests
       onLogout={handleLogout}
       onHome={handleHome}
       updateProfilePic={handleProfilePicUpdate}

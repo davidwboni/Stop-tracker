@@ -44,9 +44,9 @@ const Layout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/40 dark:from-gray-900 dark:via-blue-900/10 dark:to-indigo-900/20 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/40 dark:from-gray-900 dark:via-blue-900/10 dark:to-indigo-900/20 flex flex-col" style={{ paddingTop: '100px' }}>
       <SyncStatus />
-      <header className="relative overflow-hidden bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 sticky top-0 z-50 shadow-apple-card">
+      <header className="fixed top-0 left-0 right-0 overflow-hidden bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 z-50 shadow-apple-card">
         {/* Background decoration */}
         <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-indigo-500/5 dark:from-blue-500/10 dark:via-purple-500/10 dark:to-indigo-500/10"></div>
         <div className="absolute -top-4 -right-4 w-24 h-24 bg-blue-500/10 rounded-full blur-xl"></div>
@@ -104,7 +104,7 @@ const Layout = () => {
         </div>
       </header>
       
-      <main className="max-w-6xl mx-auto pt-8 pb-8 px-4 flex-grow overflow-y-auto" style={{ marginTop: '1rem' }}>
+      <main className="max-w-6xl mx-auto pt-4 pb-8 px-4 flex-grow overflow-y-auto">
         <ErrorBoundary>
           <div className="transition-all duration-500 ease-out">
             <Outlet />

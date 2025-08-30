@@ -6,22 +6,21 @@ import { ArrowLeft, ShieldCheck, Shield, Lock, Eye, Database } from 'lucide-reac
 
 const PrivacyPolicy = ({ onBack }) => {
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-purple-50 px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
       >
-        {onBack && (
-          <Button 
-            variant="ghost" 
-            className="mb-8 flex items-center text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200" 
-            onClick={onBack}
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Back to Home
-          </Button>
-        )}
+        <Button 
+          variant="ghost" 
+          className="mb-8 flex items-center text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-200 bg-white/80 backdrop-blur-sm rounded-xl px-4 py-2 shadow-sm hover:shadow-md" 
+          onClick={onBack || (() => window.location.href = '/app/dashboard')}
+        >
+          <ArrowLeft className="w-5 h-5 mr-2" />
+          Back to Stop Tracker
+        </Button>
         
         <Card className="overflow-hidden shadow-apple-card hover:shadow-apple-card-hover transition-all duration-500 border-0">
           <CardHeader className="relative bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 text-white py-12 overflow-hidden">
@@ -40,9 +39,9 @@ const PrivacyPolicy = ({ onBack }) => {
             </div>
             <p className="relative z-10 text-blue-200 text-sm bg-blue-800/30 px-4 py-2 rounded-xl inline-block">Last Updated: March 21, 2025</p>
           </CardHeader>
-          <CardContent className="p-10 bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50">
+          <CardContent className="p-6 sm:p-8 lg:p-10 bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50">
             <div className="prose dark:prose-invert max-w-none prose-headings:text-gray-900 dark:prose-headings:text-white prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-li:text-gray-700 dark:prose-li:text-gray-300">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-8 sm:mb-12">
                 <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-3xl border-2 border-blue-100 dark:border-blue-800">
                   <Shield className="w-10 h-10 text-blue-600 dark:text-blue-400 mb-4" />
                   <h3 className="text-xl font-bold text-blue-900 dark:text-blue-100 mb-2">Data Protection</h3>
@@ -68,7 +67,7 @@ const PrivacyPolicy = ({ onBack }) => {
               <div className="bg-gradient-to-br from-gray-50 to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10 p-8 rounded-3xl border border-gray-200/50 dark:border-gray-700/50 mb-8">
                 <h3 className="text-2xl font-bold mb-4">Personal Information</h3>
                 <p className="mb-6">When you create an account, we collect the following information to provide you with our services:</p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-apple-button">
                     <h4 className="font-semibold text-gray-900 dark:text-white mb-2">📧 Email Address</h4>
                     <p className="text-sm text-gray-600 dark:text-gray-400">For account authentication and communication</p>
@@ -163,7 +162,7 @@ const PrivacyPolicy = ({ onBack }) => {
                   Contact Us
                 </h2>
                 <p className="mb-6">If you have any questions about this Privacy Policy, please don't hesitate to reach out:</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-apple-button">
                     <h4 className="font-semibold text-gray-900 dark:text-white mb-2">📧 Email</h4>
                     <p className="text-blue-600 dark:text-blue-400 font-medium">privacy@stoptracker.app</p>
@@ -177,7 +176,25 @@ const PrivacyPolicy = ({ onBack }) => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Beautiful Creator Credit */}
+        <div className="text-center mt-12">
+          <div className="inline-flex items-center space-x-2 bg-white/80 backdrop-blur-sm px-6 py-3 rounded-full shadow-lg">
+            <span className="text-gray-600 text-sm">made with</span>
+            <div className="w-4 h-4 text-purple-500 animate-pulse">💜</div>
+            <span className="text-gray-600 text-sm">by</span>
+            <a
+              href="https://www.linkedin.com/in/davidwboni/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-transparent bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text font-semibold hover:from-indigo-400 hover:via-purple-400 hover:to-pink-400 transition-all duration-300 transform hover:scale-105"
+            >
+              david boni
+            </a>
+          </div>
+        </div>
       </motion.div>
+      </div>
     </div>
   );
 };

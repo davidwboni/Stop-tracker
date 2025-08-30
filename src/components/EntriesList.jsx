@@ -173,7 +173,7 @@ const EntriesList = ({ logs, onDeleteEntry }) => {
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="font-medium text-[var(--text)]">
-                    £{log.total.toFixed(2)}
+                    £{log.total?.toFixed(2) || '0.00'}
                   </div>
                   <Button
                     variant="ghost"

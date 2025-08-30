@@ -31,6 +31,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [rate, setRate] = useState(1.90); // Default rate per stop
+  const [showAllEntries, setShowAllEntries] = useState(false);
 
   // Get user's rate from local storage or settings
   useEffect(() => {
@@ -153,7 +154,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
     }
   };
 
-  const recentEntries = safetyLogs.slice(0, 3); // Get latest 3 entries
+  const recentEntries = showAllEntries ? safetyLogs : safetyLogs.slice(0, 3); // Show all or just 3 entries
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -408,7 +409,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                       <div className="ml-4 text-right">
                         <div className="inline-block px-3 py-1 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full">
                           <p className="font-bold text-white text-sm">
-                            £{log.total.toFixed(2)}
+                            £{log.total?.toFixed(2) || '0.00'}
                           </p>
                         </div>
                         {log.timestamp && (
@@ -423,10 +424,11 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                 
                 {safetyLogs.length > 3 && (
                   <Button 
-                    variant="ghost" 
+                    variant="ghost"
+                    onClick={() => setShowAllEntries(!showAllEntries)}
                     className="w-full mt-4 py-3 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-2 border-blue-200 dark:border-blue-800 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30 text-blue-600 dark:text-blue-400 font-semibold transition-all duration-300 hover:scale-105"
                   >
-                    View all entries ({safetyLogs.length})
+                    {showAllEntries ? `Show recent entries` : `View all entries (${safetyLogs.length})`}
                   </Button>
                 )}
               </div>

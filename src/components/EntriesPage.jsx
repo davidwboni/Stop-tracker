@@ -38,7 +38,7 @@ const EntriesPage = () => {
       Date: format(new Date(log.date), 'dd/MM/yyyy'),
       Stops: log.stops,
       Extra: log.extra || 0,
-      Total: log.total.toFixed(2),
+      Total: log.total?.toFixed(2) || '0.00',
       Notes: log.notes || ""
     }));
     

@@ -89,22 +89,21 @@ const ContactUs = ({ onBack }) => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-purple-50 px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
       >
-        {onBack && (
-          <Button 
-            variant="ghost" 
-            className="mb-8 flex items-center text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200" 
-            onClick={onBack}
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Back to Home
-          </Button>
-        )}
+        <Button 
+          variant="ghost" 
+          className="mb-8 flex items-center text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-200 bg-white/80 backdrop-blur-sm rounded-xl px-4 py-2 shadow-sm hover:shadow-md" 
+          onClick={onBack || (() => window.location.href = '/app/dashboard')}
+        >
+          <ArrowLeft className="w-5 h-5 mr-2" />
+          Back to Stop Tracker
+        </Button>
         
         <Card className="overflow-hidden shadow-apple-card hover:shadow-apple-card-hover transition-all duration-500 border-0">
           <CardHeader className="relative bg-gradient-to-br from-blue-600 via-cyan-600 to-teal-700 text-white py-12 overflow-hidden">
@@ -122,8 +121,8 @@ const ContactUs = ({ onBack }) => {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="p-10 bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+          <CardContent className="p-6 sm:p-8 lg:p-10 bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-8 sm:mb-12">
               <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-3xl border-2 border-blue-100 dark:border-blue-800">
                 <Mail className="w-10 h-10 text-blue-600 dark:text-blue-400 mb-4" />
                 <h3 className="text-xl font-bold text-blue-900 dark:text-blue-100 mb-2">Email Support</h3>
@@ -170,7 +169,7 @@ const ContactUs = ({ onBack }) => {
               </h2>
               
               <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6">
                   <div>
                     <label htmlFor="name" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                       Your Name *
@@ -269,7 +268,7 @@ const ContactUs = ({ onBack }) => {
         </CardContent>
       </Card>
       
-      <div className="mt-12 grid md:grid-cols-2 gap-8">
+      <div className="mt-8 sm:mt-12 grid grid-cols-1 gap-6 sm:gap-8">
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -321,7 +320,25 @@ const ContactUs = ({ onBack }) => {
           </div>
         </motion.div>
       </div>
+
+        {/* Beautiful Creator Credit */}
+        <div className="text-center mt-12">
+          <div className="inline-flex items-center space-x-2 bg-white/80 backdrop-blur-sm px-6 py-3 rounded-full shadow-lg">
+            <span className="text-gray-600 text-sm">made with</span>
+            <div className="w-4 h-4 text-purple-500 animate-pulse">💜</div>
+            <span className="text-gray-600 text-sm">by</span>
+            <a
+              href="https://www.linkedin.com/in/davidwboni/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-transparent bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text font-semibold hover:from-indigo-400 hover:via-purple-400 hover:to-pink-400 transition-all duration-300 transform hover:scale-105"
+            >
+              david boni
+            </a>
+          </div>
+        </div>
       </motion.div>
+      </div>
     </div>
   );
 };

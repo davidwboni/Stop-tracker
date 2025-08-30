@@ -19,8 +19,38 @@ export function AuthProvider({ children }) {
   const [error, setError] = useState(null);
   const [isNewUser, setIsNewUser] = useState(false);
 
-  // Listen for auth state changes
+  // Check for guest session
   useEffect(() => {
+    const checkGuestSession = () => {
+      const guestSession = localStorage.getItem('guestSession');
+      if (guestSession) {
+        try {
+          const guestData = JSON.parse(guestSession);
+          setUser({
+            uid: guestData.guestId,
+            email: guestData.email,
+            displayName: guestData.displayName,
+            photoURL: null,
+            role: "guest",
+            isGuest: true
+          });
+          setIsNewUser(false);
+          setLoading(false);
+          return true;
+        } catch (err) {
+          console.error("Error parsing guest session:", err);
+          localStorage.removeItem('guestSession');
+        }
+      }
+      return false;
+    };
+
+    // Check for guest session first
+    if (checkGuestSession()) {
+      return;
+    }
+
+    // Then listen for Firebase auth state changes
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setLoading(true);
       
@@ -62,8 +92,27 @@ export function AuthProvider({ children }) {
             setIsNewUser(true);
           }
         } else {
-          // Logged out
-          setUser(null);
+          // Logged out - but check for guest session again
+          const guestSession = localStorage.getItem('guestSession');
+          if (guestSession) {
+            try {
+              const guestData = JSON.parse(guestSession);
+              setUser({
+                uid: guestData.guestId,
+                email: guestData.email,
+                displayName: guestData.displayName,
+                photoURL: null,
+                role: "guest",
+                isGuest: true
+              });
+            } catch (err) {
+              console.error("Error parsing guest session:", err);
+              localStorage.removeItem('guestSession');
+              setUser(null);
+            }
+          } else {
+            setUser(null);
+          }
         }
       } catch (err) {
         console.error("Error in auth state change:", err);
@@ -125,6 +174,14 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     setError(null);
     try {
+      // Check if it's a guest session
+      if (user?.isGuest) {
+        localStorage.removeItem('guestSession');
+        setUser(null);
+        return true;
+      }
+      
+      // Otherwise, logout from Firebase
       await logoutUser();
       return true;
     } catch (err) {

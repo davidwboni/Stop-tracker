@@ -292,7 +292,7 @@ const InvoiceComparison = ({ logs = [] }) => {
                           £{log.extra ? log.extra.toFixed(2) : '0.00'}
                         </td>
                         <td className="px-4 py-3 text-sm text-right font-medium">
-                          £{log.total.toFixed(2)}
+                          £{log.total?.toFixed(2) || '0.00'}
                         </td>
                       </tr>
                     ))

@@ -6,22 +6,21 @@ import { ArrowLeft, Shield, FileText, Scale, User, Lock, CreditCard, Gavel } fro
 
 const TermsOfService = ({ onBack }) => {
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-purple-50 px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
       >
-        {onBack && (
-          <Button 
-            variant="ghost" 
-            className="mb-8 flex items-center text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-200" 
-            onClick={onBack}
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Back to Home
-          </Button>
-        )}
+        <Button 
+          variant="ghost" 
+          className="mb-8 flex items-center text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-200 bg-white/80 backdrop-blur-sm rounded-xl px-4 py-2 shadow-sm hover:shadow-md" 
+          onClick={onBack || (() => window.location.href = '/app/dashboard')}
+        >
+          <ArrowLeft className="w-5 h-5 mr-2" />
+          Back to Stop Tracker
+        </Button>
         
         <Card className="overflow-hidden shadow-apple-card hover:shadow-apple-card-hover transition-all duration-500 border-0">
           <CardHeader className="relative bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-700 text-white py-12 overflow-hidden">
@@ -40,9 +39,9 @@ const TermsOfService = ({ onBack }) => {
             </div>
             <p className="relative z-10 text-indigo-200 text-sm bg-indigo-800/30 px-4 py-2 rounded-xl inline-block">Last Updated: March 22, 2025</p>
           </CardHeader>
-          <CardContent className="p-10 bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50">
+          <CardContent className="p-6 sm:p-8 lg:p-10 bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50">
             <div className="prose dark:prose-invert max-w-none prose-headings:text-gray-900 dark:prose-headings:text-white prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-li:text-gray-700 dark:prose-li:text-gray-300">
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-12">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8 sm:mb-12">
                 <div className="bg-indigo-50 dark:bg-indigo-900/20 p-6 rounded-3xl border-2 border-indigo-100 dark:border-indigo-800">
                   <FileText className="w-10 h-10 text-indigo-600 dark:text-indigo-400 mb-4" />
                   <h3 className="text-lg font-bold text-indigo-900 dark:text-indigo-100 mb-2">Agreement</h3>
@@ -101,7 +100,7 @@ const TermsOfService = ({ onBack }) => {
             <Lock className="w-8 h-8 mr-3 text-pink-600" />
             4. User Data and Privacy
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-1 gap-4 mb-6">
             <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-apple-button">
               <h3 className="text-xl font-semibold mb-3">4.1 Data Collection</h3>
               <p>We collect and process data as described in our Privacy Policy. By using our Services, you consent to such processing and you warrant that all data provided by you is accurate.</p>
@@ -142,7 +141,7 @@ const TermsOfService = ({ onBack }) => {
             <CreditCard className="w-8 h-8 mr-3 text-emerald-600" />
             6. Payment and Billing
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 gap-4 mb-6">
             <div className="bg-emerald-50 dark:bg-emerald-900/20 p-6 rounded-2xl border-2 border-emerald-100 dark:border-emerald-800">
               <h3 className="text-lg font-semibold mb-3 text-emerald-900 dark:text-emerald-100">6.1 Fees</h3>
               <p className="text-emerald-700 dark:text-emerald-300">Use of the basic Services is free. Premium features may require payment of fees as described within the App.</p>
@@ -185,7 +184,7 @@ const TermsOfService = ({ onBack }) => {
               Contact Us
             </h2>
             <p className="mb-6">If you have any questions about these Terms, please don't hesitate to reach out:</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-apple-button">
                 <h4 className="font-semibold text-gray-900 dark:text-white mb-2">📧 Email</h4>
                 <p className="text-indigo-600 dark:text-indigo-400 font-medium">support@stoptracker.app</p>
@@ -199,7 +198,25 @@ const TermsOfService = ({ onBack }) => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Beautiful Creator Credit */}
+        <div className="text-center mt-12">
+          <div className="inline-flex items-center space-x-2 bg-white/80 backdrop-blur-sm px-6 py-3 rounded-full shadow-lg">
+            <span className="text-gray-600 text-sm">made with</span>
+            <div className="w-4 h-4 text-purple-500 animate-pulse">💜</div>
+            <span className="text-gray-600 text-sm">by</span>
+            <a
+              href="https://www.linkedin.com/in/davidwboni/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-transparent bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text font-semibold hover:from-indigo-400 hover:via-purple-400 hover:to-pink-400 transition-all duration-300 transform hover:scale-105"
+            >
+              david boni
+            </a>
+          </div>
+        </div>
       </motion.div>
+    </div>
     </div>
   );
 };

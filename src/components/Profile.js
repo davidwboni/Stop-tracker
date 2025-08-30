@@ -21,7 +21,7 @@ import {
   Loader2
 } from "lucide-react";
 
-const Profile = ({ userId, onLogout, onHome, updateProfilePic }) => {
+const Profile = ({ userId, user, onLogout, onHome, updateProfilePic }) => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -40,6 +40,28 @@ const Profile = ({ userId, onLogout, onHome, updateProfilePic }) => {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
+        // Handle guest users
+        if (user?.isGuest) {
+          const guestData = {
+            displayName: user.displayName,
+            email: user.email,
+            bio: "Demo user - experience Stop Tracker's full features!",
+            role: user.role,
+            photoURL: user.photoURL,
+            createdAt: new Date(),
+            isDemo: true
+          };
+          setUserData(guestData);
+          setFormData({
+            displayName: guestData.displayName || "",
+            email: guestData.email || "",
+            bio: guestData.bio || ""
+          });
+          setLoading(false);
+          return;
+        }
+        
+        // Regular Firebase users
         // Force a fresh read from server to get latest data
         const userDoc = await getDoc(doc(db, "users", userId), { source: 'server' });
         if (userDoc.exists()) {
@@ -229,29 +251,41 @@ const Profile = ({ userId, onLogout, onHome, updateProfilePic }) => {
     setError(null);
     
     try {
-      // Update Firestore
-      await updateDoc(doc(db, "users", userId), {
-        displayName: formData.displayName,
-        bio: formData.bio || "",
-        updatedAt: new Date().toISOString()
-      });
-      
-      // Update Auth profile if display name changed
-      if (formData.displayName !== userData.displayName && auth.currentUser) {
-        await updateProfile(auth.currentUser, {
-          displayName: formData.displayName
+      if (user?.isGuest) {
+        // For guest users, just update local state
+        setUserData(prev => ({
+          ...prev,
+          displayName: formData.displayName,
+          bio: formData.bio || ""
+        }));
+        
+        setSuccess("Demo profile updated! Create a real account to save permanently.");
+        setEditMode(false);
+      } else {
+        // Update Firestore for real users
+        await updateDoc(doc(db, "users", userId), {
+          displayName: formData.displayName,
+          bio: formData.bio || "",
+          updatedAt: new Date().toISOString()
         });
+        
+        // Update Auth profile if display name changed
+        if (formData.displayName !== userData.displayName && auth.currentUser) {
+          await updateProfile(auth.currentUser, {
+            displayName: formData.displayName
+          });
+        }
+        
+        // Update local state
+        setUserData(prev => ({
+          ...prev,
+          displayName: formData.displayName,
+          bio: formData.bio || ""
+        }));
+        
+        setSuccess("Profile updated successfully");
+        setEditMode(false);
       }
-      
-      // Update local state
-      setUserData(prev => ({
-        ...prev,
-        displayName: formData.displayName,
-        bio: formData.bio || ""
-      }));
-      
-      setSuccess("Profile updated successfully");
-      setEditMode(false);
     } catch (err) {
       console.error("Error updating profile:", err);
       setError("Failed to update profile: " + (err.message || "Unknown error"));
@@ -543,6 +577,72 @@ const Profile = ({ userId, onLogout, onHome, updateProfilePic }) => {
             </div>
           </CardContent>
         </Card>
+        
+        {/* Demo User Upgrade Card */}
+        {userData?.isDemo && (
+          <Card className="shadow-apple-card border-0 bg-gradient-to-br from-emerald-50 to-cyan-50 dark:from-emerald-900/20 dark:to-cyan-900/20 border-2 border-emerald-200 dark:border-emerald-700">
+            <CardHeader className="pb-6">
+              <div className="flex items-center">
+                <div className="p-3 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-2xl mr-4 shadow-lg">
+                  <User className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl font-bold bg-gradient-to-r from-emerald-700 to-cyan-700 bg-clip-text text-transparent">
+                    Ready to Save Your Progress?
+                  </CardTitle>
+                  <p className="text-emerald-600 dark:text-emerald-400 mt-1">
+                    Create a real account to keep your delivery data forever!
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="px-8">
+              <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm p-6 rounded-2xl border border-emerald-200 dark:border-emerald-700">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <h3 className="font-bold text-emerald-900 dark:text-emerald-100 text-lg mb-2">
+                      🚀 Upgrade to Full Account
+                    </h3>
+                    <p className="text-emerald-700 dark:text-emerald-300 text-sm leading-relaxed mb-4">
+                      You're currently using a demo account. Create a real account to:
+                    </p>
+                    <ul className="text-sm text-emerald-600 dark:text-emerald-400 space-y-1">
+                      <li className="flex items-center">
+                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-3"></div>
+                        Save your delivery data permanently
+                      </li>
+                      <li className="flex items-center">
+                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-3"></div>
+                        Sync across all your devices
+                      </li>
+                      <li className="flex items-center">
+                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-3"></div>
+                        Access premium features
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    <Button
+                      onClick={() => {
+                        // Navigate to sign up page
+                        onLogout(); // This will clear the guest session
+                        setTimeout(() => {
+                          window.location.href = '/';
+                        }, 100);
+                      }}
+                      className="bg-gradient-to-r from-emerald-500 to-cyan-600 hover:from-emerald-600 hover:to-cyan-700 text-white font-semibold px-8 py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                    >
+                      Create Account
+                    </Button>
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400 text-center">
+                      Keep all your demo data!
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         
         {/* Account Actions */}
         <Card>
