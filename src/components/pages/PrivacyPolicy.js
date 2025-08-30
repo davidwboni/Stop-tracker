@@ -177,22 +177,6 @@ const PrivacyPolicy = ({ onBack }) => {
           </CardContent>
         </Card>
 
-        {/* Beautiful Creator Credit */}
-        <div className="text-center mt-12">
-          <div className="inline-flex items-center space-x-2 bg-white/80 backdrop-blur-sm px-6 py-3 rounded-full shadow-lg">
-            <span className="text-gray-600 text-sm">made with</span>
-            <div className="w-4 h-4 text-purple-500 animate-pulse">💜</div>
-            <span className="text-gray-600 text-sm">by</span>
-            <a
-              href="https://www.linkedin.com/in/davidwboni/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-transparent bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text font-semibold hover:from-indigo-400 hover:via-purple-400 hover:to-pink-400 transition-all duration-300 transform hover:scale-105"
-            >
-              david boni
-            </a>
-          </div>
-        </div>
       </motion.div>
       </div>
     </div>
