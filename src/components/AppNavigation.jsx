@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Home, FileText, BarChart2, User, Settings, Calendar } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -6,6 +6,8 @@ const AppNavigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const currentPath = location.pathname;
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
   
   const scrollToTop = () => {
     window.scrollTo({
@@ -13,6 +15,26 @@ const AppNavigation = () => {
       behavior: 'smooth'
     });
   };
+
+  // Auto-hide navigation on scroll
+  useEffect(() => {
+    const controlNavbar = () => {
+      const currentScrollY = window.scrollY;
+      
+      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        // Scrolling down & past 100px
+        setIsVisible(false);
+      } else {
+        // Scrolling up or at the top
+        setIsVisible(true);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', controlNavbar);
+    return () => window.removeEventListener('scroll', controlNavbar);
+  }, [lastScrollY]);
   
   const navItems = [
     { path: '/app/dashboard', icon: Home, label: 'Home', color: 'from-blue-500 to-indigo-600' },
@@ -21,7 +43,7 @@ const AppNavigation = () => {
   ];
   
   return (
-    <div className="sticky bottom-0 left-0 right-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-t border-gray-200/50 dark:border-gray-700/50 shadow-apple-card z-50 safe-area-inset-bottom">
+    <div className={`fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-t border-gray-200/50 dark:border-gray-700/50 shadow-apple-card z-50 safe-area-inset-bottom transition-transform duration-300 ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}>
       <div className="absolute inset-0 bg-gradient-to-t from-gray-50/50 to-transparent dark:from-gray-900/50"></div>
       
       <div className="relative flex justify-around items-center py-2 px-4">
@@ -35,13 +57,11 @@ const AppNavigation = () => {
               key={item.path}
               onClick={() => {
                 if (item.path === '/app/dashboard') {
-                  // If already on dashboard, scroll to top; otherwise navigate first then scroll
-                  if (currentPath.includes('dashboard') || currentPath === '/app') {
-                    scrollToTop();
-                  } else {
+                  // Always scroll to top for home button, regardless of current page
+                  scrollToTop();
+                  // If not on dashboard, navigate there
+                  if (!currentPath.includes('dashboard') && currentPath !== '/app') {
                     navigate(item.path);
-                    // Small delay to ensure navigation happens first
-                    setTimeout(scrollToTop, 100);
                   }
                 } else {
                   navigate(item.path);

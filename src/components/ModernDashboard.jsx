@@ -109,7 +109,7 @@ const WelcomeMessage = ({ userName, isNewUser, todayAlreadyLogged }) => {
   
   return (
     <div 
-      className="relative overflow-hidden bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-600 text-white p-8 rounded-2xl shadow-xl mb-8"
+      className="relative overflow-hidden bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-600 text-white p-6 sm:p-8 rounded-2xl shadow-xl mb-6 sm:mb-8 mx-4 sm:mx-0"
       style={{
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         backdropFilter: 'blur(20px)'
@@ -119,11 +119,11 @@ const WelcomeMessage = ({ userName, isNewUser, todayAlreadyLogged }) => {
       <div className="absolute -top-4 -right-4 w-24 h-24 bg-white opacity-10 rounded-full"></div>
       <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-white opacity-5 rounded-full"></div>
       
-      <div className="relative z-10">
-        <h1 className="text-3xl font-bold mb-3 tracking-tight">
+      <div className="relative z-10 text-center sm:text-left">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-3 tracking-tight">
           {greeting}, {userName?.split(' ')[0] || "Driver"}! 👋
         </h1>
-        <p className="text-blue-100 text-lg font-medium opacity-90">
+        <p className="text-blue-100 text-base sm:text-lg font-medium opacity-90 leading-relaxed">
           {getMotivationalMessage()}
         </p>
       </div>
@@ -276,7 +276,7 @@ const ModernDashboard = () => {
 
       {/* Recent Entries Summary - Always visible */}
       {logs && logs.length > 0 && (
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8 mx-4 sm:mx-0">
           <Card className="overflow-hidden shadow-apple-card hover:shadow-apple-card-hover transition-all duration-500 border-0">
             <CardHeader className="bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 text-white py-6">
               <div className="flex items-center">
@@ -328,7 +328,16 @@ const ModernDashboard = () => {
           icon={TrendingUp}
           color="blue"
           trend={stats.weeklyTrend}
-          onClick={() => setActiveTab("weekly")}
+          onClick={() => {
+            setActiveTab("weekly");
+            // Scroll to the tabs section
+            setTimeout(() => {
+              const tabsElement = document.querySelector('[data-state="active"]');
+              if (tabsElement) {
+                tabsElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+            }, 100);
+          }}
         />
         <DashboardCard 
           title="Daily Average" 
@@ -337,7 +346,15 @@ const ModernDashboard = () => {
           icon={Clock}
           color="purple"
           trend={stats.avgTrend}
-          onClick={() => setActiveTab("overview")}
+          onClick={() => {
+            setActiveTab("overview");
+            setTimeout(() => {
+              const tabsElement = document.querySelector('[role="tabpanel"]');
+              if (tabsElement) {
+                tabsElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+            }, 100);
+          }}
         />
         <DashboardCard 
           title="Weekly Earnings" 
@@ -346,7 +363,15 @@ const ModernDashboard = () => {
           icon={DollarSign}
           color="green"
           trend={stats.earningsTrend}
-          onClick={() => setActiveTab("invoice")}
+          onClick={() => {
+            setActiveTab("invoice");
+            setTimeout(() => {
+              const tabsElement = document.querySelector('[role="tabpanel"]');
+              if (tabsElement) {
+                tabsElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+            }, 100);
+          }}
         />
         <DashboardCard 
           title="Total Stops" 
@@ -354,7 +379,15 @@ const ModernDashboard = () => {
           description="Click for complete overview"
           icon={Award}
           color="amber"
-          onClick={() => setActiveTab("overview")}
+          onClick={() => {
+            setActiveTab("overview");
+            setTimeout(() => {
+              const tabsElement = document.querySelector('[role="tabpanel"]');
+              if (tabsElement) {
+                tabsElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+            }, 100);
+          }}
         />
       </div>
 

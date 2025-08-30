@@ -143,27 +143,27 @@ const WeeklyStats = ({ logs = [] }) => {
     <motion.div
       whileHover={{ y: -4, scale: 1.01 }}
       transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
-      className="bg-white dark:bg-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-apple-card hover:shadow-apple-card-hover border-2 border-gray-200 dark:border-gray-700 group cursor-pointer"
+      className="sm:bg-white sm:dark:bg-gray-800 sm:rounded-3xl sm:p-6 sm:shadow-apple-card sm:hover:shadow-apple-card-hover sm:border-2 sm:border-gray-200 sm:dark:border-gray-700 group cursor-pointer p-4 py-6"
     >
-      {/* Mobile-friendly layout - stack on small screens */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0 mb-3 sm:mb-4">
+      {/* Mobile: Seamless cards, Desktop: Boxed cards */}
+      <div className="flex items-center justify-between mb-3 sm:mb-4">
         <div className="flex-1 min-w-0">
-          <h3 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white tracking-wide mb-1 sm:mb-2 uppercase">{title}</h3>
-          <p className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white transition-all duration-300 leading-none">{value}</p>
-          <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 mt-1 font-medium">{subtitle}</p>
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white tracking-wide mb-2 uppercase">{title}</h3>
+          <p className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white transition-all duration-300 leading-none">{value}</p>
+          <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 font-medium">{subtitle}</p>
         </div>
-        <div className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl ${gradient || 'bg-gradient-to-br from-blue-500 to-indigo-600'} shadow-lg group-hover:scale-110 transition-transform duration-300 self-start sm:self-auto flex-shrink-0`}>
-          <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+        <div className={`p-4 rounded-2xl ${gradient || 'bg-gradient-to-br from-blue-500 to-indigo-600'} shadow-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0 ml-4`}>
+          <Icon className="w-6 h-6 text-white" />
         </div>
       </div>
       {change !== undefined && (
-        <div className="flex items-center pt-2 sm:pt-3 border-t-2 border-gray-200 dark:border-gray-700">
-          <div className={`flex items-center text-xs sm:text-sm font-black px-2 sm:px-3 py-1 rounded-full ${
+        <div className="flex items-center pt-3 border-t-2 border-gray-200 dark:border-gray-700 sm:border-gray-200/50 sm:dark:border-gray-700/50">
+          <div className={`flex items-center text-sm font-black px-3 py-1 rounded-full ${
             change >= 0 
               ? 'bg-green-600 text-white' 
               : 'bg-red-600 text-white'
           }`}>
-            {change >= 0 ? <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> : <TrendingDown className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />}
+            {change >= 0 ? <TrendingUp className="w-4 h-4 mr-1" /> : <TrendingDown className="w-4 h-4 mr-1" />}
             {Math.abs(change)}% vs last week
           </div>
         </div>

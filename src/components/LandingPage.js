@@ -440,7 +440,7 @@ export default function LandingPage({ onGetStarted, onContactUs, onPrivacyPolicy
       </div>
 
       {/* Stunning Footer */}
-      <footer className="bg-gradient-to-r from-slate-950 to-gray-950 border-t border-white/10 relative z-50">
+      <footer className="bg-gradient-to-r from-slate-950 to-gray-950 border-t border-white/10 relative">
         <div className="max-w-6xl mx-auto px-6 py-16">
           <div className="grid md:grid-cols-4 gap-12 mb-16">
             {/* Brand */}
