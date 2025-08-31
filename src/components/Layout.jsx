@@ -7,11 +7,14 @@ import { User, LogOut, Home, Star, Sun, Moon, Settings, Mail, Shield } from 'luc
 import SyncStatus from './SyncStatus';
 import AppNavigation from './AppNavigation';
 import AppFooter from './AppFooter';
+import FloatingActionButton from './FloatingActionButton';
 import { syncData } from '../services/firebase';
+import { useData } from '../contexts/DataContext';
 
 const Layout = () => {
   const { user, logout } = useAuth();
   const { theme } = useTheme();
+  const { logs, updateLogs, paymentConfig } = useData();
   const navigate = useNavigate();
   const [syncing, setSyncing] = useState(false);
   const [profilePic, setProfilePic] = useState(user?.photoURL || "/default-avatar.png");
@@ -43,8 +46,55 @@ const Layout = () => {
     }
   };
 
+  // Handle quick entry from floating action button
+  const handleQuickEntry = async (entryData) => {
+    try {
+      // Calculate earnings based on payment config
+      const calculateEarnings = (stops, extra = 0) => {
+        if (!paymentConfig) return stops * 1.98 + extra; // fallback rate
+        
+        const { cutoffPoint = 110, rateBeforeCutoff = 1.98, rateAfterCutoff = 1.48 } = paymentConfig;
+        
+        let total = 0;
+        if (stops <= cutoffPoint) {
+          total = stops * rateBeforeCutoff;
+        } else {
+          total = cutoffPoint * rateBeforeCutoff + (stops - cutoffPoint) * rateAfterCutoff;
+        }
+        
+        return total + extra;
+      };
+
+      const newEntry = {
+        id: Date.now(),
+        ...entryData,
+        total: calculateEarnings(entryData.stops, entryData.extra),
+        timestamp: new Date().toISOString(),
+      };
+      
+      const updatedLogs = [...(logs || []), newEntry].sort(
+        (a, b) => new Date(b.date) - new Date(a.date)
+      );
+      
+      await updateLogs(updatedLogs);
+      
+      // Add haptic feedback for success
+      if (navigator.vibrate) {
+        navigator.vibrate([10, 50, 10]);
+      }
+      
+    } catch (error) {
+      console.error('Error adding quick entry:', error);
+      // Add haptic feedback for error
+      if (navigator.vibrate) {
+        navigator.vibrate([100, 50, 100]);
+      }
+      throw error;
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/40 dark:from-gray-900 dark:via-blue-900/10 dark:to-indigo-900/20 flex flex-col" style={{ paddingTop: '100px' }}>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/20 to-purple-50/30 dark:from-gray-900 dark:via-blue-900/10 dark:to-purple-900/20 flex flex-col" style={{ paddingTop: '100px' }}>
       <SyncStatus />
       <header className="fixed top-0 left-0 right-0 overflow-hidden bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 z-50 shadow-apple-card">
         {/* Background decoration */}
@@ -114,6 +164,14 @@ const Layout = () => {
       </main>
       
       <AppNavigation className="flex-shrink-0" />
+      
+      {/* Floating Action Button for Quick Entry */}
+      {user && (
+        <FloatingActionButton 
+          onAddEntry={handleQuickEntry}
+          isVisible={true}
+        />
+      )}
     </div>
   );
 };

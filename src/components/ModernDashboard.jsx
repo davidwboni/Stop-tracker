@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useSwipeable } from 'react-swipeable';
+import { useDrag } from '@use-gesture/react';
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
@@ -21,15 +23,9 @@ import WeeklyStats from "./WeeklyStats";
 import InvoiceComparison from "./InvoiceComparison";
 import StatsOverview from "./StatsOverview";
 import QuickEntry from "./QuickEntry";
+import { SkeletonStats, SkeletonTabs, SkeletonList } from "./Skeleton";
 
 const DashboardCard = ({ title, value, description, icon: Icon, color, trend, onClick }) => {
-  const colorGradients = {
-    blue: 'from-blue-500/10 via-blue-400/5 to-blue-600/10',
-    purple: 'from-purple-500/10 via-purple-400/5 to-purple-600/10',
-    green: 'from-green-500/10 via-green-400/5 to-green-600/10',
-    amber: 'from-amber-500/10 via-amber-400/5 to-amber-600/10'
-  };
-
   const iconColors = {
     blue: 'from-blue-500 to-blue-600',
     purple: 'from-purple-500 to-purple-600',
@@ -40,34 +36,31 @@ const DashboardCard = ({ title, value, description, icon: Icon, color, trend, on
   return (
     <div 
       onClick={onClick}
-      className={`rounded-xl p-6 shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-2 hover:scale-105 cursor-pointer group backdrop-blur-sm border border-white/20 dark:border-gray-700/50 ${onClick ? 'hover:shadow-xl active:scale-95' : ''}`}
-      style={{
-        background: `linear-gradient(135deg, rgba(103, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.05) 50%, rgba(99, 102, 241, 0.1) 100%)`,
-        backdropFilter: 'blur(20px)',
-        borderImage: 'linear-gradient(135deg, rgba(103, 126, 234, 0.3), rgba(118, 75, 162, 0.2)) 1'
-      }}
+      className={`p-4 sm:p-6 transition-all duration-500 hover:-translate-y-2 hover:scale-105 cursor-pointer group ${onClick ? 'active:scale-95' : ''}`}
     >
-      <div className="flex justify-between items-start">
-        <div className="flex-1">
-          <p className="text-gray-700 dark:text-gray-300 text-sm font-semibold mb-2 tracking-wide">{title}</p>
-          <h3 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">{value}</h3>
-          <p className="text-gray-600 dark:text-gray-400 text-sm flex items-center gap-1">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex-1 min-w-0">
+          <p className="text-gray-700 dark:text-gray-300 text-sm font-bold mb-2 tracking-wide uppercase">{title}</p>
+          <h3 className="text-3xl sm:text-4xl font-black mb-2 text-gray-900 dark:text-white leading-none">{value}</h3>
+          <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">
             {description}
-            {trend && (
-              <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                trend > 0 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 
-                trend < 0 ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' : 
-                'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-              }`}>
-                {trend > 0 ? '+' : ''}{trend}%
-              </span>
-            )}
           </p>
         </div>
-        <div className={`p-4 rounded-2xl bg-gradient-to-br ${iconColors[color]} text-white group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
+        <div className={`p-4 rounded-2xl bg-gradient-to-br ${iconColors[color]} text-white group-hover:scale-110 transition-transform duration-300 shadow-lg flex-shrink-0 ml-4`}>
           <Icon size={24} />
         </div>
       </div>
+      {trend && (
+        <div className="flex items-center pt-3 border-t-2 border-gray-200 dark:border-gray-700">
+          <span className={`text-xs px-3 py-1 rounded-full font-black ${
+            trend > 0 ? 'bg-green-600 text-white' : 
+            trend < 0 ? 'bg-red-600 text-white' : 
+            'bg-gray-600 text-white'
+          }`}>
+            {trend > 0 ? '+' : ''}{trend}% vs last week
+          </span>
+        </div>
+      )}
     </div>
   );
 };
@@ -108,25 +101,13 @@ const WelcomeMessage = ({ userName, isNewUser, todayAlreadyLogged }) => {
   };
   
   return (
-    <div 
-      className="relative overflow-hidden bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-600 text-white p-6 sm:p-8 rounded-2xl shadow-xl mb-6 sm:mb-8 mx-4 sm:mx-0"
-      style={{
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        backdropFilter: 'blur(20px)'
-      }}
-    >
-      <div className="absolute inset-0 bg-black opacity-10"></div>
-      <div className="absolute -top-4 -right-4 w-24 h-24 bg-white opacity-10 rounded-full"></div>
-      <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-white opacity-5 rounded-full"></div>
-      
-      <div className="relative z-10 text-center sm:text-left">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-3 tracking-tight">
-          {greeting}, {userName?.split(' ')[0] || "Driver"}! 👋
-        </h1>
-        <p className="text-blue-100 text-base sm:text-lg font-medium opacity-90 leading-relaxed">
-          {getMotivationalMessage()}
-        </p>
-      </div>
+    <div className="px-4 sm:px-6 py-6 sm:py-8 text-center mb-6 sm:mb-8">
+      <h1 className="text-3xl sm:text-4xl font-black mb-4 tracking-tight bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+        {greeting}, {userName?.split(' ')[0] || "Driver"}! 👋
+      </h1>
+      <p className="text-gray-700 dark:text-gray-300 text-base sm:text-lg font-semibold leading-relaxed max-w-4xl mx-auto">
+        {getMotivationalMessage()}
+      </p>
     </div>
   );
 };
@@ -137,6 +118,91 @@ const ModernDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("entry");
   const [showWelcome, setShowWelcome] = useState(true);
+
+  // Tab order for swipe navigation
+  const tabOrder = ["entry", "weekly", "invoice", "overview"];
+  
+  // Swipe navigation handlers
+  const handleSwipeLeft = () => {
+    const currentIndex = tabOrder.indexOf(activeTab);
+    const nextIndex = (currentIndex + 1) % tabOrder.length;
+    setActiveTab(tabOrder[nextIndex]);
+    
+    // Add haptic feedback if available
+    if (navigator.vibrate) {
+      navigator.vibrate(10);
+    }
+  };
+
+  const handleSwipeRight = () => {
+    const currentIndex = tabOrder.indexOf(activeTab);
+    const prevIndex = currentIndex === 0 ? tabOrder.length - 1 : currentIndex - 1;
+    setActiveTab(tabOrder[prevIndex]);
+    
+    // Add haptic feedback if available
+    if (navigator.vibrate) {
+      navigator.vibrate(10);
+    }
+  };
+
+  // Configure swipeable handlers
+  const swipeHandlers = useSwipeable({
+    onSwipedLeft: handleSwipeLeft,
+    onSwipedRight: handleSwipeRight,
+    preventDefaultTouchmoveEvent: false,
+    trackMouse: false
+  });
+
+  // Pull-to-refresh state
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+
+  // Pull-to-refresh handler
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    
+    // Add haptic feedback
+    if (navigator.vibrate) {
+      navigator.vibrate([10, 50, 10]);
+    }
+
+    // Simulate data refresh - you can replace this with actual data fetching
+    try {
+      // In a real app, you'd call your data fetching functions here
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // You could refresh logs, sync with Firebase, etc.
+      // await syncData.forceRefreshAllData(user?.uid);
+      
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    } finally {
+      setIsRefreshing(false);
+      setPullDistance(0);
+    }
+  };
+
+  // Pull-to-refresh gesture
+  const bind = useDrag(({ movement: [, my], velocity: [, vy], direction: [, dy], cancel }) => {
+    // Only handle downward pull at the top of the page
+    if (window.scrollY > 0) return;
+    
+    if (my < 0) return; // Ignore upward movement
+    
+    const pullThreshold = 80;
+    const distance = Math.min(my, pullThreshold + 20);
+    
+    setPullDistance(distance);
+    
+    if (distance >= pullThreshold && vy > 0.1 && dy > 0) {
+      cancel();
+      handleRefresh();
+    }
+  }, {
+    axis: 'y',
+    filterTaps: true,
+    rubberband: true
+  });
 
   // Add scroll listener to hide welcome message when scrolling
   useEffect(() => {
@@ -246,14 +312,60 @@ const ModernDashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="max-w-6xl mx-auto py-4 sm:py-8 px-4 sm:px-6 w-full min-h-screen">
+        {/* Skeleton Welcome Message */}
+        <div className="px-4 sm:px-6 py-6 sm:py-8 text-center mb-6 sm:mb-8">
+          <div className="animate-pulse">
+            <div className="h-8 sm:h-10 bg-gray-200 dark:bg-gray-700 rounded mb-4 w-3/4 mx-auto"></div>
+            <div className="h-4 sm:h-5 bg-gray-200 dark:bg-gray-700 rounded w-5/6 mx-auto"></div>
+          </div>
+        </div>
+
+        {/* Skeleton Stats */}
+        <SkeletonStats />
+
+        {/* Skeleton Tabs */}
+        <SkeletonTabs />
+
+        {/* Skeleton Recent Entries */}
+        <div className="mb-6 sm:mb-8">
+          <div className="flex items-center mb-4 px-4 sm:px-0">
+            <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-2xl mr-4 animate-pulse"></div>
+            <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse"></div>
+          </div>
+          <SkeletonList count={3} />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto py-4 sm:py-8 px-4 sm:px-6 w-full"> {/* Enhanced mobile padding */}
+    <div {...bind()} className="relative" style={{ touchAction: 'pan-y' }}>
+      {/* Pull-to-refresh indicator */}
+      {(pullDistance > 0 || isRefreshing) && (
+        <div 
+          className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center bg-gradient-to-r from-blue-500 to-indigo-600 text-white transition-all duration-300"
+          style={{
+            height: Math.max(pullDistance, isRefreshing ? 60 : 0),
+            transform: `translateY(${isRefreshing ? 0 : -60 + pullDistance}px)`
+          }}
+        >
+          {isRefreshing ? (
+            <div className="flex items-center space-x-2">
+              <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+              <span className="text-sm font-medium">Syncing data...</span>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2 opacity-80">
+              <span className="text-sm font-medium">
+                {pullDistance >= 80 ? 'Release to refresh' : 'Pull down to refresh'}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+      
+      <div className="max-w-6xl mx-auto py-4 sm:py-8 px-4 sm:px-6 w-full min-h-screen"> {/* Enhanced mobile padding */}
       {/* Main welcome message - visible only when scrolled to top */}
       {showWelcome && (
         <WelcomeMessage 
@@ -274,19 +386,18 @@ const ModernDashboard = () => {
         </div>
       )}
 
-      {/* Recent Entries Summary - Always visible */}
+      {/* Recent Entries Summary - Seamless Design */}
       {logs && logs.length > 0 && (
-        <div className="mb-6 sm:mb-8 mx-4 sm:mx-0">
-          <Card className="overflow-hidden shadow-apple-card hover:shadow-apple-card-hover transition-all duration-500 border-0">
-            <CardHeader className="bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 text-white py-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-white/20 rounded-xl mr-3 backdrop-blur-sm">
-                  <Clock className="w-5 h-5" />
-                </div>
-                <CardTitle className="text-xl font-bold">Recent Entries</CardTitle>
+        <div className="mb-6 sm:mb-8">
+          <div className="mb-6">
+            <div className="flex items-center mb-4 px-4 sm:px-0">
+              <div className="p-3 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl mr-4 shadow-lg">
+                <Clock className="w-6 h-6 text-white" />
               </div>
-            </CardHeader>
-            <CardContent className="p-6">
+              <h2 className="text-2xl font-black text-gray-900 dark:text-white">Recent Entries</h2>
+            </div>
+          </div>
+          <div className="px-4 sm:px-0">
               <div className="space-y-3">
                 {logs.slice(-3).reverse().map((log, index) => (
                   <motion.div
@@ -294,7 +405,7 @@ const ModernDashboard = () => {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className="bg-gradient-to-r from-gray-50 to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10 p-4 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 hover:shadow-apple-button transition-all duration-300"
+                    className="py-4 px-4 sm:px-0 transition-all duration-300 hover:-translate-y-1"
                   >
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-3 sm:space-y-0">
                       <div className="flex items-center space-x-3">
@@ -314,8 +425,7 @@ const ModernDashboard = () => {
                   </motion.div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+          </div>
         </div>
       )}
       
@@ -391,15 +501,21 @@ const ModernDashboard = () => {
         />
       </div>
 
-      {/* Tabs Navigation */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-apple-card hover:shadow-apple-card-hover transition-all duration-500 mb-8 overflow-hidden">
+      {/* Tabs Navigation - Seamless with Swipe Support */}
+      <div className="mb-6 sm:mb-8" {...swipeHandlers}>
         <Tabs 
           defaultValue="entry" 
           value={activeTab} 
           onValueChange={setActiveTab}
           className="w-full"
         >
-          <TabsList className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 p-2 bg-gray-50 dark:bg-gray-900/50 m-2 rounded-xl">
+          <TabsList className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 p-4 sm:p-0 bg-transparent">
+            {/* Swipe indicator for mobile */}
+            <div className="col-span-full sm:hidden text-center mb-2">
+              <div className="inline-flex items-center text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-full">
+                <span>← Swipe to navigate →</span>
+              </div>
+            </div>
             <TabsTrigger 
               value="entry" 
               className="flex items-center justify-center space-x-1 sm:space-x-2 py-4 px-2 sm:px-4 rounded-lg transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transform hover:scale-105 min-h-[48px]"
@@ -430,21 +546,28 @@ const ModernDashboard = () => {
             </TabsTrigger>
           </TabsList>
           
-          {/* Tab Content */}
-          <TabsContent value="entry" className="p-4 sm:p-6">
-            <h2 className="text-lg sm:text-xl font-bold mb-4">Log New Entry</h2>
+          {/* Tab Content - Seamless */}
+          <TabsContent value="entry" className="mt-6">
+            <div className="mb-6 px-4 sm:px-0">
+              <div className="flex items-center mb-4">
+                <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl mr-4 shadow-lg">
+                  <Plus className="w-6 h-6 text-white" />
+                </div>
+                <h2 className="text-2xl font-black text-gray-900 dark:text-white">Log New Entry</h2>
+              </div>
+            </div>
             <StopEntryForm logs={logs} updateLogs={updateLogs} />
           </TabsContent>
           
-          <TabsContent value="weekly" className="p-4 sm:p-6">
+          <TabsContent value="weekly" className="mt-6">
             <WeeklyStats logs={logs} />
           </TabsContent>
           
-          <TabsContent value="invoice" className="p-4 sm:p-6">
+          <TabsContent value="invoice" className="mt-6">
             <InvoiceComparison logs={logs} />
           </TabsContent>
           
-          <TabsContent value="overview" className="p-4 sm:p-6">
+          <TabsContent value="overview" className="mt-6">
             <StatsOverview logs={logs} />
           </TabsContent>
         </Tabs>
@@ -464,6 +587,7 @@ const ModernDashboard = () => {
           </a>
         </p>
       </div>
+    </div>
     </div>
   );
 };

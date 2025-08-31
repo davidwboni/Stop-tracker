@@ -126,18 +126,17 @@ const PaymentConfig = ({ config = {} }) => {
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="w-5 h-5" /> Payment Settings
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
+        <div className="text-center py-12">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <Settings className="w-6 h-6 text-green-600" />
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Payment Settings</h2>
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -148,21 +147,21 @@ const PaymentConfig = ({ config = {} }) => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
       >
-        <Card className="overflow-hidden shadow-apple-card hover:shadow-apple-card-hover transition-all duration-500 border-0">
-          <CardHeader className="relative bg-gradient-to-br from-green-500 via-emerald-500 to-teal-600 text-white py-6 sm:py-12 overflow-hidden">
-            <div className="absolute inset-0 bg-black/10"></div>
-            <div className="absolute -top-4 -right-4 w-32 h-32 bg-white/10 rounded-full"></div>
-            <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-white/5 rounded-full"></div>
-            
-            <CardTitle className="relative z-10 flex flex-col sm:flex-row sm:items-center text-2xl sm:text-3xl font-bold mb-3">
-              <div className="p-3 sm:p-4 bg-white/20 rounded-2xl mb-3 sm:mb-0 sm:mr-4 backdrop-blur-sm self-start">
-                <Settings className="w-6 h-6 sm:w-8 sm:h-8" />
-              </div>
-              <span className="leading-tight">Payment Settings</span>
-            </CardTitle>
-            <p className="relative z-10 text-green-100 text-base sm:text-lg font-medium leading-relaxed">Configure your delivery payment rates and thresholds</p>
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6 lg:p-10 bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50">
+        <div className="text-center mb-8 sm:mb-12">
+          <div className="flex items-center justify-center gap-3 sm:gap-4 mb-4">
+            <div className="p-3 sm:p-4 bg-gradient-to-br from-green-500 to-teal-600 rounded-2xl">
+              <Settings className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent">
+              Payment Settings
+            </h1>
+          </div>
+          <p className="text-gray-700 dark:text-gray-300 text-base sm:text-lg font-semibold leading-relaxed max-w-2xl mx-auto">
+            Configure your delivery payment rates and thresholds
+          </p>
+        </div>
+        
+        <div className="space-y-6 sm:space-y-8">
             <div className="mb-6 sm:mb-8 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border-2 border-blue-100 dark:border-blue-800">
               <div className="flex gap-3 sm:gap-4 items-start">
                 <div className="p-2 sm:p-3 bg-blue-500 rounded-xl sm:rounded-2xl flex-shrink-0">
@@ -307,8 +306,7 @@ const PaymentConfig = ({ config = {} }) => {
                 )}
               </Button>
             </div>
-          </CardContent>
-        </Card>
+        </div>
       </motion.div>
     </div>
   );

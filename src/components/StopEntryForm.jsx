@@ -20,12 +20,32 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
   // Initialize logs as an empty array if null
   const safetyLogs = logs || [];
   
-  const [entry, setEntry] = useState({
-    date: new Date().toISOString().split('T')[0],
-    stops: "",
-    extra: "",
-    notes: "",
-  });
+  // Smart defaults - get last used values
+  const getSmartDefaults = () => {
+    try {
+      const lastEntry = localStorage.getItem('last-entry-data');
+      if (lastEntry) {
+        const parsed = JSON.parse(lastEntry);
+        return {
+          date: new Date().toISOString().split('T')[0], // Always use today's date
+          stops: parsed.stops || "",
+          extra: parsed.extra || "",
+          notes: parsed.notes || "",
+        };
+      }
+    } catch (error) {
+      console.error('Error loading smart defaults:', error);
+    }
+    
+    return {
+      date: new Date().toISOString().split('T')[0],
+      stops: "",
+      extra: "",
+      notes: "",
+    };
+  };
+
+  const [entry, setEntry] = useState(getSmartDefaults());
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
@@ -102,12 +122,25 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
       if (updateLogs) {
         await updateLogs(updatedLogs);
       }
+
+      // Save smart defaults for next entry (excluding date)
+      try {
+        const smartDefaults = {
+          stops: entry.stops,
+          extra: entry.extra,
+          notes: entry.notes
+        };
+        localStorage.setItem('last-entry-data', JSON.stringify(smartDefaults));
+      } catch (error) {
+        console.error('Error saving smart defaults:', error);
+      }
       
+      // Clear form with fresh smart defaults
       setEntry({
         date: new Date().toISOString().split('T')[0],
-        stops: "",
-        extra: "",
-        notes: "",
+        stops: entry.stops, // Keep the same stops count as smart default
+        extra: entry.extra, // Keep the same extra amount as smart default  
+        notes: "", // Clear notes for next entry
       });
       
       setSuccess(true);
@@ -204,7 +237,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                     name="stops"
                     value={entry.stops}
                     onChange={handleChange}
-                    placeholder="How many deliveries?"
+                    placeholder={entry.stops ? `Using last value: ${entry.stops}` : "How many deliveries?"}
                     required
                     className="w-full h-12 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800 transition-all duration-300"
                   />
@@ -228,7 +261,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                       name="extra"
                       value={entry.extra}
                       onChange={handleChange}
-                      placeholder="0.00"
+                      placeholder={entry.extra ? `Using last value: £${entry.extra}` : "0.00"}
                       step="0.01"
                       className="pl-8 w-full h-12 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-200 dark:focus:ring-green-800 transition-all duration-300"
                     />
