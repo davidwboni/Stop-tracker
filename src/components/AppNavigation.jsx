@@ -38,6 +38,7 @@ const AppNavigation = () => {
   
   const navItems = [
     { path: '/app/dashboard', icon: Home, label: 'Home', color: 'from-blue-500 to-indigo-600' },
+    { path: '/app/entries', icon: FileText, label: 'Entries', color: 'from-orange-500 to-red-600' },
     { path: '/app/profile', icon: User, label: 'Profile', color: 'from-purple-500 to-pink-600' },
     { path: '/app/settings', icon: Settings, label: 'Settings', color: 'from-green-500 to-teal-600' },
   ];
@@ -57,9 +58,9 @@ const AppNavigation = () => {
               key={item.path}
               onClick={() => {
                 if (item.path === '/app/dashboard') {
-                  // Always scroll to top for home button, regardless of current page
+                  // Always scroll to top for home button
                   scrollToTop();
-                  // If not on dashboard, navigate there
+                  // Only navigate if not already on dashboard
                   if (!currentPath.includes('dashboard') && currentPath !== '/app') {
                     navigate(item.path);
                   }

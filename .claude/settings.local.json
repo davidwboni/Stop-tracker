@@ -8,7 +8,13 @@
       "Bash(vercel:*)",
       "Bash(git commit:*)",
       "Bash(npx vercel:*)",
-      "Bash(ipconfig)"
+      "Bash(ipconfig)",
+      "Bash(npm install:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npm run build:*)",
+      "Bash(set PORT=3001)",
+      "Bash(npx eslint:*)",
+      "Bash(npx kill-port:*)"
     ],
     "deny": [],
     "ask": []

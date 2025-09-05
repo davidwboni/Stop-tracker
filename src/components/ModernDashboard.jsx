@@ -13,7 +13,8 @@ import {
   TrendingUp,
   Award,
   DollarSign,
-  Clock
+  Clock,
+  Trash2
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -26,42 +27,168 @@ import QuickEntry from "./QuickEntry";
 import { SkeletonStats, SkeletonTabs, SkeletonList } from "./Skeleton";
 
 const DashboardCard = ({ title, value, description, icon: Icon, color, trend, onClick }) => {
-  const iconColors = {
-    blue: 'from-blue-500 to-blue-600',
-    purple: 'from-purple-500 to-purple-600',
-    green: 'from-green-500 to-green-600',
-    amber: 'from-amber-500 to-amber-600'
+  const colorStyles = {
+    blue: {
+      bg: 'bg-blue-50 dark:bg-blue-950/30',
+      icon: 'text-blue-600 dark:text-blue-400',
+      accent: 'bg-blue-600 dark:bg-blue-500'
+    },
+    purple: {
+      bg: 'bg-purple-50 dark:bg-purple-950/30',
+      icon: 'text-purple-600 dark:text-purple-400',
+      accent: 'bg-purple-600 dark:bg-purple-500'
+    },
+    green: {
+      bg: 'bg-green-50 dark:bg-green-950/30',
+      icon: 'text-green-600 dark:text-green-400',
+      accent: 'bg-green-600 dark:bg-green-500'
+    },
+    amber: {
+      bg: 'bg-amber-50 dark:bg-amber-950/30',
+      icon: 'text-amber-600 dark:text-amber-400',
+      accent: 'bg-amber-600 dark:bg-amber-500'
+    }
   };
 
+  const styles = colorStyles[color];
+
   return (
-    <div 
+    <motion.div
       onClick={onClick}
-      className={`p-4 sm:p-6 transition-all duration-500 hover:-translate-y-2 hover:scale-105 cursor-pointer group ${onClick ? 'active:scale-95' : ''}`}
+      whileTap={{ scale: 0.95 }}
+      whileHover={{ scale: 1.02 }}
+      className={`p-6 ${styles.bg} rounded-3xl cursor-pointer transition-all duration-200 active:scale-95 min-h-[120px] flex flex-col justify-between`}
     >
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex-1 min-w-0">
-          <p className="text-gray-700 dark:text-gray-300 text-sm font-bold mb-2 tracking-wide uppercase">{title}</p>
-          <h3 className="text-3xl sm:text-4xl font-black mb-2 text-gray-900 dark:text-white leading-none">{value}</h3>
-          <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">
-            {description}
-          </p>
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1">
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{title}</p>
+          <h3 className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">{value}</h3>
         </div>
-        <div className={`p-4 rounded-2xl bg-gradient-to-br ${iconColors[color]} text-white group-hover:scale-110 transition-transform duration-300 shadow-lg flex-shrink-0 ml-4`}>
-          <Icon size={24} />
+        <div className={`p-2 rounded-full ${styles.icon}`}>
+          <Icon size={20} />
         </div>
       </div>
-      {trend && (
-        <div className="flex items-center pt-3 border-t-2 border-gray-200 dark:border-gray-700">
-          <span className={`text-xs px-3 py-1 rounded-full font-black ${
-            trend > 0 ? 'bg-green-600 text-white' : 
-            trend < 0 ? 'bg-red-600 text-white' : 
-            'bg-gray-600 text-white'
+      
+      {trend !== undefined && (
+        <div className="flex items-center">
+          <div className={`w-2 h-2 rounded-full ${styles.accent} mr-2`}></div>
+          <span className={`text-xs font-medium ${
+            trend > 0 ? 'text-green-600 dark:text-green-400' : 
+            trend < 0 ? 'text-red-600 dark:text-red-400' : 
+            'text-gray-600 dark:text-gray-400'
           }`}>
-            {trend > 0 ? '+' : ''}{trend}% vs last week
+            {trend > 0 ? '↗' : trend < 0 ? '↘' : '→'} {Math.abs(trend)}% vs last week
           </span>
         </div>
       )}
-    </div>
+    </motion.div>
+  );
+};
+
+const RecentEntryItem = ({ log, index, onDelete }) => {
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [swipeProgress, setSwipeProgress] = useState(0);
+  
+  const swipeHandlers = useSwipeable({
+    onSwipedLeft: () => {
+      setSwipeProgress(100);
+      setTimeout(() => {
+        setIsDeleting(true);
+        onDelete(log.id);
+      }, 200);
+    },
+    onSwiping: (eventData) => {
+      if (eventData.dir === 'Left') {
+        const progress = Math.min(Math.abs(eventData.deltaX) / 100, 1) * 100;
+        setSwipeProgress(progress);
+      }
+    },
+    onSwiped: () => {
+      if (swipeProgress < 100) {
+        setSwipeProgress(0);
+      }
+    },
+    preventDefaultTouchmoveEvent: true,
+    trackMouse: false
+  });
+  
+  return (
+    <motion.div
+      {...swipeHandlers}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ 
+        opacity: isDeleting ? 0 : 1, 
+        x: isDeleting ? -100 : -swipeProgress / 3,
+        scale: isDeleting ? 0.95 : 1,
+        y: 0
+      }}
+      exit={{ opacity: 0, x: -100 }}
+      transition={{ delay: index * 0.05, duration: isDeleting ? 0.3 : 0.4, ease: "easeOut" }}
+      className="relative py-5 px-6 mx-2 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 active:scale-98 transition-all"
+      style={{
+        background: swipeProgress > 0 ? 
+          `linear-gradient(90deg, #fee2e2 0%, #fecaca ${swipeProgress}%, #ffffff ${swipeProgress}%)` : 
+          undefined
+      }}
+    >
+      {/* Swipe-to-delete indicator */}
+      {swipeProgress > 0 && (
+        <motion.div 
+          className="absolute right-6 top-1/2 transform -translate-y-1/2 flex items-center space-x-2 text-red-500"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: swipeProgress / 100, scale: swipeProgress > 50 ? 1 : 0.9 }}
+        >
+          <span className="text-sm font-medium">
+            {swipeProgress >= 80 ? 'Release to delete' : 'Swipe left'}
+          </span>
+          <Trash2 className="w-5 h-5" />
+        </motion.div>
+      )}
+      
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4 flex-1 min-w-0">
+          <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-xl">
+            <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-lg text-gray-900 dark:text-white">
+              {new Date(log.date).toLocaleDateString('en-GB', { 
+                weekday: 'short', 
+                month: 'short', 
+                day: 'numeric' 
+              })}
+            </p>
+            <div className="flex items-center space-x-2 mt-1">
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                {log.stops} stops
+              </span>
+              {log.extra > 0 && (
+                <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">
+                  +£{log.extra.toFixed(2)}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex items-center space-x-4">
+          <div className="text-right">
+            <p className="text-xl font-bold text-gray-900 dark:text-white">
+              £{log.total?.toFixed(2) || '0.00'}
+            </p>
+          </div>
+          
+          {/* Delete button for desktop */}
+          <motion.button
+            onClick={() => onDelete(log.id)}
+            whileTap={{ scale: 0.9 }}
+            className="hidden sm:flex p-3 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all duration-200"
+          >
+            <Trash2 className="w-5 h-5" />
+          </motion.button>
+        </div>
+      </div>
+    </motion.div>
   );
 };
 
@@ -101,11 +228,11 @@ const WelcomeMessage = ({ userName, isNewUser, todayAlreadyLogged }) => {
   };
   
   return (
-    <div className="px-4 sm:px-6 py-6 sm:py-8 text-center mb-6 sm:mb-8">
-      <h1 className="text-3xl sm:text-4xl font-black mb-4 tracking-tight bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
-        {greeting}, {userName?.split(' ')[0] || "Driver"}! 👋
+    <div className="text-center">
+      <h1 className="text-4xl sm:text-5xl font-bold mb-3 tracking-tight text-gray-900 dark:text-white">
+        {greeting}, {userName?.split(' ')[0] || "Driver"}
       </h1>
-      <p className="text-gray-700 dark:text-gray-300 text-base sm:text-lg font-semibold leading-relaxed max-w-4xl mx-auto">
+      <p className="text-gray-600 dark:text-gray-400 text-lg font-medium leading-relaxed max-w-2xl mx-auto">
         {getMotivationalMessage()}
       </p>
     </div>
@@ -250,6 +377,17 @@ const ModernDashboard = () => {
     
     return total + (parseFloat(extra) || 0);
   };
+
+  // Delete entry handler
+  const handleDeleteEntry = async (entryId) => {
+    // Add haptic feedback
+    if (navigator.vibrate) {
+      navigator.vibrate([10, 50, 10]);
+    }
+    
+    const updatedLogs = logs.filter(log => log.id !== entryId);
+    await updateLogs(updatedLogs);
+  };
   
 
   // Calculate summary stats with trends
@@ -365,19 +503,21 @@ const ModernDashboard = () => {
         </div>
       )}
       
-      <div className="max-w-6xl mx-auto py-4 sm:py-8 px-4 sm:px-6 w-full min-h-screen"> {/* Enhanced mobile padding */}
+      <div className="max-w-6xl mx-auto py-6 px-4 w-full min-h-screen bg-gray-50 dark:bg-gray-900 -mx-4 -my-6">
       {/* Main welcome message - visible only when scrolled to top */}
       {showWelcome && (
-        <WelcomeMessage 
-          userName={user?.displayName}
-          isNewUser={isNewUser}
-          todayAlreadyLogged={todayAlreadyLogged}
-        />
+        <div className="px-6 py-8 mb-8">
+          <WelcomeMessage 
+            userName={user?.displayName}
+            isNewUser={isNewUser}
+            todayAlreadyLogged={todayAlreadyLogged}
+          />
+        </div>
       )}
       
       {/* Quick Entry - Show prominently if today not logged */}
       {!todayAlreadyLogged && (
-        <div className="mb-8">
+        <div className="mb-8 px-4">
           <QuickEntry 
             logs={logs} 
             onAddEntry={handleQuickEntryAdd}
@@ -386,206 +526,210 @@ const ModernDashboard = () => {
         </div>
       )}
 
-      {/* Recent Entries Summary - Seamless Design */}
+      {/* Stats Summary - Apple-style section */}
+      <div className="mb-8">
+        <div className="px-6 mb-4">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Overview</h2>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">Your delivery performance at a glance</p>
+        </div>
+        <div className="px-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <DashboardCard 
+              title="Weekly Stops" 
+              value={stats.weeklyStops}
+              description="Click to view weekly stats"
+              icon={TrendingUp}
+              color="blue"
+              trend={stats.weeklyTrend}
+              onClick={() => {
+                setActiveTab("weekly");
+                setTimeout(() => {
+                  const tabsElement = document.querySelector('[data-state="active"]');
+                  if (tabsElement) {
+                    tabsElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                }, 100);
+              }}
+            />
+            <DashboardCard 
+              title="Daily Average" 
+              value={stats.avgStopsPerDay}
+              description="Click for detailed overview"
+              icon={Clock}
+              color="purple"
+              trend={stats.avgTrend}
+              onClick={() => {
+                setActiveTab("overview");
+                setTimeout(() => {
+                  const tabsElement = document.querySelector('[role="tabpanel"]');
+                  if (tabsElement) {
+                    tabsElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                }, 100);
+              }}
+            />
+            <DashboardCard 
+              title="Weekly Earnings" 
+              value={`£${stats.weeklyEarnings}`}
+              description="Click for invoice comparison"
+              icon={DollarSign}
+              color="green"
+              trend={stats.earningsTrend}
+              onClick={() => {
+                setActiveTab("invoice");
+                setTimeout(() => {
+                  const tabsElement = document.querySelector('[role="tabpanel"]');
+                  if (tabsElement) {
+                    tabsElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                }, 100);
+              }}
+            />
+            <DashboardCard 
+              title="Total Stops" 
+              value={stats.totalStops}
+              description="Click for complete overview"
+              icon={Award}
+              color="amber"
+              onClick={() => {
+                setActiveTab("overview");
+                setTimeout(() => {
+                  const tabsElement = document.querySelector('[role="tabpanel"]');
+                  if (tabsElement) {
+                    tabsElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                }, 100);
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Entries - Apple-style section */}
       {logs && logs.length > 0 && (
-        <div className="mb-6 sm:mb-8">
-          <div className="mb-6">
-            <div className="flex items-center mb-4 px-4 sm:px-0">
-              <div className="p-3 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl mr-4 shadow-lg">
-                <Clock className="w-6 h-6 text-white" />
+        <div className="mb-8">
+          <div className="px-6 mb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Recent Activity</h2>
+                <p className="text-gray-600 dark:text-gray-400 mt-1">Your latest delivery entries</p>
               </div>
-              <h2 className="text-2xl font-black text-gray-900 dark:text-white">Recent Entries</h2>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                className="text-blue-600 dark:text-blue-400 text-sm font-medium px-4 py-2 rounded-full bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-colors"
+                onClick={() => navigate('/app/entries')}
+              >
+                See All & Delete
+              </motion.button>
             </div>
           </div>
-          <div className="px-4 sm:px-0">
-              <div className="space-y-3">
-                {logs.slice(-3).reverse().map((log, index) => (
-                  <motion.div
-                    key={log.id || log.date}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="py-4 px-4 sm:px-0 transition-all duration-300 hover:-translate-y-1"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-3 sm:space-y-0">
-                      <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex-shrink-0">
-                          <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-gray-900 dark:text-white truncate">{new Date(log.date).toLocaleDateString()}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">{log.stops} stops</p>
-                        </div>
-                      </div>
-                      <div className="text-right sm:text-right text-left sm:ml-4 flex-shrink-0">
-                        <p className="font-bold text-emerald-600 dark:text-emerald-400 text-lg">£{log.total?.toFixed(2) || '0.00'}</p>
-                        {log.extra > 0 && <p className="text-xs text-gray-500">+£{log.extra.toFixed(2)} extra</p>}
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+          <div className="space-y-3">
+            {logs.slice(-3).reverse().map((log, index) => (
+              <RecentEntryItem 
+                key={log.id || log.date}
+                log={log}
+                index={index}
+                onDelete={handleDeleteEntry}
+              />
+            ))}
           </div>
         </div>
       )}
-      
-      {/* Stats Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 my-8">
-        <DashboardCard 
-          title="Weekly Stops" 
-          value={stats.weeklyStops}
-          description="Click to view weekly stats"
-          icon={TrendingUp}
-          color="blue"
-          trend={stats.weeklyTrend}
-          onClick={() => {
-            setActiveTab("weekly");
-            // Scroll to the tabs section
-            setTimeout(() => {
-              const tabsElement = document.querySelector('[data-state="active"]');
-              if (tabsElement) {
-                tabsElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              }
-            }, 100);
-          }}
-        />
-        <DashboardCard 
-          title="Daily Average" 
-          value={stats.avgStopsPerDay}
-          description="Click for detailed overview"
-          icon={Clock}
-          color="purple"
-          trend={stats.avgTrend}
-          onClick={() => {
-            setActiveTab("overview");
-            setTimeout(() => {
-              const tabsElement = document.querySelector('[role="tabpanel"]');
-              if (tabsElement) {
-                tabsElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              }
-            }, 100);
-          }}
-        />
-        <DashboardCard 
-          title="Weekly Earnings" 
-          value={`£${stats.weeklyEarnings}`}
-          description="Click for invoice comparison"
-          icon={DollarSign}
-          color="green"
-          trend={stats.earningsTrend}
-          onClick={() => {
-            setActiveTab("invoice");
-            setTimeout(() => {
-              const tabsElement = document.querySelector('[role="tabpanel"]');
-              if (tabsElement) {
-                tabsElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              }
-            }, 100);
-          }}
-        />
-        <DashboardCard 
-          title="Total Stops" 
-          value={stats.totalStops}
-          description="Click for complete overview"
-          icon={Award}
-          color="amber"
-          onClick={() => {
-            setActiveTab("overview");
-            setTimeout(() => {
-              const tabsElement = document.querySelector('[role="tabpanel"]');
-              if (tabsElement) {
-                tabsElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              }
-            }, 100);
-          }}
-        />
-      </div>
 
-      {/* Tabs Navigation - Seamless with Swipe Support */}
-      <div className="mb-6 sm:mb-8" {...swipeHandlers}>
+      {/* Tabs Navigation - Apple-style section */}
+      <div className="mb-8" {...swipeHandlers}>
+        <div className="px-6 mb-4">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Tools</h2>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">Manage your delivery data</p>
+        </div>
+        
         <Tabs 
           defaultValue="entry" 
           value={activeTab} 
           onValueChange={setActiveTab}
           className="w-full"
         >
-          <TabsList className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 p-4 sm:p-0 bg-transparent">
-            {/* Swipe indicator for mobile */}
-            <div className="col-span-full sm:hidden text-center mb-2">
-              <div className="inline-flex items-center text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-full">
-                <span>← Swipe to navigate →</span>
-              </div>
-            </div>
-            <TabsTrigger 
-              value="entry" 
-              className="flex items-center justify-center space-x-1 sm:space-x-2 py-4 px-2 sm:px-4 rounded-lg transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transform hover:scale-105 min-h-[48px]"
-            >
-              <Plus size={18} />
-              <span className="font-medium text-xs sm:text-sm">Log Entry</span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="weekly" 
-              className="flex items-center justify-center space-x-1 sm:space-x-2 py-4 px-2 sm:px-4 rounded-lg transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-lg transform hover:scale-105 min-h-[48px]"
-            >
-              <Calendar size={18} />
-              <span className="font-medium text-xs sm:text-sm">Weekly</span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="invoice" 
-              className="flex items-center justify-center space-x-1 sm:space-x-2 py-4 px-2 sm:px-4 rounded-lg transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-teal-600 data-[state=active]:text-white data-[state=active]:shadow-lg transform hover:scale-105 min-h-[48px]"
-            >
-              <FileText size={18} />
-              <span className="font-medium text-xs sm:text-sm">Invoice</span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="overview" 
-              className="flex items-center justify-center space-x-1 sm:space-x-2 py-4 px-2 sm:px-4 rounded-lg transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-red-600 data-[state=active]:text-white data-[state=active]:shadow-lg transform hover:scale-105 min-h-[48px] hidden sm:flex"
-            >
-              <BarChart2 size={18} />
-              <span className="font-medium text-xs sm:text-sm">Overview</span>
-            </TabsTrigger>
-          </TabsList>
-          
-          {/* Tab Content - Seamless */}
-          <TabsContent value="entry" className="mt-6">
-            <div className="mb-6 px-4 sm:px-0">
-              <div className="flex items-center mb-4">
-                <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl mr-4 shadow-lg">
-                  <Plus className="w-6 h-6 text-white" />
+          <div className="px-4 mb-6">
+            <TabsList className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-1 bg-gray-200 dark:bg-gray-800 rounded-2xl">
+              {/* Swipe indicator for mobile */}
+              <div className="col-span-full sm:hidden text-center py-2">
+                <div className="inline-flex items-center text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
+                  <span>← Swipe to navigate →</span>
                 </div>
-                <h2 className="text-2xl font-black text-gray-900 dark:text-white">Log New Entry</h2>
               </div>
+              <TabsTrigger 
+                value="entry" 
+                className="flex items-center justify-center space-x-2 py-3 px-4 rounded-xl transition-all duration-200 hover:bg-white/50 dark:hover:bg-gray-700 data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm min-h-[48px] font-medium"
+              >
+                <Plus size={18} />
+                <span className="text-sm">Log Entry</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="weekly" 
+                className="flex items-center justify-center space-x-2 py-3 px-4 rounded-xl transition-all duration-200 hover:bg-white/50 dark:hover:bg-gray-700 data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:shadow-sm min-h-[48px] font-medium"
+              >
+                <Calendar size={18} />
+                <span className="text-sm">Weekly</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="invoice" 
+                className="flex items-center justify-center space-x-2 py-3 px-4 rounded-xl transition-all duration-200 hover:bg-white/50 dark:hover:bg-gray-700 data-[state=active]:bg-white data-[state=active]:text-green-600 data-[state=active]:shadow-sm min-h-[48px] font-medium"
+              >
+                <FileText size={18} />
+                <span className="text-sm">Invoice</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="overview" 
+                className="flex items-center justify-center space-x-2 py-3 px-4 rounded-xl transition-all duration-200 hover:bg-white/50 dark:hover:bg-gray-700 data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-sm min-h-[48px] font-medium"
+              >
+                <BarChart2 size={18} />
+                <span className="text-sm">Overview</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
+          
+          {/* Tab Content - Apple-style */}
+          <TabsContent value="entry" className="px-4">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700">
+              <StopEntryForm logs={logs} updateLogs={updateLogs} />
             </div>
-            <StopEntryForm logs={logs} updateLogs={updateLogs} />
           </TabsContent>
           
-          <TabsContent value="weekly" className="mt-6">
-            <WeeklyStats logs={logs} />
+          <TabsContent value="weekly" className="px-4">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700">
+              <WeeklyStats logs={logs} />
+            </div>
           </TabsContent>
           
-          <TabsContent value="invoice" className="mt-6">
-            <InvoiceComparison logs={logs} />
+          <TabsContent value="invoice" className="px-4">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700">
+              <InvoiceComparison logs={logs} />
+            </div>
           </TabsContent>
           
-          <TabsContent value="overview" className="mt-6">
-            <StatsOverview logs={logs} />
+          <TabsContent value="overview" className="px-4">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700">
+              <StatsOverview logs={logs} />
+            </div>
           </TabsContent>
         </Tabs>
       </div>
 
       {/* Creator Credit */}
-      <div className="text-center mt-8 mb-4">
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          made with &lt;3 by{' '}
-          <a
-            href="https://www.linkedin.com/in/davidwboni/" 
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-semibold transition-colors duration-200 hover:underline"
-          >
-            david boni
-          </a>
-        </p>
+      <div className="text-center mt-12 mb-8 px-6">
+        <div className="py-6 border-t border-gray-200 dark:border-gray-700">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            made with &lt;3 by{' '}
+            <a
+              href="https://www.linkedin.com/in/davidwboni/" 
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-semibold transition-colors duration-200 hover:underline"
+            >
+              david boni
+            </a>
+          </p>
+        </div>
       </div>
     </div>
     </div>

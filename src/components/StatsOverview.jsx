@@ -240,133 +240,145 @@ const StatsOverview = ({ logs = [], loading = false }) => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 -mx-6 -mt-6">
+      {/* Header */}
+      <div className="px-4 py-4 bg-white dark:bg-gray-800">
+        <div className="text-center">
+          <h1 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
+            Statistics Overview
+          </h1>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Your delivery insights
+          </p>
+        </div>
+      </div>
+      
       {/* SUMMARY CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Total Stops</CardTitle>
+      <div className="px-4">
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-gray-100 dark:border-gray-700">
+            <div className="text-center">
+              <div className="text-lg font-bold text-gray-900 dark:text-white">{overallStats.totalStops}</div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Total Stops</p>
+              <p className="text-xs text-gray-400">{overallStats.totalDays} days</p>
+            </div>
+          </div>
+          
+          <div className="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-gray-100 dark:border-gray-700">
+            <div className="text-center">
+              <div className="text-lg font-bold text-gray-900 dark:text-white">{overallStats.avgStopsPerDay}</div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Daily Avg</p>
+              <p className="text-xs text-gray-400">per day</p>
+            </div>
+          </div>
+          
+          <div className="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-gray-100 dark:border-gray-700">
+            <div className="text-center">
+              <div className="text-lg font-bold text-gray-900 dark:text-white">{overallStats.bestDay.stops}</div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Best Day</p>
+              <p className="text-xs text-gray-400">
+                {overallStats.bestDay.date ? 
+                  format(new Date(overallStats.bestDay.date), 'MMM dd') : 
+                  'N/A'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* WEEKLY CHART */}
+      <div className="px-4">
+        <Card className="rounded-2xl border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">This Week's Stops</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{overallStats.totalStops}</div>
-            <p className="text-sm text-gray-500">Over {overallStats.totalDays} days</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Daily Average</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{overallStats.avgStopsPerDay}</div>
-            <p className="text-sm text-gray-500">Stops per day</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Best Day</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{overallStats.bestDay.stops}</div>
-            <p className="text-sm text-gray-500">
-              {overallStats.bestDay.date ? 
-                format(new Date(overallStats.bestDay.date), 'MMM dd, yyyy') : 
-                'N/A'}
-            </p>
+          <CardContent className="p-4">
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={chartData.weeklyData}
+                  margin={{ top: 10, right: 10, left: 10, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="name" fontSize={10} />
+                  <YAxis fontSize={10} />
+                  <Tooltip 
+                    formatter={(value) => [`${value} stops`, 'Stops']}
+                    labelFormatter={(label) => {
+                      const day = chartData.weeklyData.find(d => d.name === label);
+                      return day ? day.fullDate : label;
+                    }}
+                    contentStyle={{ fontSize: '12px' }}
+                  />
+                  <Bar dataKey="stops" fill="#3B82F6" name="Stops" radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* WEEKLY CHART */}
-      <Card>
-        <CardHeader>
-          <CardTitle>This Week's Stops</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={chartData.weeklyData}
-                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip 
-                  formatter={(value) => [`${value} stops`, 'Stops']}
-                  labelFormatter={(label) => {
-                    const day = chartData.weeklyData.find(d => d.name === label);
-                    return day ? day.fullDate : label;
-                  }}
-                />
-                <Legend />
-                <Bar dataKey="stops" fill="#3B82F6" name="Stops" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* MONTHLY TREND */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Monthly Trend</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={chartData.monthlyData}
-                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip 
-                  formatter={(value) => [`${value} stops`, 'Stops']}
-                />
-                <Legend />
-                <Line type="monotone" dataKey="stops" stroke="#3B82F6" activeDot={{ r: 8 }} name="Total Stops" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* DAY OF WEEK AVERAGES */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Average Stops by Day</CardTitle>
+      <div className="px-4">
+        <Card className="rounded-2xl border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Monthly Trend</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="h-80">
+          <CardContent className="p-4">
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={chartData.monthlyData}
+                  margin={{ top: 10, right: 10, left: 10, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="name" fontSize={10} />
+                  <YAxis fontSize={10} />
+                  <Tooltip 
+                    formatter={(value) => [`${value} stops`, 'Stops']}
+                    contentStyle={{ fontSize: '12px' }}
+                  />
+                  <Line type="monotone" dataKey="stops" stroke="#3B82F6" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 4 }} name="Total Stops" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* DAY OF WEEK AVERAGES - Single column on mobile */}
+      <div className="px-4 space-y-4">
+        <Card className="rounded-2xl border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Average Stops by Day</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="h-40">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={chartData.dayOfWeekData}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="name" fontSize={10} />
+                  <YAxis fontSize={10} />
                   <Tooltip 
                     formatter={(value, name) => [value, name === 'average' ? 'Average Stops' : 'Total Stops']}
+                    contentStyle={{ fontSize: '12px' }}
                   />
-                  <Legend />
-                  <Bar dataKey="average" fill="#8884d8" name="Average Stops" />
+                  <Bar dataKey="average" fill="#8884d8" name="Average Stops" radius={[2, 2, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Workload Distribution</CardTitle>
+        <Card className="rounded-2xl border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Workload Distribution</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="h-80">
+          <CardContent className="p-4">
+            <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -375,9 +387,10 @@ const StatsOverview = ({ logs = [], loading = false }) => {
                     cy="50%"
                     labelLine={false}
                     label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
+                    outerRadius={60}
                     fill="#8884d8"
                     dataKey="stops"
+                    fontSize={10}
                   >
                     {chartData.dayOfWeekData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -385,8 +398,8 @@ const StatsOverview = ({ logs = [], loading = false }) => {
                   </Pie>
                   <Tooltip 
                     formatter={(value) => [`${value} stops`, 'Stops']}
+                    contentStyle={{ fontSize: '12px' }}
                   />
-                  <Legend />
                 </PieChart>
               </ResponsiveContainer>
             </div>

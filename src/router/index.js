@@ -79,6 +79,7 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <Navigate to="/app/dashboard" /> },
           { path: 'dashboard', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><DashboardWrapper /></React.Suspense></ErrorBoundary> },
+          { path: 'entries', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><EntriesWrapper /></React.Suspense></ErrorBoundary> },
           { path: 'profile', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><ProfileWrapper /></React.Suspense></ErrorBoundary> },
           { path: 'settings', element: <PaymentConfig config={{}} /> },
           { path: 'upgrade', element: <UpgradeToPro /> },

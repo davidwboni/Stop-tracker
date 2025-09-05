@@ -340,34 +340,34 @@ const Profile = ({ userId, user, onLogout, onHome, updateProfilePic }) => {
   }
   
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-950 pb-24">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
-        className="space-y-6 sm:space-y-8"
+        className="space-y-4"
       >
         {/* Profile Card */}
-        <Card className="overflow-hidden shadow-apple-card hover:shadow-apple-card-hover transition-all duration-500 border-0">
-          <CardHeader className="relative bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 text-white py-8 sm:py-12 overflow-hidden">
+        <Card className="mx-4 overflow-hidden shadow-apple-card hover:shadow-apple-card-hover transition-all duration-500 border-0 rounded-2xl">
+          <CardHeader className="relative bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 text-white py-6 overflow-hidden">
             <div className="absolute inset-0 bg-black/10"></div>
             <div className="absolute -top-4 -right-4 w-32 h-32 bg-white/10 rounded-full"></div>
             <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-white/5 rounded-full"></div>
             
-            <CardTitle className="relative z-10 flex items-center text-2xl sm:text-3xl font-bold">
-              <div className="p-3 sm:p-4 bg-white/20 rounded-2xl mr-3 sm:mr-4 backdrop-blur-sm">
-                <User className="w-6 h-6 sm:w-8 sm:h-8" />
+            <CardTitle className="relative z-10 flex items-center text-xl font-bold">
+              <div className="p-3 bg-white/20 rounded-2xl mr-3 backdrop-blur-sm">
+                <User className="w-6 h-6" />
               </div>
               Your Profile
             </CardTitle>
-            <p className="relative z-10 text-blue-100 mt-2 sm:mt-3 text-base sm:text-lg font-medium">Manage your account settings and track your achievements</p>
+            <p className="relative z-10 text-blue-100 mt-2 text-sm font-medium">Manage your account and achievements</p>
           </CardHeader>
-          <CardContent className="p-4 sm:p-6 lg:p-10 bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50">
-            <div className="flex flex-col lg:flex-row gap-6 sm:gap-8 lg:gap-12 items-center lg:items-start">
+          <CardContent className="p-4 bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50">
+            <div className="flex flex-col gap-6 items-center">
               {/* Profile Picture */}
-              <div className="flex flex-col items-center lg:items-start">
-                <div className="relative group mb-6">
-                  <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-3xl overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 shadow-2xl ring-4 ring-white/50 dark:ring-gray-600/50 group-hover:ring-blue-300 dark:group-hover:ring-blue-600 transition-all duration-300">
+              <div className="flex flex-col items-center">
+                <div className="relative group mb-4">
+                  <div className="w-24 h-24 rounded-3xl overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 shadow-2xl ring-4 ring-white/50 dark:ring-gray-600/50 group-hover:ring-blue-300 dark:group-hover:ring-blue-600 transition-all duration-300">
                     {userData?.photoURL ? (
                       <img 
                         src={userData.photoURL} 
@@ -377,12 +377,12 @@ const Profile = ({ userId, user, onLogout, onHome, updateProfilePic }) => {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400">
-                        <User className="w-16 h-16 sm:w-20 sm:h-20" />
+                        <User className="w-12 h-12" />
                       </div>
                     )}
                   </div>
-                  <label className="absolute -bottom-2 -right-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-2 sm:p-3 rounded-2xl cursor-pointer hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 transform hover:scale-110 shadow-lg">
-                    <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <label className="absolute -bottom-1 -right-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-2 rounded-2xl cursor-pointer hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 transform hover:scale-110 shadow-lg">
+                    <Camera className="w-4 h-4" />
                     <input 
                       type="file" 
                       className="hidden" 
@@ -397,10 +397,10 @@ const Profile = ({ userId, user, onLogout, onHome, updateProfilePic }) => {
                     </div>
                   )}
                 </div>
-                <div className="text-center lg:text-left">
-                  <div className="inline-flex items-center px-4 py-2 rounded-2xl bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 border border-blue-200/50 dark:border-blue-700/50">
-                    <Award className="w-4 h-4 mr-2 text-blue-600 dark:text-blue-400" />
-                    <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                <div className="text-center">
+                  <div className="inline-flex items-center px-3 py-1.5 rounded-2xl bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 border border-blue-200/50 dark:border-blue-700/50">
+                    <Award className="w-3 h-3 mr-2 text-blue-600 dark:text-blue-400" />
+                    <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">
                       {userData?.role === 'pro' ? 'Pro Member' : 'Free User'}
                     </span>
                   </div>
@@ -408,7 +408,7 @@ const Profile = ({ userId, user, onLogout, onHome, updateProfilePic }) => {
               </div>
               
               {/* Profile Info */}
-              <div className="flex-1">
+              <div className="w-full">
                 {editMode ? (
                   <div className="space-y-4">
                     <div>
@@ -482,23 +482,24 @@ const Profile = ({ userId, user, onLogout, onHome, updateProfilePic }) => {
                   </div>
                 ) : (
                   <div>
-                    <div className="mb-6">
-                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    <div className="mb-6 text-center">
+                      <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                         {userData?.displayName || 'User'}
                       </h2>
-                      <p className="text-gray-600 dark:text-gray-300 mt-1">
+                      <p className="text-gray-600 dark:text-gray-300 mt-1 text-sm">
                         {userData?.email}
                       </p>
                       {userData?.bio && (
-                        <p className="text-gray-700 dark:text-gray-300 mt-4">
+                        <p className="text-gray-700 dark:text-gray-300 mt-3 text-sm">
                           {userData.bio}
                         </p>
                       )}
                     </div>
-                    <div>
+                    <div className="text-center">
                       <Button
                         onClick={() => setEditMode(true)}
-                        className="bg-blue-500 hover:bg-blue-600 text-white"
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-8"
+                        size="sm"
                       >
                         Edit Profile
                       </Button>
@@ -525,32 +526,32 @@ const Profile = ({ userId, user, onLogout, onHome, updateProfilePic }) => {
         </Card>
         
         {/* Achievements Card */}
-        <Card className="shadow-apple-card border-0 bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50">
-          <CardHeader className="pb-6">
+        <Card className="mx-4 shadow-apple-card border-0 bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50 rounded-2xl">
+          <CardHeader className="pb-4">
             <div className="flex items-center">
-              <div className="p-3 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-2xl mr-4 shadow-lg">
-                <Award className="w-6 h-6 text-white" />
+              <div className="p-2 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-2xl mr-3 shadow-lg">
+                <Award className="w-5 h-5 text-white" />
               </div>
-              <CardTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+              <CardTitle className="text-lg font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
                 Achievements
               </CardTitle>
             </div>
           </CardHeader>
-          <CardContent className="px-8">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <CardContent className="px-4">
+            <div className="grid grid-cols-1 gap-3">
               {achievements.map((achievement, index) => (
                 <motion.div 
                   key={index}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1, duration: 0.5 }}
-                  className={`group p-6 rounded-3xl border-2 flex items-center gap-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
+                  className={`group p-4 rounded-2xl border flex items-center gap-4 transition-all duration-300 ${
                     achievement.unlocked 
                       ? "border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 dark:border-blue-700 dark:from-blue-900/20 dark:to-indigo-900/20 hover:shadow-blue-200/50" 
                       : "border-gray-200 bg-gray-50/50 dark:border-gray-700 dark:bg-gray-800/30 hover:border-gray-300 dark:hover:border-gray-600"
                   }`}
                 >
-                  <div className={`p-4 rounded-2xl transition-all duration-300 group-hover:scale-110 ${
+                  <div className={`p-3 rounded-2xl transition-all duration-300 ${
                     achievement.unlocked 
                       ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg" 
                       : "bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
@@ -558,7 +559,7 @@ const Profile = ({ userId, user, onLogout, onHome, updateProfilePic }) => {
                     {achievement.icon}
                   </div>
                   <div className="flex-1">
-                    <h3 className={`font-bold text-lg mb-1 ${
+                    <h3 className={`font-bold text-base mb-1 ${
                       achievement.unlocked 
                         ? "text-blue-900 dark:text-blue-100" 
                         : "text-gray-500 dark:text-gray-400"
@@ -580,24 +581,24 @@ const Profile = ({ userId, user, onLogout, onHome, updateProfilePic }) => {
         
         {/* Demo User Upgrade Card */}
         {userData?.isDemo && (
-          <Card className="shadow-apple-card border-0 bg-gradient-to-br from-emerald-50 to-cyan-50 dark:from-emerald-900/20 dark:to-cyan-900/20 border-2 border-emerald-200 dark:border-emerald-700">
-            <CardHeader className="pb-6">
+          <Card className="mx-4 shadow-apple-card border-0 bg-gradient-to-br from-emerald-50 to-cyan-50 dark:from-emerald-900/20 dark:to-cyan-900/20 border-2 border-emerald-200 dark:border-emerald-700 rounded-2xl">
+            <CardHeader className="pb-4">
               <div className="flex items-center">
-                <div className="p-3 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-2xl mr-4 shadow-lg">
-                  <User className="w-6 h-6 text-white" />
+                <div className="p-2 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-2xl mr-3 shadow-lg">
+                  <User className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <CardTitle className="text-2xl font-bold bg-gradient-to-r from-emerald-700 to-cyan-700 bg-clip-text text-transparent">
+                  <CardTitle className="text-lg font-bold bg-gradient-to-r from-emerald-700 to-cyan-700 bg-clip-text text-transparent">
                     Ready to Save Your Progress?
                   </CardTitle>
-                  <p className="text-emerald-600 dark:text-emerald-400 mt-1">
+                  <p className="text-emerald-600 dark:text-emerald-400 mt-1 text-sm">
                     Create a real account to keep your delivery data forever!
                   </p>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="px-8">
-              <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm p-6 rounded-2xl border border-emerald-200 dark:border-emerald-700">
+            <CardContent className="px-4">
+              <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm p-4 rounded-2xl border border-emerald-200 dark:border-emerald-700">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="flex-1">
                     <h3 className="font-bold text-emerald-900 dark:text-emerald-100 text-lg mb-2">
@@ -645,16 +646,16 @@ const Profile = ({ userId, user, onLogout, onHome, updateProfilePic }) => {
         )}
         
         {/* Account Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Settings className="mr-2" />
+        <Card className="mx-4 rounded-2xl">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center text-lg">
+              <Settings className="mr-2 w-5 h-5" />
               Account Settings
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4">
             <div className="space-y-4">
-              <div className="flex justify-between items-center p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex justify-between items-center p-3 rounded-lg border border-gray-200 dark:border-gray-700">
                 <div>
                   <h3 className="font-medium text-gray-900 dark:text-white">Subscription Plan</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -674,7 +675,7 @@ const Profile = ({ userId, user, onLogout, onHome, updateProfilePic }) => {
                 </Button>
               </div>
               
-              <div className="flex justify-between items-center p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex justify-between items-center p-3 rounded-lg border border-gray-200 dark:border-gray-700">
                 <div>
                   <h3 className="font-medium text-gray-900 dark:text-white">Account Actions</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
