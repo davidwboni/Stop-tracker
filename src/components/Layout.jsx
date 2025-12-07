@@ -62,10 +62,10 @@ const Layout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/20 to-purple-50/30 dark:from-gray-900 dark:via-blue-900/10 dark:to-purple-900/20 flex flex-col">
+    <div className="min-h-[100dvh] bg-gradient-to-br from-gray-50 via-blue-50/20 to-purple-50/30 dark:from-gray-900 dark:via-blue-900/10 dark:to-purple-900/20 flex flex-col pt-safe">
       <SyncStatus />
-      
-      <main className="max-w-6xl mx-auto pt-8 pb-8 px-4 flex-grow overflow-y-auto">
+
+      <main className="max-w-6xl mx-auto pt-8 pb-8 px-4 flex-grow overflow-y-auto touch-manipulation">
         <ErrorBoundary>
           <div className="transition-all duration-500 ease-out">
             <Outlet />
@@ -73,12 +73,12 @@ const Layout = () => {
         </ErrorBoundary>
         <AppFooter />
       </main>
-      
-      <AppNavigation className="flex-shrink-0" />
-      
+
+      <AppNavigation className="flex-shrink-0 pb-safe" />
+
       {/* Floating Action Button for Quick Entry */}
       {user && (
-        <FloatingActionButton 
+        <FloatingActionButton
           onAddEntry={handleQuickEntry}
           isVisible={true}
         />

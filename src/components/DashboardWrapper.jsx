@@ -1,10 +1,10 @@
 import React from 'react';
 import { useData } from '../contexts/DataContext';
-import ModernDashboard from './ModernDashboard';
+import SimpleDashboard from './SimpleDashboard';
 
 const DashboardWrapper = () => {
   const { logs, updateLogs, loading } = useData();
-  
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -12,8 +12,8 @@ const DashboardWrapper = () => {
       </div>
     );
   }
-  
-  return <ModernDashboard logs={logs} updateLogs={updateLogs} />;
+
+  return <SimpleDashboard logs={logs} updateLogs={updateLogs} />;
 };
 
 export default DashboardWrapper;

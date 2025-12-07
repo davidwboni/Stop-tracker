@@ -241,56 +241,78 @@ const StatsOverview = ({ logs = [], loading = false }) => {
 
   return (
     <div className="space-y-4 -mx-6 -mt-6">
-      {/* Header */}
-      <div className="px-4 py-4 bg-white dark:bg-gray-800">
-        <div className="text-center">
-          <h1 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
+      {/* Header - 2.0 Style */}
+      <div className="px-4 py-6 bg-gradient-to-br from-purple-500 via-pink-500 to-rose-600 text-white relative overflow-hidden">
+        <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/10 rounded-full"></div>
+        <div className="absolute -bottom-4 -left-4 w-24 h-24 bg-white/5 rounded-full"></div>
+        <div className="text-center relative z-10">
+          <h1 className="text-xl font-bold text-white mb-2">
             Statistics Overview
           </h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Your delivery insights
+          <p className="text-sm text-white/90">
+            Your delivery insights at a glance
           </p>
         </div>
       </div>
       
-      {/* SUMMARY CARDS */}
+      {/* SUMMARY CARDS - 2.0 Style */}
       <div className="px-4">
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-gray-100 dark:border-gray-700">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            whileHover={{ scale: 1.05 }}
+            transition={{ duration: 0.2 }}
+            className="bg-gradient-to-br from-blue-500 to-indigo-600 p-4 rounded-2xl shadow-lg text-white touch-manipulation"
+          >
             <div className="text-center">
-              <div className="text-lg font-bold text-gray-900 dark:text-white">{overallStats.totalStops}</div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Total Stops</p>
-              <p className="text-xs text-gray-400">{overallStats.totalDays} days</p>
+              <div className="text-2xl font-bold">{overallStats.totalStops}</div>
+              <p className="text-xs text-white/80 mt-1 font-medium">Total Stops</p>
+              <p className="text-xs text-white/60">{overallStats.totalDays} days</p>
             </div>
-          </div>
-          
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-gray-100 dark:border-gray-700">
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1 }}
+            whileHover={{ scale: 1.05 }}
+            className="bg-gradient-to-br from-purple-500 to-pink-600 p-4 rounded-2xl shadow-lg text-white touch-manipulation"
+          >
             <div className="text-center">
-              <div className="text-lg font-bold text-gray-900 dark:text-white">{overallStats.avgStopsPerDay}</div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Daily Avg</p>
-              <p className="text-xs text-gray-400">per day</p>
+              <div className="text-2xl font-bold">{overallStats.avgStopsPerDay}</div>
+              <p className="text-xs text-white/80 mt-1 font-medium">Daily Avg</p>
+              <p className="text-xs text-white/60">per day</p>
             </div>
-          </div>
-          
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-gray-100 dark:border-gray-700">
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2 }}
+            whileHover={{ scale: 1.05 }}
+            className="bg-gradient-to-br from-emerald-500 to-cyan-600 p-4 rounded-2xl shadow-lg text-white touch-manipulation"
+          >
             <div className="text-center">
-              <div className="text-lg font-bold text-gray-900 dark:text-white">{overallStats.bestDay.stops}</div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Best Day</p>
-              <p className="text-xs text-gray-400">
-                {overallStats.bestDay.date ? 
-                  format(new Date(overallStats.bestDay.date), 'MMM dd') : 
+              <div className="text-2xl font-bold">{overallStats.bestDay.stops}</div>
+              <p className="text-xs text-white/80 mt-1 font-medium">Best Day</p>
+              <p className="text-xs text-white/60">
+                {overallStats.bestDay.date ?
+                  format(new Date(overallStats.bestDay.date), 'MMM dd') :
                   'N/A'}
               </p>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
 
-      {/* WEEKLY CHART */}
+      {/* WEEKLY CHART - 2.0 Style */}
       <div className="px-4">
-        <Card className="rounded-2xl border-0 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">This Week's Stops</CardTitle>
+        <Card className="rounded-2xl border-2 border-blue-100 dark:border-blue-900 shadow-xl overflow-hidden">
+          <CardHeader className="pb-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
+            <CardTitle className="text-sm font-semibold text-blue-900 dark:text-blue-100 flex items-center gap-2">
+              📊 This Week's Stops
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-4">
             <div className="h-48">
@@ -318,11 +340,13 @@ const StatsOverview = ({ logs = [], loading = false }) => {
         </Card>
       </div>
 
-      {/* MONTHLY TREND */}
+      {/* MONTHLY TREND - 2.0 Style */}
       <div className="px-4">
-        <Card className="rounded-2xl border-0 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Monthly Trend</CardTitle>
+        <Card className="rounded-2xl border-2 border-purple-100 dark:border-purple-900 shadow-xl overflow-hidden">
+          <CardHeader className="pb-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20">
+            <CardTitle className="text-sm font-semibold text-purple-900 dark:text-purple-100 flex items-center gap-2">
+              📈 Monthly Trend
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-4">
             <div className="h-48">
@@ -346,11 +370,13 @@ const StatsOverview = ({ logs = [], loading = false }) => {
         </Card>
       </div>
 
-      {/* DAY OF WEEK AVERAGES - Single column on mobile */}
+      {/* DAY OF WEEK AVERAGES - 2.0 Style */}
       <div className="px-4 space-y-4">
-        <Card className="rounded-2xl border-0 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Average Stops by Day</CardTitle>
+        <Card className="rounded-2xl border-2 border-emerald-100 dark:border-emerald-900 shadow-xl overflow-hidden">
+          <CardHeader className="pb-3 bg-gradient-to-r from-emerald-50 to-cyan-50 dark:from-emerald-900/20 dark:to-cyan-900/20">
+            <CardTitle className="text-sm font-semibold text-emerald-900 dark:text-emerald-100 flex items-center gap-2">
+              📅 Average Stops by Day
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-4">
             <div className="h-40">
@@ -373,9 +399,11 @@ const StatsOverview = ({ logs = [], loading = false }) => {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-0 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Workload Distribution</CardTitle>
+        <Card className="rounded-2xl border-2 border-amber-100 dark:border-amber-900 shadow-xl overflow-hidden">
+          <CardHeader className="pb-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20">
+            <CardTitle className="text-sm font-semibold text-amber-900 dark:text-amber-100 flex items-center gap-2">
+              🥧 Workload Distribution
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-4">
             <div className="h-48">

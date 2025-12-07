@@ -1,0 +1,155 @@
+/**
+ * Safe Area Utilities for Android-first Edge-to-Edge Display
+ * Handles status bar, navigation bar, and keyboard safe areas
+ */
+
+:root {
+  /* Safe area insets for notches and system UI */
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+
+  /* Color tokens for theming */
+  --surface: theme('colors.gray.50');
+  --surface-elevated: theme('colors.white');
+  --text-primary: theme('colors.gray.900');
+  --text-secondary: theme('colors.gray.600');
+  --brand: theme('colors.blue.600');
+  --brand-hover: theme('colors.blue.700');
+}
+
+:root[class~="dark"] {
+  --surface: theme('colors.gray.900');
+  --surface-elevated: theme('colors.gray.800');
+  --text-primary: theme('colors.white');
+  --text-secondary: theme('colors.gray.400');
+  --brand: theme('colors.blue.500');
+  --brand-hover: theme('colors.blue.600');
+}
+
+/* Utility classes for safe areas */
+.pt-safe {
+  padding-top: var(--sat) !important;
+}
+
+.pr-safe {
+  padding-right: var(--sar) !important;
+}
+
+.pb-safe {
+  padding-bottom: var(--sab) !important;
+}
+
+.pl-safe {
+  padding-left: var(--sal) !important;
+}
+
+.p-safe {
+  padding-top: var(--sat) !important;
+  padding-right: var(--sar) !important;
+  padding-bottom: var(--sab) !important;
+  padding-left: var(--sal) !important;
+}
+
+.mt-safe {
+  margin-top: var(--sat) !important;
+}
+
+.mr-safe {
+  margin-right: var(--sar) !important;
+}
+
+.mb-safe {
+  margin-bottom: var(--sab) !important;
+}
+
+.ml-safe {
+  margin-left: var(--sal) !important;
+}
+
+.m-safe {
+  margin-top: var(--sat) !important;
+  margin-right: var(--sar) !important;
+  margin-bottom: var(--sab) !important;
+  margin-left: var(--sal) !important;
+}
+
+/* Safe height using dynamic viewport */
+.h-safe-screen {
+  height: 100dvh !important;
+}
+
+.min-h-safe-screen {
+  min-height: 100dvh !important;
+}
+
+.max-h-safe-screen {
+  max-height: 100dvh !important;
+}
+
+/* Combined safe area + dynamic viewport utilities */
+.safe-area-screen {
+  min-height: 100dvh;
+  padding-top: var(--sat);
+  padding-right: var(--sar);
+  padding-bottom: var(--sab);
+  padding-left: var(--sal);
+}
+
+/* For bottom navigation/FAB - ensures they're above system nav bar */
+.bottom-safe {
+  bottom: var(--sab);
+}
+
+/* Top status bar safe spacing */
+.top-safe {
+  top: var(--sat);
+}
+
+/* Support for both env() and constant() (older iOS) */
+@supports (padding: max(0px)) {
+  .pt-safe {
+    padding-top: max(var(--sat), 0px) !important;
+  }
+
+  .pb-safe {
+    padding-bottom: max(var(--sab), 0px) !important;
+  }
+
+  .pl-safe {
+    padding-left: max(var(--sal), 0px) !important;
+  }
+
+  .pr-safe {
+    padding-right: max(var(--sar), 0px) !important;
+  }
+}
+
+/* Prevent layout shift when keyboard appears */
+.keyboard-aware {
+  transition: padding-bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Optimize for Android touch */
+.touch-manipulation {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent overscroll on Android */
+body {
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure content fills viewport correctly */
+html, body, #root {
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+}

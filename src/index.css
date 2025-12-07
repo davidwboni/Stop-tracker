@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import './styles/safe-area.css';
 
 @tailwind base;
 @tailwind components;
@@ -34,30 +35,30 @@
   }
 
   .dark {
-    /* Dark mode color theme */
-    --background: #1C1C1E;
+    /* Dark mode color theme - Sleek v3.0 */
+    --background: #0F1419;
     --foreground: #FFFFFF;
-    
-    --card: #2C2C2E;
+
+    --card: #1A1F2E;
     --card-foreground: #FFFFFF;
-    
+
     --primary: #0A84FF;
     --primary-foreground: #FFFFFF;
-    
+
     --secondary: #5E5CE6;
     --secondary-foreground: #FFFFFF;
-    
-    --muted: #3A3A3C;
-    --muted-foreground: #AEAEB2;
-    
-    --accent: #30D158;
-    --accent-foreground: #FFFFFF;
-    
+
+    --muted: #2A3142;
+    --muted-foreground: #8E92A1;
+
+    --accent: #34C759;
+    --accent-foreground: #0F1419;
+
     --destructive: #FF453A;
     --destructive-foreground: #FFFFFF;
-    
-    --border: #3A3A3C;
-    --input: #3A3A3C;
+
+    --border: #2A3142;
+    --input: #1A1F2E;
     --ring: #0A84FF;
   }
 }
@@ -97,32 +98,46 @@
   .shadow-apple-button {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
   }
-  
+
   .shadow-apple-card {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
   }
-  
+
   .shadow-apple-card-hover {
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08);
   }
-  
-  .gradient-apple {
-    background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255,255,255,0.3);
+
+  .dark .shadow-apple-card {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 2px 6px rgba(0, 0, 0, 0.15);
+  }
+
+  .dark .shadow-apple-card-hover {
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.25);
   }
   
+  .gradient-apple {
+    background: linear-gradient(135deg, rgba(10, 132, 255, 0.1) 0%, rgba(52, 199, 89, 0.05) 100%);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(10, 132, 255, 0.2);
+  }
+
   .text-gradient {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #0A84FF 0%, #30D158 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
-  
+
   .glassmorphism {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(26, 31, 46, 0.5);
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(42, 49, 66, 0.5);
+  }
+
+  .dark .glassmorphism {
+    background: rgba(26, 31, 46, 0.6);
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(42, 49, 66, 0.6);
   }
   
   .hover-lift {

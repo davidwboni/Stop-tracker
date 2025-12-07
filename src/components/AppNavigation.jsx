@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Home, FileText, BarChart2, User, Settings, Calendar } from "lucide-react";
+import { Home, FileText, BarChart2, User, Calculator, TrendingUp } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const AppNavigation = () => {
@@ -8,39 +8,40 @@ const AppNavigation = () => {
   const currentPath = location.pathname;
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
-  
+
   const scrollToTop = () => {
     window.scrollTo({
       top: 0,
       behavior: 'smooth'
     });
+
+    // Add haptic feedback
+    if (navigator.vibrate) {
+      navigator.vibrate(5);
+    }
   };
 
-  // Auto-hide navigation on scroll
+  // Auto-hide navigation on scroll (disabled for better UX)
   useEffect(() => {
     const controlNavbar = () => {
       const currentScrollY = window.scrollY;
-      
-      if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        // Scrolling down & past 100px
-        setIsVisible(false);
-      } else {
-        // Scrolling up or at the top
-        setIsVisible(true);
-      }
-      
+
+      // Keep navbar always visible for easier access
+      setIsVisible(true);
+
       setLastScrollY(currentScrollY);
     };
 
     window.addEventListener('scroll', controlNavbar);
     return () => window.removeEventListener('scroll', controlNavbar);
   }, [lastScrollY]);
-  
+
   const navItems = [
     { path: '/app/dashboard', icon: Home, label: 'Home', color: 'from-blue-500 to-indigo-600' },
     { path: '/app/entries', icon: FileText, label: 'Entries', color: 'from-orange-500 to-red-600' },
-    { path: '/app/profile', icon: User, label: 'Profile', color: 'from-purple-500 to-pink-600' },
-    { path: '/app/settings', icon: Settings, label: 'Settings', color: 'from-green-500 to-teal-600' },
+    { path: '/app/invoice', icon: Calculator, label: 'Invoice', color: 'from-rose-500 to-pink-600' },
+    { path: '/app/stats', icon: TrendingUp, label: 'Stats', color: 'from-purple-500 to-indigo-600' },
+    { path: '/app/profile', icon: User, label: 'Profile', color: 'from-emerald-500 to-teal-600' },
   ];
   
   return (
@@ -57,6 +58,11 @@ const AppNavigation = () => {
             <button
               key={item.path}
               onClick={() => {
+                // Add haptic feedback
+                if (navigator.vibrate) {
+                  navigator.vibrate(10);
+                }
+
                 if (item.path === '/app/dashboard') {
                   // Always scroll to top for home button
                   scrollToTop();
@@ -68,7 +74,7 @@ const AppNavigation = () => {
                   navigate(item.path);
                 }
               }}
-              className={`relative flex flex-col items-center p-3 rounded-2xl transition-all duration-300 transform hover:scale-110 active:scale-95 min-w-0 flex-1 max-w-24 touch-manipulation ${
+              className={`relative flex flex-col items-center p-2.5 rounded-2xl transition-all duration-200 transform active:scale-95 min-w-0 flex-1 touch-manipulation min-h-[64px] ${
                 isActive 
                   ? 'text-white shadow-lg' 
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'

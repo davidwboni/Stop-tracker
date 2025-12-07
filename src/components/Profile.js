@@ -381,11 +381,16 @@ const Profile = ({ userId, user, onLogout, onHome, updateProfilePic }) => {
                       </div>
                     )}
                   </div>
-                  <label className="absolute -bottom-1 -right-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-2 rounded-2xl cursor-pointer hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 transform hover:scale-110 shadow-lg">
+                  <label
+                    onClick={() => {
+                      if (navigator.vibrate) navigator.vibrate(10);
+                    }}
+                    className="absolute -bottom-1 -right-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-2 rounded-2xl cursor-pointer hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 transform hover:scale-110 shadow-lg touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+                  >
                     <Camera className="w-4 h-4" />
-                    <input 
-                      type="file" 
-                      className="hidden" 
+                    <input
+                      type="file"
+                      className="hidden"
                       accept="image/*"
                       onChange={handleImageUpload}
                       disabled={updating}
@@ -497,8 +502,11 @@ const Profile = ({ userId, user, onLogout, onHome, updateProfilePic }) => {
                     </div>
                     <div className="text-center">
                       <Button
-                        onClick={() => setEditMode(true)}
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-8"
+                        onClick={() => {
+                          setEditMode(true);
+                          if (navigator.vibrate) navigator.vibrate(5);
+                        }}
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-8 min-h-[48px] touch-manipulation"
                         size="sm"
                       >
                         Edit Profile

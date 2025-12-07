@@ -7,7 +7,8 @@ import Layout from '../components/Layout';
 // Pages
 import DashboardWrapper from '../components/DashboardWrapper';
 import EntriesWrapper from '../components/EntriesWrapper';
-import StatsOverview from '../components/StatsOverview';
+import StatsPage from '../components/StatsPage';
+import InvoicePage from '../components/InvoicePage';
 import ErrorBoundary from '../components/ErrorBoundary';
 import ProfileWrapper from '../components/ProfileWrapper';
 import PaymentConfig from '../components/PaymentConfig';
@@ -17,7 +18,6 @@ import PrivacyPolicy from '../components/pages/PrivacyPolicy';
 import TermsOfService from '../components/pages/TermsOfService';
 import LandingPage from '../components/LandingPage';
 import Auth from '../components/Auth';
-import WeeklyStats from '../components/WeeklyStats';
 
 // Auth route protection
 import ProtectedRoute from './ProtectedRoute';
@@ -80,6 +80,8 @@ const router = createBrowserRouter([
           { index: true, element: <Navigate to="/app/dashboard" /> },
           { path: 'dashboard', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><DashboardWrapper /></React.Suspense></ErrorBoundary> },
           { path: 'entries', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><EntriesWrapper /></React.Suspense></ErrorBoundary> },
+          { path: 'invoice', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><InvoicePage /></React.Suspense></ErrorBoundary> },
+          { path: 'stats', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><StatsPage /></React.Suspense></ErrorBoundary> },
           { path: 'profile', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><ProfileWrapper /></React.Suspense></ErrorBoundary> },
           { path: 'settings', element: <PaymentConfig config={{}} /> },
           { path: 'upgrade', element: <UpgradeToPro /> },

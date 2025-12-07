@@ -14,7 +14,17 @@
       "Bash(npm run build:*)",
       "Bash(set PORT=3001)",
       "Bash(npx eslint:*)",
-      "Bash(npx kill-port:*)"
+      "Bash(npx kill-port:*)",
+      "Bash(curl:*)",
+      "Bash(npm test)",
+      "Bash(npx serve:*)",
+      "Bash(findstr:*)",
+      "Bash(set HOST=0.0.0.0)",
+      "Bash(timeout:*)",
+      "Bash(dir:*)",
+      "Bash(del srccomponentsModernDashboard.jsx)",
+      "Bash(tree:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []
