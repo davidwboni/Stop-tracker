@@ -340,16 +340,27 @@ const Profile = ({ userId, user, onLogout, onHome, updateProfilePic }) => {
   }
   
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-950 pb-24">
+    <motion.div
+      className="max-w-4xl mx-auto px-4 py-6 pb-24 space-y-6"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">Your Profile</h1>
+        <p className="text-muted-foreground">Manage your account and settings</p>
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
-        className="space-y-4"
+        className="space-y-6"
       >
         {/* Profile Card */}
-        <Card className="mx-4 overflow-hidden shadow-apple-card hover:shadow-apple-card-hover transition-all duration-500 border-0 rounded-2xl">
-          <CardHeader className="relative bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 text-white py-6 overflow-hidden">
+        <Card className="bg-card border-border/50 overflow-hidden">
+          <CardHeader className="relative bg-gradient-to-br from-primary/10 to-accent/10 border-b border-border/50 py-6 overflow-hidden">
             <div className="absolute inset-0 bg-black/10"></div>
             <div className="absolute -top-4 -right-4 w-32 h-32 bg-white/10 rounded-full"></div>
             <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-white/5 rounded-full"></div>
@@ -718,7 +729,7 @@ const Profile = ({ userId, user, onLogout, onHome, updateProfilePic }) => {
           </CardContent>
         </Card>
       </motion.div>
-    </div>
+    </motion.div>
   );
 };
 

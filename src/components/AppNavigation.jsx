@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Home, FileText, BarChart2, User, Calculator, TrendingUp } from "lucide-react";
+import { Home, FileText, Calculator, User, TrendingUp, Settings } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const AppNavigation = () => {
@@ -37,10 +37,11 @@ const AppNavigation = () => {
   }, [lastScrollY]);
 
   const navItems = [
-    { path: '/app/dashboard', icon: Home, label: 'Home', color: 'from-blue-500 to-indigo-600' },
+    { path: '/app/dashboard', icon: Home, label: 'Home', color: 'from-primary to-secondary' },
     { path: '/app/entries', icon: FileText, label: 'Entries', color: 'from-orange-500 to-red-600' },
     { path: '/app/invoice', icon: Calculator, label: 'Invoice', color: 'from-rose-500 to-pink-600' },
-    { path: '/app/stats', icon: TrendingUp, label: 'Stats', color: 'from-purple-500 to-indigo-600' },
+    { path: '/app/stats', icon: TrendingUp, label: 'Stats', color: 'from-secondary to-purple-600' },
+    { path: '/app/settings', icon: Settings, label: 'Settings', color: 'from-cyan-500 to-blue-600' },
     { path: '/app/profile', icon: User, label: 'Profile', color: 'from-emerald-500 to-teal-600' },
   ];
   

@@ -12,6 +12,7 @@ import InvoicePage from '../components/InvoicePage';
 import ErrorBoundary from '../components/ErrorBoundary';
 import ProfileWrapper from '../components/ProfileWrapper';
 import PaymentConfig from '../components/PaymentConfig';
+import PaymentSettingsWrapper from '../components/PaymentSettingsWrapper';
 import UpgradeToPro from '../components/UpgradeToPro';
 import ContactUs from '../components/pages/ContactUs';
 import PrivacyPolicy from '../components/pages/PrivacyPolicy';
@@ -83,7 +84,7 @@ const router = createBrowserRouter([
           { path: 'invoice', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><InvoicePage /></React.Suspense></ErrorBoundary> },
           { path: 'stats', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><StatsPage /></React.Suspense></ErrorBoundary> },
           { path: 'profile', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><ProfileWrapper /></React.Suspense></ErrorBoundary> },
-          { path: 'settings', element: <PaymentConfig config={{}} /> },
+          { path: 'settings', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><PaymentSettingsWrapper /></React.Suspense></ErrorBoundary> },
           { path: 'upgrade', element: <UpgradeToPro /> },
           { path: 'contact', element: <ContactUs /> },
           { path: 'privacy', element: <PrivacyPolicy /> },
