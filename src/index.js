@@ -6,6 +6,7 @@ import router from './router';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { DataProvider } from './contexts/DataContext';
+import { InvoiceProvider } from './contexts/InvoiceContext';
 
 // Check if root element exists
 const rootElement = document.getElementById('root');
@@ -20,7 +21,9 @@ root.render(
     <AuthProvider>
       <ThemeProvider>
         <DataProvider>
-          <RouterProvider router={router} />
+          <InvoiceProvider>
+            <RouterProvider router={router} />
+          </InvoiceProvider>
         </DataProvider>
       </ThemeProvider>
     </AuthProvider>

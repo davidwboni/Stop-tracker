@@ -9,7 +9,8 @@ const StatsPage = () => {
 
   return (
     <motion.div
-      className="max-w-4xl mx-auto pb-safe px-4 py-6"
+      className="max-w-4xl mx-auto pb-safe px-4 py-6 overflow-y-auto"
+      style={{ maxHeight: 'calc(100vh - 120px)' }}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}

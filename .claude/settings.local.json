@@ -24,7 +24,9 @@
       "Bash(dir:*)",
       "Bash(del srccomponentsModernDashboard.jsx)",
       "Bash(tree:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(del srccomponentsStatsOverview.js)",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": []
