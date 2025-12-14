@@ -14,6 +14,7 @@ import ProfileWrapper from '../components/ProfileWrapper';
 import PaymentConfig from '../components/PaymentConfig';
 import PaymentSettingsWrapper from '../components/PaymentSettingsWrapper';
 import UpgradeToPro from '../components/UpgradeToPro';
+import RoutePlannerWrapper from '../components/RoutePlannerWrapper';
 import ContactUs from '../components/pages/ContactUs';
 import PrivacyPolicy from '../components/pages/PrivacyPolicy';
 import TermsOfService from '../components/pages/TermsOfService';
@@ -81,6 +82,7 @@ const router = createBrowserRouter([
           { index: true, element: <Navigate to="/app/dashboard" /> },
           { path: 'dashboard', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><DashboardWrapper /></React.Suspense></ErrorBoundary> },
           { path: 'entries', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><EntriesWrapper /></React.Suspense></ErrorBoundary> },
+          { path: 'routes', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><RoutePlannerWrapper /></React.Suspense></ErrorBoundary> },
           { path: 'invoice', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><InvoicePage /></React.Suspense></ErrorBoundary> },
           { path: 'stats', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><StatsPage /></React.Suspense></ErrorBoundary> },
           { path: 'profile', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><ProfileWrapper /></React.Suspense></ErrorBoundary> },

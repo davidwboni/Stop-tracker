@@ -19,10 +19,8 @@ import { useData } from "../contexts/DataContext";
 const EntriesPage = () => {
   const { logs, updateLogs, loading } = useData();
   const [searchTerm, setSearchTerm] = useState("");
-  const [dateFilter, setDateFilter] = useState("");
-  const [filterMode, setFilterMode] = useState("day"); // "day", "month", "year"
-  const [monthFilter, setMonthFilter] = useState("");
-  const [yearFilter, setYearFilter] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   const handleDeleteEntry = (id) => {
     // Add haptic feedback
@@ -40,16 +38,20 @@ const EntriesPage = () => {
 
     let matchesDate = true;
 
-    if (filterMode === "day" && dateFilter) {
-      matchesDate = log.date === dateFilter;
-    } else if (filterMode === "month" && monthFilter) {
+    if (startDate || endDate) {
       const logDate = new Date(log.date);
-      const filterDate = new Date(monthFilter + "-01");
-      matchesDate = logDate.getMonth() === filterDate.getMonth() &&
-                    logDate.getFullYear() === filterDate.getFullYear();
-    } else if (filterMode === "year" && yearFilter) {
-      const logDate = new Date(log.date);
-      matchesDate = logDate.getFullYear() === parseInt(yearFilter);
+
+      if (startDate && endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        matchesDate = logDate >= start && logDate <= end;
+      } else if (startDate) {
+        const start = new Date(startDate);
+        matchesDate = logDate >= start;
+      } else if (endDate) {
+        const end = new Date(endDate);
+        matchesDate = logDate <= end;
+      }
     }
 
     return matchesSearch && matchesDate;
@@ -149,35 +151,7 @@ const EntriesPage = () => {
               </h2>
             </div>
 
-            {/* Filter Mode Selection */}
-            <div className="flex gap-2 mb-4">
-              <Button
-                onClick={() => setFilterMode("day")}
-                variant={filterMode === "day" ? "default" : "outline"}
-                size="sm"
-                className="flex-1"
-              >
-                Day
-              </Button>
-              <Button
-                onClick={() => setFilterMode("month")}
-                variant={filterMode === "month" ? "default" : "outline"}
-                size="sm"
-                className="flex-1"
-              >
-                Month
-              </Button>
-              <Button
-                onClick={() => setFilterMode("year")}
-                variant={filterMode === "year" ? "default" : "outline"}
-                size="sm"
-                className="flex-1"
-              >
-                Year
-              </Button>
-            </div>
-
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Search Input */}
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -192,51 +166,44 @@ const EntriesPage = () => {
                 />
               </div>
 
-              {/* Date Filter - Changes based on mode */}
+              {/* Start Date */}
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <Calendar className="h-5 w-5 text-gray-400" />
                 </div>
-                {filterMode === "day" && (
-                  <Input
-                    type="date"
-                    value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value)}
-                    className="pl-11 h-12 rounded-xl border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 transition-colors touch-manipulation"
-                  />
-                )}
-                {filterMode === "month" && (
-                  <Input
-                    type="month"
-                    value={monthFilter}
-                    onChange={(e) => setMonthFilter(e.target.value)}
-                    className="pl-11 h-12 rounded-xl border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 transition-colors touch-manipulation"
-                  />
-                )}
-                {filterMode === "year" && (
-                  <Input
-                    type="number"
-                    placeholder="YYYY"
-                    value={yearFilter}
-                    onChange={(e) => setYearFilter(e.target.value)}
-                    min="2020"
-                    max="2030"
-                    className="pl-11 h-12 rounded-xl border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 transition-colors touch-manipulation"
-                  />
-                )}
+                <Input
+                  type="date"
+                  placeholder="From date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="pl-11 h-12 rounded-xl border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 transition-colors touch-manipulation"
+                />
+              </div>
+
+              {/* End Date */}
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Calendar className="h-5 w-5 text-gray-400" />
+                </div>
+                <Input
+                  type="date"
+                  placeholder="To date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="pl-11 h-12 rounded-xl border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 transition-colors touch-manipulation"
+                />
               </div>
 
               {/* Clear Filter Button */}
               <Button
                 onClick={() => {
-                  setDateFilter("");
-                  setMonthFilter("");
-                  setYearFilter("");
+                  setStartDate("");
+                  setEndDate("");
                   setSearchTerm("");
                   if (navigator.vibrate) navigator.vibrate(10);
                 }}
                 variant="outline"
-                disabled={!dateFilter && !monthFilter && !yearFilter && !searchTerm}
+                disabled={!startDate && !endDate && !searchTerm}
                 className="h-12 rounded-xl border-2 font-medium touch-manipulation min-h-[48px] transition-all duration-200 hover:bg-blue-50 dark:hover:bg-blue-900/20"
               >
                 <Filter className="w-4 h-4 mr-2" />
@@ -245,7 +212,7 @@ const EntriesPage = () => {
             </div>
 
             {/* Active Filters Display */}
-            {(searchTerm || dateFilter || monthFilter || yearFilter) && (
+            {(searchTerm || startDate || endDate) && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
@@ -257,19 +224,14 @@ const EntriesPage = () => {
                       Search: "{searchTerm}"
                     </span>
                   )}
-                  {dateFilter && (
+                  {startDate && (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200">
-                      Day: {format(new Date(dateFilter), 'dd/MM/yyyy')}
+                      From: {format(new Date(startDate), 'dd/MM/yyyy')}
                     </span>
                   )}
-                  {monthFilter && (
+                  {endDate && (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200">
-                      Month: {format(new Date(monthFilter + "-01"), 'MMMM yyyy')}
-                    </span>
-                  )}
-                  {yearFilter && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200">
-                      Year: {yearFilter}
+                      To: {format(new Date(endDate), 'dd/MM/yyyy')}
                     </span>
                   )}
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 font-medium">
