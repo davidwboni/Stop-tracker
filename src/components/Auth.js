@@ -8,12 +8,11 @@ import { Separator } from "./ui/separator";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signInWithPopup,
   signInAnonymously,
   RecaptchaVerifier,
   signInWithPhoneNumber,
 } from "firebase/auth";
-import { auth, googleProvider } from "../services/firebase";
+import { auth, signInWithGoogle } from "../services/firebase";
 import { Loader2, Mail, Phone, AlertCircle } from "lucide-react";
 
 const Auth = ({ onBack }) => {
@@ -48,7 +47,7 @@ const Auth = ({ onBack }) => {
           ? await signInWithEmailAndPassword(auth, formData.email, formData.password)
           : await createUserWithEmailAndPassword(auth, formData.email, formData.password);
       } else if (type === "google") {
-        await signInWithPopup(auth, googleProvider);
+        await signInWithGoogle();
       } else if (type === "phone") {
         if (!verificationId) {
           setupRecaptcha();

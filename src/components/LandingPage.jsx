@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "./ui/button";
 import PremiumModal from "./PremiumModal";
+import { useAuth } from "../contexts/AuthContext";
 import {
   ArrowRight,
   Calculator,
@@ -96,6 +97,14 @@ const pricingFeatures = [
 
 export default function LandingPage({ onGetStarted, onContactUs, onPrivacyPolicy, onTermsOfService }) {
   const [premiumModalOpen, setPremiumModalOpen] = useState(false);
+  const { loginAsGuest } = useAuth();
+
+  const handleGuestLogin = async () => {
+    const success = await loginAsGuest();
+    if (success) {
+      onGetStarted();
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -156,16 +165,7 @@ export default function LandingPage({ onGetStarted, onContactUs, onPrivacyPolicy
               </Button>
               <Button
                 variant="outline"
-                onClick={() => {
-                  const guestData = {
-                    isGuest: true,
-                    guestId: 'guest_' + Date.now(),
-                    displayName: 'Demo User',
-                    email: 'demo@stoptracker.com'
-                  };
-                  localStorage.setItem('guestSession', JSON.stringify(guestData));
-                  onGetStarted();
-                }}
+                onClick={handleGuestLogin}
                 className="w-full sm:w-auto bg-muted hover:bg-muted/80 border-border px-8 py-6 text-lg rounded-xl transition-all duration-300 min-h-[56px] touch-manipulation"
               >
                 Try Demo

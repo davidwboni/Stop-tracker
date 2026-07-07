@@ -1,14 +1,19 @@
 import { initializeApp } from "firebase/app";
-import { 
-  getAuth, 
-  GoogleAuthProvider, 
-  signInWithEmailAndPassword, 
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  signInWithCredential,
+  signInAnonymously,
+  sendPasswordResetEmail,
   onAuthStateChanged,
   signOut,
   updateProfile
 } from "firebase/auth";
+import { Capacitor } from '@capacitor/core';
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import { 
   getFirestore, 
   doc, 
@@ -72,6 +77,16 @@ try {
 export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();
 
+// ==== Platform Detection ====
+
+/**
+ * Detect if running on native platform (Capacitor)
+ */
+const isNativePlatform = () => {
+  return Capacitor.isNativePlatform();
+};
+
+
 // ==== User Management ====
 
 /**
@@ -123,18 +138,27 @@ export const loginWithEmail = async (email, password) => {
 };
 
 /**
- * Sign in with Google
+ * Sign in with Google.
+ * On Android (Capacitor): uses the native Google Sign-In SDK via @capacitor-firebase/authentication,
+ * then exchanges the idToken for a Firebase credential — no browser opens.
+ * On web: uses the standard Firebase popup flow.
  */
 export const signInWithGoogle = async () => {
   try {
-    const result = await signInWithPopup(auth, googleProvider);
-    const user = result.user;
-    
-    // Check if user document exists
+    let user;
+
+    if (isNativePlatform()) {
+      const { credential: nativeCredential } = await FirebaseAuthentication.signInWithGoogle();
+      const firebaseCredential = GoogleAuthProvider.credential(nativeCredential?.idToken);
+      const webResult = await signInWithCredential(auth, firebaseCredential);
+      user = webResult.user;
+    } else {
+      const result = await signInWithPopup(auth, googleProvider);
+      user = result.user;
+    }
+
     const userDoc = await getDoc(doc(db, "users", user.uid));
-    
     if (!userDoc.exists()) {
-      // Create user document if it doesn't exist
       await setDoc(doc(db, "users", user.uid), {
         email: user.email,
         displayName: user.displayName || "User",
@@ -144,15 +168,82 @@ export const signInWithGoogle = async () => {
         lastLogin: serverTimestamp()
       });
     } else {
-      // Update last login timestamp
       await updateDoc(doc(db, "users", user.uid), {
         lastLogin: serverTimestamp()
       });
     }
-    
+
     return { user };
   } catch (error) {
     console.error("Error signing in with Google:", error);
+    return { error };
+  }
+};
+
+/**
+ * Sign in anonymously (Guest mode)
+ * Uses Firebase anonymous authentication
+ */
+export const signInAsGuest = async () => {
+  try {
+    const isNative = isNativePlatform();
+
+    if (isNative) {
+      // Use Capacitor Firebase Authentication plugin on native platforms
+      await FirebaseAuthentication.signInAnonymously();
+
+      // Get the Firebase user from the web SDK auth instance
+      const currentUser = auth.currentUser;
+
+      if (currentUser) {
+        // Create user document for guest
+        await setDoc(doc(db, "users", currentUser.uid), {
+          email: "guest@stoptracker.com",
+          displayName: "Guest User",
+          photoURL: null,
+          role: "guest",
+          isGuest: true,
+          createdAt: serverTimestamp(),
+          lastLogin: serverTimestamp()
+        });
+
+        return { user: currentUser };
+      }
+
+      return { error: new Error("Guest authentication failed") };
+    } else {
+      // Use web SDK on web
+      const result = await signInAnonymously(auth);
+      const user = result.user;
+
+      // Create user document for guest
+      await setDoc(doc(db, "users", user.uid), {
+        email: "guest@stoptracker.com",
+        displayName: "Guest User",
+        photoURL: null,
+        role: "guest",
+        isGuest: true,
+        createdAt: serverTimestamp(),
+        lastLogin: serverTimestamp()
+      });
+
+      return { user };
+    }
+  } catch (error) {
+    console.error("Error signing in as guest:", error);
+    return { error };
+  }
+};
+
+/**
+ * Send password reset email
+ */
+export const resetPassword = async (email) => {
+  try {
+    await sendPasswordResetEmail(auth, email);
+    return { success: true };
+  } catch (error) {
+    console.error("Error sending password reset email:", error);
     return { error };
   }
 };
@@ -163,6 +254,8 @@ export const signInWithGoogle = async () => {
 export const logoutUser = async () => {
   try {
     await signOut(auth);
+    // Clear any localStorage guest session data
+    localStorage.removeItem('guestSession');
     return { success: true };
   } catch (error) {
     console.error("Error signing out:", error);

@@ -1,10 +1,12 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
-import { 
-  auth, 
-  db, 
-  signUpWithEmail, 
+import {
+  auth,
+  db,
+  signUpWithEmail,
   loginWithEmail,
   signInWithGoogle,
+  signInAsGuest,
+  resetPassword,
   logoutUser,
   getCurrentUser
 } from "../services/firebase";
@@ -19,38 +21,9 @@ export function AuthProvider({ children }) {
   const [error, setError] = useState(null);
   const [isNewUser, setIsNewUser] = useState(false);
 
-  // Check for guest session
+  // Handle authentication and session management
   useEffect(() => {
-    const checkGuestSession = () => {
-      const guestSession = localStorage.getItem('guestSession');
-      if (guestSession) {
-        try {
-          const guestData = JSON.parse(guestSession);
-          setUser({
-            uid: guestData.guestId,
-            email: guestData.email,
-            displayName: guestData.displayName,
-            photoURL: null,
-            role: "guest",
-            isGuest: true
-          });
-          setIsNewUser(false);
-          setLoading(false);
-          return true;
-        } catch (err) {
-          console.error("Error parsing guest session:", err);
-          localStorage.removeItem('guestSession');
-        }
-      }
-      return false;
-    };
-
-    // Check for guest session first
-    if (checkGuestSession()) {
-      return;
-    }
-
-    // Then listen for Firebase auth state changes
+    // Listen for Firebase auth state changes
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setLoading(true);
       
@@ -69,9 +42,10 @@ export function AuthProvider({ children }) {
               displayName: firebaseUser.displayName || userData.displayName || "User",
               photoURL: firebaseUser.photoURL || userData.photoURL,
               role: userData.role || "free",
+              isGuest: userData.isGuest || false,
               createdAt: userData.createdAt,
             });
-            
+
             // Update last login timestamp
             await setDoc(userRef, { lastLogin: serverTimestamp() }, { merge: true });
             setIsNewUser(false);
@@ -92,27 +66,8 @@ export function AuthProvider({ children }) {
             setIsNewUser(true);
           }
         } else {
-          // Logged out - but check for guest session again
-          const guestSession = localStorage.getItem('guestSession');
-          if (guestSession) {
-            try {
-              const guestData = JSON.parse(guestSession);
-              setUser({
-                uid: guestData.guestId,
-                email: guestData.email,
-                displayName: guestData.displayName,
-                photoURL: null,
-                role: "guest",
-                isGuest: true
-              });
-            } catch (err) {
-              console.error("Error parsing guest session:", err);
-              localStorage.removeItem('guestSession');
-              setUser(null);
-            }
-          } else {
-            setUser(null);
-          }
+          // User logged out
+          setUser(null);
         }
       } catch (err) {
         console.error("Error in auth state change:", err);
@@ -163,9 +118,43 @@ export function AuthProvider({ children }) {
       if (result.error) {
         throw result.error;
       }
+      // If pending (redirect flow on mobile), return true
+      if (result.pending) {
+        return true;
+      }
       return true;
     } catch (err) {
       setError(err.message || "Failed to login with Google");
+      return false;
+    }
+  };
+
+  // Guest login (anonymous)
+  const loginAsGuest = async () => {
+    setError(null);
+    try {
+      const result = await signInAsGuest();
+      if (result.error) {
+        throw result.error;
+      }
+      return true;
+    } catch (err) {
+      setError(err.message || "Failed to login as guest");
+      return false;
+    }
+  };
+
+  // Password reset
+  const sendPasswordReset = async (email) => {
+    setError(null);
+    try {
+      const result = await resetPassword(email);
+      if (result.error) {
+        throw result.error;
+      }
+      return true;
+    } catch (err) {
+      setError(err.message || "Failed to send password reset email");
       return false;
     }
   };
@@ -174,14 +163,6 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     setError(null);
     try {
-      // Check if it's a guest session
-      if (user?.isGuest) {
-        localStorage.removeItem('guestSession');
-        setUser(null);
-        return true;
-      }
-      
-      // Otherwise, logout from Firebase
       await logoutUser();
       return true;
     } catch (err) {
@@ -204,6 +185,8 @@ export function AuthProvider({ children }) {
     signup,
     login,
     loginWithGoogle,
+    loginAsGuest,
+    sendPasswordReset,
     logout,
     resetError
   };

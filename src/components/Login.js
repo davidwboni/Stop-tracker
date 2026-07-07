@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { auth, db, googleProvider } from "../services/firebase";
-import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
+import { auth, db, signInWithGoogle, resetPassword } from "../services/firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
@@ -13,6 +13,10 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetSuccess, setResetSuccess] = useState(false);
+  const [resetError, setResetError] = useState("");
 
   // Fetch or create user profile in Firestore
   const fetchOrCreateUserProfile = async (user) => {
@@ -58,7 +62,7 @@ const Login = () => {
     setError("");
 
     try {
-      const result = await signInWithPopup(auth, googleProvider);
+      const result = await signInWithGoogle();
       const user = result.user;
       const profile = await fetchOrCreateUserProfile(user);
 
@@ -70,6 +74,31 @@ const Login = () => {
       }
     } catch (err) {
       setError(`Sign in failed: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle password reset
+  const handlePasswordReset = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setResetError("");
+    setResetSuccess(false);
+
+    try {
+      const result = await resetPassword(resetEmail);
+      if (result.error) {
+        throw result.error;
+      }
+      setResetSuccess(true);
+      setTimeout(() => {
+        setShowResetPassword(false);
+        setResetSuccess(false);
+        setResetEmail("");
+      }, 3000);
+    } catch (err) {
+      setResetError(err.message || "Failed to send password reset email.");
     } finally {
       setIsLoading(false);
     }
@@ -104,6 +133,15 @@ const Login = () => {
               className="w-full bg-[var(--background)] text-[var(--text)]"
               required
             />
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={() => setShowResetPassword(true)}
+                className="text-sm text-[var(--primary)] hover:underline"
+              >
+                Forgot Password?
+              </button>
+            </div>
             {error && (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
@@ -172,6 +210,76 @@ const Login = () => {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Password Reset Modal */}
+      {showResetPassword && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+          <Card className="w-full max-w-md shadow-lg rounded-xl bg-[var(--background)]">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold text-[var(--text)]">
+                Reset Password
+              </CardTitle>
+              <p className="text-sm text-[var(--text-muted)] mt-2">
+                Enter your email address and we'll send you a link to reset your password.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <form onSubmit={handlePasswordReset} className="space-y-4">
+                <Input
+                  type="email"
+                  placeholder="Email address"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  className="w-full bg-[var(--background)] text-[var(--text)]"
+                  required
+                />
+                {resetError && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{resetError}</AlertDescription>
+                  </Alert>
+                )}
+                {resetSuccess && (
+                  <Alert className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+                    <AlertDescription className="text-green-800 dark:text-green-200">
+                      Password reset email sent! Check your inbox.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setShowResetPassword(false);
+                      setResetEmail("");
+                      setResetError("");
+                      setResetSuccess(false);
+                    }}
+                    disabled={isLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="flex-1 bg-[var(--primary)] hover:bg-[var(--secondary)] text-white"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      "Send Reset Link"
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
