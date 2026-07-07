@@ -23,3 +23,9 @@ yarn-debug.log*
 yarn-error.log*
 
 .vercel
+
+# Android signing — never commit release signing keys or credentials
+*.keystore
+*.jks
+android/KEYSTORE_CREDENTIALS.txt
+android/**/KEYSTORE_CREDENTIALS.txt
