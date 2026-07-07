@@ -1,34 +1,35 @@
 import React from "react";
 
 // Enhanced button component with different variants
-const Button = ({ 
-  children, 
-  className = "", 
-  variant = "primary", 
-  size = "default", 
+const Button = ({
+  children,
+  className = "",
+  variant = "primary",
+  size = "default",
   loading = false,
   disabled = false,
-  ...props 
+  ...props
 }) => {
-  const baseClasses = "inline-flex items-center justify-center rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2";
-  
+  const baseClasses = "inline-flex items-center justify-center rounded-[14px] font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2";
+
   const variantClasses = {
-    primary: "bg-blue-500 text-white hover:bg-blue-600 focus:ring-blue-500",
-    secondary: "bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 focus:ring-gray-500",
-    outline: "bg-transparent border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 focus:ring-gray-500",
-    ghost: "bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 focus:ring-gray-500",
-    link: "bg-transparent underline-offset-4 hover:underline text-blue-500 dark:text-blue-400 hover:bg-transparent focus:ring-0"
+    primary: "bg-primary text-primary-foreground hover:opacity-90 focus:ring-ring",
+    secondary: "bg-muted text-muted-foreground hover:opacity-80 focus:ring-ring",
+    outline: "bg-transparent border border-border hover:bg-muted focus:ring-ring",
+    ghost: "bg-transparent hover:bg-muted focus:ring-ring",
+    link: "bg-transparent underline-offset-4 hover:underline text-primary hover:bg-transparent focus:ring-0",
+    destructive: "bg-destructive text-destructive-foreground hover:opacity-90 focus:ring-destructive"
   };
-  
+
   const sizeClasses = {
     sm: "text-xs px-3 py-1.5",
     default: "text-sm px-4 py-2",
     lg: "text-base px-5 py-2.5",
     icon: "p-2"
   };
-  
+
   const disabledClasses = "opacity-50 cursor-not-allowed";
-  
+
   const classes = [
     baseClasses,
     variantClasses[variant],
@@ -36,7 +37,7 @@ const Button = ({
     disabled || loading ? disabledClasses : "",
     className
   ].join(" ");
-  
+
   return (
     <button
       className={classes}
