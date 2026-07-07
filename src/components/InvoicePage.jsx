@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import InvoiceGeneratorNew from "./InvoiceGeneratorNew";
 import InvoiceHistory from "./InvoiceHistory";
-import InvoiceCompare from "./InvoiceCompare";
+import PayPeriodList from "../features/payperiod/PayPeriodList";
 import PremiumFeatureGate from "./PremiumFeatureGate";
 import { FileText, CheckCircle2, History, Crown } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
@@ -12,6 +12,12 @@ const InvoicePage = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("create");
   const isPro = user?.role === "pro";
+  const [prefillInvoice, setPrefillInvoice] = useState(null);
+
+  const handleGenerateInvoice = (prefill) => {
+    setPrefillInvoice(prefill);
+    setActiveTab("create");
+  };
 
   return (
     <motion.div
@@ -48,7 +54,7 @@ const InvoicePage = () => {
           </TabsTrigger>
           <TabsTrigger value="verify" className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Verify</span>
+            <span className="hidden sm:inline">Reconcile</span>
             <span className="sm:hidden">Check</span>
           </TabsTrigger>
         </TabsList>
@@ -86,7 +92,7 @@ const InvoicePage = () => {
             exit={{ opacity: 0, x: -10 }}
             transition={{ duration: 0.2 }}
           >
-            <InvoiceCompare />
+            <PayPeriodList onGenerateInvoice={handleGenerateInvoice} />
           </motion.div>
         </TabsContent>
       </Tabs>
