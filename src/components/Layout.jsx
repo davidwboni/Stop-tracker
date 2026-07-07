@@ -8,6 +8,7 @@ import AppNavigation from './AppNavigation';
 import AppFooter from './AppFooter';
 import FloatingActionButton from './FloatingActionButton';
 import { useData } from '../contexts/DataContext';
+import { calculateStopFee } from '../features/payperiod/payPeriodCalculations';
 
 const Layout = () => {
   const { user } = useAuth();
@@ -19,18 +20,12 @@ const Layout = () => {
     try {
       // Calculate earnings based on payment config
       const calculateEarnings = (stops, extra = 0) => {
-        if (!paymentConfig) return stops * 1.98 + extra; // fallback rate
-        
-        const { cutoffPoint = 110, rateBeforeCutoff = 1.98, rateAfterCutoff = 1.48 } = paymentConfig;
-        
-        let total = 0;
-        if (stops <= cutoffPoint) {
-          total = stops * rateBeforeCutoff;
-        } else {
-          total = cutoffPoint * rateBeforeCutoff + (stops - cutoffPoint) * rateAfterCutoff;
-        }
-        
-        return total + extra;
+        const config = paymentConfig || {
+          thresholds: [{ stopCount: 110, rate: 1.98 }, { rate: 1.48 }],
+          excessParcelRate: 0.05
+        };
+
+        return calculateStopFee(stops, config.thresholds) + (parseFloat(extra) || 0);
       };
 
       const newEntry = {
