@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Alert, AlertDescription } from "./ui/alert";
+import { Money } from "./ui/money";
 import {
   FileText,
   Download,
@@ -103,7 +104,7 @@ const InvoiceHistory = () => {
                         </div>
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <DollarSign className="h-4 w-4" />
-                          <span className="font-semibold text-primary">£{parseFloat(invoice.invoiceAmount).toFixed(2)}</span>
+                          <span className="font-semibold text-primary"><Money amount={parseFloat(invoice.invoiceAmount)} /></span>
                         </div>
                       </div>
 
@@ -173,13 +174,13 @@ const InvoiceHistory = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Total Value</p>
                 <p className="text-2xl font-bold text-primary">
-                  £{invoices.reduce((sum, inv) => sum + parseFloat(inv.invoiceAmount), 0).toFixed(2)}
+                  <Money amount={invoices.reduce((sum, inv) => sum + parseFloat(inv.invoiceAmount), 0)} />
                 </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Average Value</p>
                 <p className="text-2xl font-bold text-primary">
-                  £{(invoices.reduce((sum, inv) => sum + parseFloat(inv.invoiceAmount), 0) / invoices.length).toFixed(2)}
+                  <Money amount={invoices.reduce((sum, inv) => sum + parseFloat(inv.invoiceAmount), 0) / invoices.length} />
                 </p>
               </div>
               <div>

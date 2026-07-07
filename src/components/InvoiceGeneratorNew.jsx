@@ -5,6 +5,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Alert, AlertDescription } from "./ui/alert";
+import { Money } from "./ui/money";
 import {
   Select,
   SelectContent,
@@ -592,7 +593,7 @@ const InvoiceGeneratorNew = ({ prefill }) => {
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Tracked Amount</p>
-                    <p className="text-lg font-semibold">£{loggedData.amount.toFixed(2)}</p>
+                    <p className="text-lg font-semibold"><Money amount={loggedData.amount} /></p>
                   </div>
                 </div>
               </motion.div>
