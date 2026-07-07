@@ -97,3 +97,52 @@ export function calculatePeriodTotals(
 
   return { days, grossPayment, dpdCharge, adminFee, total, vat, totalWithVat };
 }
+
+export type ComparisonStatus = 'match' | 'mismatch' | 'missing-from-log' | 'missing-from-statement';
+
+export interface DayComparison {
+  date: string;
+  loggedStops: number | null;
+  statementStops: number | null;
+  status: ComparisonStatus;
+  difference: number;
+}
+
+export function comparePeriodToLogs(
+  dailyEntries: DailyDpdEntry[],
+  logs: Array<{ date: string; stops: number }>
+): DayComparison[] {
+  const dates = new Set<string>([
+    ...dailyEntries.map((e) => e.date),
+    ...logs.map((l) => l.date),
+  ]);
+
+  return Array.from(dates)
+    .sort()
+    .map((date) => {
+      const statementEntry = dailyEntries.find((e) => e.date === date);
+      const logEntry = logs.find((l) => l.date === date);
+
+      const statementStops = statementEntry ? statementEntry.stops : null;
+      const loggedStops = logEntry ? logEntry.stops : null;
+
+      let status: ComparisonStatus;
+      if (statementStops === null) {
+        status = 'missing-from-statement';
+      } else if (loggedStops === null) {
+        status = 'missing-from-log';
+      } else if (statementStops === loggedStops) {
+        status = 'match';
+      } else {
+        status = 'mismatch';
+      }
+
+      return {
+        date,
+        loggedStops,
+        statementStops,
+        status,
+        difference: (loggedStops ?? 0) - (statementStops ?? 0),
+      };
+    });
+}

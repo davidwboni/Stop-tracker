@@ -112,3 +112,57 @@ describe('calculatePeriodTotals', () => {
     expect(result.totalWithVat).toBeCloseTo(360.00, 2);
   });
 });
+
+import { comparePeriodToLogs } from '../features/payperiod/payPeriodCalculations';
+
+describe('comparePeriodToLogs', () => {
+  const dailyEntries = [
+    { date: '2026-06-19', stops: 176, totalParcels: 214 },
+    { date: '2026-06-20', stops: 112, totalParcels: 132 },
+  ];
+
+  it('flags a match when logged stops equal statement stops', () => {
+    const logs = [{ date: '2026-06-19', stops: 176 }];
+    const result = comparePeriodToLogs(dailyEntries, logs);
+    const day19 = result.find((d) => d.date === '2026-06-19');
+    expect(day19?.status).toBe('match');
+    expect(day19?.difference).toBe(0);
+  });
+
+  it('flags a mismatch and computes the difference', () => {
+    const logs = [
+      { date: '2026-06-19', stops: 176 },
+      { date: '2026-06-20', stops: 100 },
+    ];
+    const result = comparePeriodToLogs(dailyEntries, logs);
+    const day20 = result.find((d) => d.date === '2026-06-20');
+    expect(day20?.status).toBe('mismatch');
+    expect(day20?.difference).toBe(-12); // logged 100, statement says 112
+  });
+
+  it('flags a date missing from the log', () => {
+    const logs = [{ date: '2026-06-19', stops: 176 }];
+    const result = comparePeriodToLogs(dailyEntries, logs);
+    const day20 = result.find((d) => d.date === '2026-06-20');
+    expect(day20?.status).toBe('missing-from-log');
+    expect(day20?.loggedStops).toBeNull();
+  });
+
+  it('flags a date missing from the statement', () => {
+    const logs = [
+      { date: '2026-06-19', stops: 176 },
+      { date: '2026-06-20', stops: 112 },
+      { date: '2026-06-21', stops: 50 },
+    ];
+    const result = comparePeriodToLogs(dailyEntries, logs);
+    const day21 = result.find((d) => d.date === '2026-06-21');
+    expect(day21?.status).toBe('missing-from-statement');
+    expect(day21?.statementStops).toBeNull();
+  });
+
+  it('returns results sorted by date', () => {
+    const logs = [{ date: '2026-06-19', stops: 176 }];
+    const result = comparePeriodToLogs(dailyEntries, logs);
+    expect(result.map((d) => d.date)).toEqual(['2026-06-19', '2026-06-20']);
+  });
+});
