@@ -71,3 +71,29 @@ export function calculateDayTotal(entry: DailyDpdEntry, config: PaymentConfig): 
     dayTotal: stopFee + parcelFee,
   };
 }
+
+export interface PeriodTotals {
+  days: DayCalculation[];
+  grossPayment: number;
+  dpdCharge: number;
+  adminFee: number;
+  total: number;
+  vat: number;
+  totalWithVat: number;
+}
+
+export function calculatePeriodTotals(
+  dailyEntries: DailyDpdEntry[],
+  dpdCharge: number,
+  adminFee: number,
+  vatRate: number,
+  config: PaymentConfig
+): PeriodTotals {
+  const days = dailyEntries.map((entry) => calculateDayTotal(entry, config));
+  const grossPayment = days.reduce((sum, day) => sum + day.dayTotal, 0);
+  const total = grossPayment - dpdCharge - adminFee;
+  const vat = total * vatRate;
+  const totalWithVat = total + vat;
+
+  return { days, grossPayment, dpdCharge, adminFee, total, vat, totalWithVat };
+}
