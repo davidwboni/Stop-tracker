@@ -28,7 +28,7 @@ import { useInvoice } from "../contexts/InvoiceContext";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-const InvoiceGeneratorNew = () => {
+const InvoiceGeneratorNew = ({ prefill }) => {
   const { logs } = useData();
   const { clients, saveClient, deleteClient, addInvoice, getNextInvoiceNumber } = useInvoice();
 
@@ -51,6 +51,7 @@ const InvoiceGeneratorNew = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [showClientForm, setShowClientForm] = useState(false);
+  const [skipVat, setSkipVat] = useState(false);
 
   // User details (would ideally come from user profile)
   const userDetails = {
@@ -70,6 +71,16 @@ const InvoiceGeneratorNew = () => {
       setInvoiceNumber(getNextInvoiceNumber().toString());
     }
   }, []);
+
+  // Apply prefill from pay period reconciliation (amount is already VAT-inclusive)
+  useEffect(() => {
+    if (prefill) {
+      setInvoiceAmount(prefill.amount.toFixed(2));
+      setInvoiceStartDate(prefill.startDate);
+      setInvoiceEndDate(prefill.endDate);
+      setSkipVat(true);
+    }
+  }, [prefill]);
 
   // Handle client selection
   useEffect(() => {
@@ -255,8 +266,8 @@ const InvoiceGeneratorNew = () => {
       doc.setFontSize(10);
 
       const subtotal = parseFloat(invoiceAmount);
-      const vat = vatNumber ? (subtotal * 0.2).toFixed(2) : 0;
-      const total = (subtotal + parseFloat(vat)).toFixed(2);
+      const vat = skipVat ? 0 : (vatNumber ? (subtotal * 0.2).toFixed(2) : 0);
+      const total = skipVat ? subtotal.toFixed(2) : (subtotal + parseFloat(vat)).toFixed(2);
 
       // Right-aligned summary
       const summaryX = pageWidth - margin - 50;
@@ -341,6 +352,7 @@ const InvoiceGeneratorNew = () => {
     setInvoiceAmount("");
     setPaymentDate("");
     setSelectedClientId("new");
+    setSkipVat(false);
   };
 
   const handleEmailInvoice = () => {

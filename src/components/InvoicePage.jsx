@@ -67,7 +67,7 @@ const InvoicePage = () => {
             transition={{ duration: 0.2 }}
           >
             <PremiumFeatureGate featureName="Invoice Creation">
-              <InvoiceGeneratorNew />
+              <InvoiceGeneratorNew prefill={prefillInvoice} />
             </PremiumFeatureGate>
           </motion.div>
         </TabsContent>
