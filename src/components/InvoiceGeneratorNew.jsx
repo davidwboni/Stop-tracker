@@ -20,7 +20,10 @@ import {
   CheckCircle2,
   Users,
   Mail,
-  Share2
+  Share2,
+  AlertCircle,
+  Calendar,
+  DollarSign
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useData } from "../contexts/DataContext";
@@ -50,7 +53,23 @@ const InvoiceGeneratorNew = () => {
   // UI state
   const [isGenerating, setIsGenerating] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
   const [showClientForm, setShowClientForm] = useState(false);
+
+  // Auto-dismiss messages
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(""), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => setErrorMessage(""), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
 
   // User details (would ideally come from user profile)
   const userDetails = {
@@ -121,14 +140,36 @@ const InvoiceGeneratorNew = () => {
     }
   }, [invoiceStartDate, invoiceEndDate, logs]);
 
-  const handleGenerateInvoice = async () => {
+  // Share invoice using native share or web fallback
+  const shareInvoicePDF = async (blob, filename) => {
+    try {
+      // Check if Web Share API with files is available
+      if (navigator.canShare && navigator.canShare({ files: [new File([blob], filename)] })) {
+        const file = new File([blob], filename, { type: 'application/pdf' });
+        await navigator.share({
+          files: [file],
+          title: `Invoice #${invoiceNumber}`,
+          text: `Invoice for ${clientName}`
+        });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      if (error.name !== 'AbortError') {
+        console.error('Share error:', error);
+      }
+      return false;
+    }
+  };
+
+  const handleGenerateInvoice = async (shouldShare = false) => {
     if (!invoiceNumber || !invoiceStartDate || !invoiceEndDate || !invoiceAmount) {
-      alert("Please fill in all required fields");
+      setErrorMessage("Please fill in all required fields");
       return;
     }
 
     if (!clientName) {
-      alert("Please enter client details");
+      setErrorMessage("Please enter client details");
       return;
     }
 
@@ -298,9 +339,6 @@ const InvoiceGeneratorNew = () => {
       // Generate filename
       const filename = `Invoice_#${invoiceNumber}_${format(parseISO(invoiceStartDate), "dd-MMM-yyyy")}.pdf`;
 
-      // Save the PDF
-      doc.save(filename);
-
       // Save invoice to history
       const invoiceData = {
         invoiceNumber,
@@ -320,15 +358,30 @@ const InvoiceGeneratorNew = () => {
 
       await addInvoice(invoiceData);
 
-      // Show success message
-      setSuccessMessage(`Invoice #${invoiceNumber} generated successfully!`);
+      // If sharing, try to share the PDF
+      if (shouldShare) {
+        const pdfBlob = doc.output('blob');
+        const shared = await shareInvoicePDF(pdfBlob, filename);
+
+        if (!shared) {
+          // Fallback to download if sharing failed or not supported
+          doc.save(filename);
+          setSuccessMessage(`Invoice #${invoiceNumber} generated!`);
+        } else {
+          setSuccessMessage(`Invoice #${invoiceNumber} shared successfully!`);
+        }
+      } else {
+        // Just download the PDF
+        doc.save(filename);
+        setSuccessMessage(`Invoice #${invoiceNumber} generated successfully!`);
+      }
+
       setTimeout(() => {
-        setSuccessMessage("");
         handleReset();
-      }, 3000);
+      }, 2000);
     } catch (error) {
       console.error("Error generating invoice:", error);
-      alert("Error generating invoice. Please try again.");
+      setErrorMessage("Error generating invoice. Please try again.");
     } finally {
       setIsGenerating(false);
     }
@@ -345,7 +398,7 @@ const InvoiceGeneratorNew = () => {
 
   const handleEmailInvoice = () => {
     if (!clientEmail) {
-      alert("Please enter client email");
+      setErrorMessage("Please enter client email");
       return;
     }
 
@@ -357,7 +410,20 @@ const InvoiceGeneratorNew = () => {
 
   return (
     <div className="space-y-6">
+      {/* Notifications */}
       <AnimatePresence>
+        {errorMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <Alert className="bg-destructive/10 border-destructive/20">
+              <AlertCircle className="h-4 w-4 text-destructive" />
+              <AlertDescription className="text-destructive">{errorMessage}</AlertDescription>
+            </Alert>
+          </motion.div>
+        )}
         {successMessage && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -584,40 +650,57 @@ const InvoiceGeneratorNew = () => {
             )}
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 pt-4">
-              <motion.div className="flex-1" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button
-                  onClick={handleGenerateInvoice}
-                  disabled={isGenerating || !invoiceNumber || !clientName}
-                  className="w-full bg-primary hover:bg-primary/90"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  {isGenerating ? "Generating..." : "Generate & Download PDF"}
-                </Button>
-              </motion.div>
-
-              {clientEmail && (
+            <div className="space-y-3 pt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   <Button
-                    onClick={handleEmailInvoice}
-                    variant="outline"
-                    className="w-full sm:w-auto gap-2"
+                    onClick={() => handleGenerateInvoice(false)}
+                    disabled={isGenerating || !invoiceNumber || !clientName}
+                    className="w-full bg-primary hover:bg-primary/90"
                   >
-                    <Mail className="h-4 w-4" />
-                    Email Invoice
+                    <Download className="h-4 w-4 mr-2" />
+                    {isGenerating ? "Generating..." : "Download PDF"}
                   </Button>
                 </motion.div>
-              )}
 
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button
-                  onClick={handleReset}
-                  variant="outline"
-                  className="border-border hover:bg-muted"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </motion.div>
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button
+                    onClick={() => handleGenerateInvoice(true)}
+                    disabled={isGenerating || !invoiceNumber || !clientName}
+                    variant="outline"
+                    className="w-full gap-2"
+                  >
+                    <Share2 className="h-4 w-4" />
+                    Generate & Share
+                  </Button>
+                </motion.div>
+              </div>
+
+              <div className="flex gap-3">
+                {clientEmail && (
+                  <motion.div className="flex-1" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <Button
+                      onClick={handleEmailInvoice}
+                      variant="outline"
+                      className="w-full gap-2"
+                    >
+                      <Mail className="h-4 w-4" />
+                      Email Client
+                    </Button>
+                  </motion.div>
+                )}
+
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button
+                    onClick={handleReset}
+                    variant="outline"
+                    className="border-border hover:bg-muted"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Reset
+                  </Button>
+                </motion.div>
+              </div>
             </div>
           </CardContent>
         </Card>
