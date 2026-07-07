@@ -3,6 +3,7 @@ import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Plus, Zap, TrendingUp, Clock, Target } from "lucide-react";
+import { calculateStopFee } from "../features/payperiod/payPeriodCalculations";
 
 const QuickEntry = ({ logs = [], onAddEntry, paymentConfig }) => {
   const [stops, setStops] = useState("");
@@ -46,18 +47,12 @@ const QuickEntry = ({ logs = [], onAddEntry, paymentConfig }) => {
   const calculateEarnings = (stopCount, extraPay = 0) => {
     if (!stopCount) return 0;
 
-    // Use provided config or default values
-    const config = paymentConfig || { cutoffPoint: 110, rateBeforeCutoff: 1.98, rateAfterCutoff: 1.48 };
-    const { cutoffPoint = 110, rateBeforeCutoff = 1.98, rateAfterCutoff = 1.48 } = config;
-    
-    let total = 0;
-    if (stopCount <= cutoffPoint) {
-      total = stopCount * rateBeforeCutoff;
-    } else {
-      total = cutoffPoint * rateBeforeCutoff + (stopCount - cutoffPoint) * rateAfterCutoff;
-    }
-    
-    return total + (parseFloat(extraPay) || 0);
+    const config = paymentConfig || {
+      thresholds: [{ stopCount: 110, rate: 1.98 }, { rate: 1.48 }],
+      excessParcelRate: 0.05
+    };
+
+    return calculateStopFee(stopCount, config.thresholds) + (parseFloat(extraPay) || 0);
   };
 
   const estimatedEarnings = calculateEarnings(parseInt(stops) || 0, extra);

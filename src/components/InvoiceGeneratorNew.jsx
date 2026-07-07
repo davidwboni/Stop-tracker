@@ -5,6 +5,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Alert, AlertDescription } from "./ui/alert";
+import { Money } from "./ui/money";
 import {
   Select,
   SelectContent,
@@ -31,7 +32,7 @@ import { useInvoice } from "../contexts/InvoiceContext";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-const InvoiceGeneratorNew = () => {
+const InvoiceGeneratorNew = ({ prefill }) => {
   const { logs } = useData();
   const { clients, saveClient, deleteClient, addInvoice, getNextInvoiceNumber } = useInvoice();
 
@@ -55,6 +56,7 @@ const InvoiceGeneratorNew = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [showClientForm, setShowClientForm] = useState(false);
+  const [skipVat, setSkipVat] = useState(false);
 
   // Auto-dismiss messages
   useEffect(() => {
@@ -89,6 +91,16 @@ const InvoiceGeneratorNew = () => {
       setInvoiceNumber(getNextInvoiceNumber().toString());
     }
   }, []);
+
+  // Apply prefill from pay period reconciliation (amount is already VAT-inclusive)
+  useEffect(() => {
+    if (prefill) {
+      setInvoiceAmount(prefill.amount.toFixed(2));
+      setInvoiceStartDate(prefill.startDate);
+      setInvoiceEndDate(prefill.endDate);
+      setSkipVat(true);
+    }
+  }, [prefill]);
 
   // Handle client selection
   useEffect(() => {
@@ -296,8 +308,8 @@ const InvoiceGeneratorNew = () => {
       doc.setFontSize(10);
 
       const subtotal = parseFloat(invoiceAmount);
-      const vat = vatNumber ? (subtotal * 0.2).toFixed(2) : 0;
-      const total = (subtotal + parseFloat(vat)).toFixed(2);
+      const vat = skipVat ? 0 : (vatNumber ? (subtotal * 0.2).toFixed(2) : 0);
+      const total = skipVat ? subtotal.toFixed(2) : (subtotal + parseFloat(vat)).toFixed(2);
 
       // Right-aligned summary
       const summaryX = pageWidth - margin - 50;
@@ -305,7 +317,7 @@ const InvoiceGeneratorNew = () => {
       doc.text(`£${subtotal.toFixed(2)}`, summaryX + 10, yPosition);
       yPosition += 6;
 
-      if (vatNumber) {
+      if (vatNumber && !skipVat) {
         doc.text(`VAT #${vatNumber} (20%)`, summaryX - 40, yPosition);
         doc.text(`£${vat}`, summaryX + 10, yPosition);
         yPosition += 8;
@@ -394,6 +406,7 @@ const InvoiceGeneratorNew = () => {
     setInvoiceAmount("");
     setPaymentDate("");
     setSelectedClientId("new");
+    setSkipVat(false);
   };
 
   const handleEmailInvoice = () => {
@@ -606,7 +619,10 @@ const InvoiceGeneratorNew = () => {
                   type="number"
                   placeholder="e.g., 3420.84"
                   value={invoiceAmount}
-                  onChange={(e) => setInvoiceAmount(e.target.value)}
+                  onChange={(e) => {
+                    setInvoiceAmount(e.target.value);
+                    setSkipVat(false);
+                  }}
                   className="bg-input border-border"
                   step="0.01"
                 />
@@ -643,7 +659,7 @@ const InvoiceGeneratorNew = () => {
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Tracked Amount</p>
-                    <p className="text-lg font-semibold">£{loggedData.amount.toFixed(2)}</p>
+                    <p className="text-lg font-semibold"><Money amount={loggedData.amount} /></p>
                   </div>
                 </div>
               </motion.div>

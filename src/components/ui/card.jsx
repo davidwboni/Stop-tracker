@@ -3,7 +3,7 @@ import React from "react";
 const Card = ({ className = "", children, ...props }) => {
   return (
     <div
-      className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm ${className}`}
+      className={`bg-card text-card-foreground rounded-[18px] shadow-sm ${className}`}
       {...props}
     >
       {children}
@@ -14,7 +14,7 @@ const Card = ({ className = "", children, ...props }) => {
 const CardHeader = ({ className = "", children, ...props }) => {
   return (
     <div
-      className={`p-6 border-b border-gray-100 dark:border-gray-700 ${className}`}
+      className={`p-6 border-b border-border ${className}`}
       {...props}
     >
       {children}
@@ -25,7 +25,7 @@ const CardHeader = ({ className = "", children, ...props }) => {
 const CardTitle = ({ className = "", children, ...props }) => {
   return (
     <h3
-      className={`text-xl font-bold text-gray-900 dark:text-white ${className}`}
+      className={`text-xl font-bold text-card-foreground ${className}`}
       {...props}
     >
       {children}
@@ -36,7 +36,7 @@ const CardTitle = ({ className = "", children, ...props }) => {
 const CardDescription = ({ className = "", children, ...props }) => {
   return (
     <p
-      className={`mt-1 text-sm text-gray-500 dark:text-gray-400 ${className}`}
+      className={`mt-1 text-sm text-muted-foreground ${className}`}
       {...props}
     >
       {children}
@@ -55,7 +55,7 @@ const CardContent = ({ className = "", children, ...props }) => {
 const CardFooter = ({ className = "", children, ...props }) => {
   return (
     <div
-      className={`p-6 border-t border-gray-100 dark:border-gray-700 ${className}`}
+      className={`p-6 border-t border-border ${className}`}
       {...props}
     >
       {children}
