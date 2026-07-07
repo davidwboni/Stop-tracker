@@ -29,6 +29,7 @@ yarn-error.log*
 *.jks
 android/KEYSTORE_CREDENTIALS.txt
 android/**/KEYSTORE_CREDENTIALS.txt
+android/key.properties
 
 # Editor / local tooling artifacts
 .idea/
