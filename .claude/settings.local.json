@@ -26,7 +26,22 @@
       "Bash(tree:*)",
       "Bash(find:*)",
       "Bash(del srccomponentsStatsOverview.js)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(npm cache clean:*)",
+      "Bash(cat:*)",
+      "mcp__plugin_serena_serena__find_symbol",
+      "Bash(npx cap:*)",
+      "Bash(keytool -genkeypair:*)",
+      "Bash(where:*)",
+      "WebFetch(domain:davidwboni.github.io)",
+      "WebFetch(domain:sites.google.com)",
+      "Bash(gradlew.bat signingReport:*)",
+      "Bash(\"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\\\\bin\\\\keytool.exe\" -list -v -keystore \"%USERPROFILE%\\\\.android\\\\debug.keystore\" -alias androiddebugkey -storepass android -keypass android)",
+      "Bash(set JAVA_HOME=C:Program FilesAndroidAndroid Studiojbr)",
+      "Bash(gradlew.bat assembleDebug:*)",
+      "Bash(\"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\\\\bin\\\\keytool.exe\" -list -v -keystore \"$HOME/.android/debug.keystore\" -alias androiddebugkey -storepass android -keypass android)",
+      "Bash(cmd.exe /c \"set JAVA_HOME=C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr && gradlew.bat assembleDebug\")"
     ],
     "deny": [],
     "ask": []
