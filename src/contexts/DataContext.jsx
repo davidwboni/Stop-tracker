@@ -23,9 +23,11 @@ export const DataProvider = ({ children }) => {
   const [syncing, setSyncing] = useState(false);
   const [isNewUser, setIsNewUser] = useState(false);
   const [paymentConfig, setPaymentConfig] = useState({
-    cutoffPoint: 110,
-    rateBeforeCutoff: 1.98,
-    rateAfterCutoff: 1.48
+    thresholds: [
+      { stopCount: 110, rate: 1.98 },
+      { rate: 1.48 }
+    ],
+    excessParcelRate: 0.05
   });
 
   // Initial data load - with error handling and retry mechanism
@@ -84,9 +86,11 @@ export const DataProvider = ({ children }) => {
               localStorage.setItem(`guestLogs_${user.uid}`, JSON.stringify(demoLogs));
             }
             setPaymentConfig(guestConfig ? JSON.parse(guestConfig) : {
-              cutoffPoint: 110,
-              rateBeforeCutoff: 1.98,
-              rateAfterCutoff: 1.48
+              thresholds: [
+                { stopCount: 110, rate: 1.98 },
+                { rate: 1.48 }
+              ],
+              excessParcelRate: 0.05
             });
             setIsNewUser(true); // Guest users are always "new" for demo purposes
           } catch (err) {
