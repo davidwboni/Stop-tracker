@@ -8,58 +8,58 @@
 @layer base {
   :root {
     /* Light mode color theme */
-    --background: #F5F5F7;
+    --background: #FAFAFA;
     --foreground: #000000;
-    
+
     --card: #FFFFFF;
     --card-foreground: #000000;
-    
-    --primary: #007AFF;
+
+    --primary: #0D9488;
     --primary-foreground: #FFFFFF;
-    
+
     --secondary: #5856D6;
     --secondary-foreground: #FFFFFF;
-    
-    --muted: #E5E5EA;
-    --muted-foreground: #8E8E93;
-    
-    --accent: #34C759;
+
+    --muted: #F3F4F6;
+    --muted-foreground: #9CA3AF;
+
+    --accent: #0D9488;
     --accent-foreground: #FFFFFF;
-    
+
     --destructive: #FF3B30;
     --destructive-foreground: #FFFFFF;
-    
-    --border: #E5E5EA;
-    --input: #E5E5EA;
-    --ring: #007AFF;
+
+    --border: #EEEEEE;
+    --input: #EEEEEE;
+    --ring: #0D9488;
   }
 
   .dark {
-    /* Dark mode color theme - Sleek v3.0 */
-    --background: #0F1419;
+    /* Dark mode color theme */
+    --background: #111113;
     --foreground: #FFFFFF;
 
-    --card: #1A1F2E;
+    --card: #1C1C1F;
     --card-foreground: #FFFFFF;
 
-    --primary: #0A84FF;
-    --primary-foreground: #FFFFFF;
+    --primary: #2DD4BF;
+    --primary-foreground: #0A0A0A;
 
     --secondary: #5E5CE6;
     --secondary-foreground: #FFFFFF;
 
-    --muted: #2A3142;
-    --muted-foreground: #8E92A1;
+    --muted: #2A2A2E;
+    --muted-foreground: #6B7280;
 
-    --accent: #34C759;
-    --accent-foreground: #0F1419;
+    --accent: #2DD4BF;
+    --accent-foreground: #0A0A0A;
 
     --destructive: #FF453A;
     --destructive-foreground: #FFFFFF;
 
-    --border: #2A3142;
-    --input: #1A1F2E;
-    --ring: #0A84FF;
+    --border: #2A2A2E;
+    --input: #2A2A2E;
+    --ring: #2DD4BF;
   }
 }
 
@@ -163,10 +163,6 @@
   
   .button-apple-secondary {
     @apply bg-muted text-muted-foreground rounded-full font-medium shadow-sm hover:opacity-90 transition-all duration-200;
-  }
-  
-  .card-apple {
-    @apply bg-card rounded-xl overflow-hidden shadow-apple border border-border/50;
   }
 }
 
