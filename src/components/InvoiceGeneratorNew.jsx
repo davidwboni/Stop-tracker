@@ -552,7 +552,10 @@ const InvoiceGeneratorNew = ({ prefill }) => {
                   type="number"
                   placeholder="e.g., 3420.84"
                   value={invoiceAmount}
-                  onChange={(e) => setInvoiceAmount(e.target.value)}
+                  onChange={(e) => {
+                    setInvoiceAmount(e.target.value);
+                    setSkipVat(false);
+                  }}
                   className="bg-input border-border"
                   step="0.01"
                 />
