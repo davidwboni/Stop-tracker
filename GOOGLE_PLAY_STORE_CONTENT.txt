@@ -1,0 +1,214 @@
+═══════════════════════════════════════════════════════════
+GOOGLE PLAY STORE - COPY & PASTE CONTENT
+═══════════════════════════════════════════════════════════
+
+📱 APP INFORMATION
+─────────────────
+App name: Stop Tracker
+Package name: com.stoptracker.app
+Category: Business
+Content rating: Everyone
+Price: Free
+
+
+📝 SHORT DESCRIPTION (80 characters max)
+─────────────────────────────────────────
+Track deliveries, plan routes, and generate invoices for drivers
+
+
+📖 FULL DESCRIPTION (4000 characters max)
+──────────────────────────────────────────
+
+Stop Tracker - The Complete Delivery Driver Solution
+
+Stop Tracker is a powerful all-in-one app designed specifically for delivery drivers and couriers. Whether you're doing Amazon Flex, DPD, Evri, or any delivery service, Stop Tracker helps you stay organized and maximize your earnings.
+
+🚚 KEY FEATURES
+
+DELIVERY TRACKING
+• Log stops and earnings in seconds
+• Track daily, weekly, and monthly statistics
+• View comprehensive performance analytics
+• Monitor your progress with visual charts
+• Export your data anytime
+
+🗺️ ROUTE PLANNER
+• Smart route optimization to save time and fuel
+• UK address search with autocomplete
+• Use your current location as starting point
+• Get turn-by-turn navigation via Google Maps, Waze, or Apple Maps
+• Save and reuse frequent routes
+• Share routes with team members
+
+💼 INVOICE GENERATOR
+• Create professional PDF invoices instantly
+• Save client information for quick reuse
+• Automatic invoice numbering
+• Include VAT calculations
+• Email invoices directly to clients
+• Share invoices via any app
+• Track payment status and history
+
+📊 ANALYTICS & INSIGHTS
+• Beautiful dashboard with real-time statistics
+• Compare performance across different time periods
+• Track earnings trends
+• Monitor stops per day
+• Filter by custom date ranges
+• Visual charts and graphs
+
+🎨 PREMIUM FEATURES
+• Dark mode for night driving
+• Customizable themes
+• Advanced reporting
+• Cloud backup with Firebase
+• Priority support
+• Ad-free experience
+
+💾 DATA SECURITY
+• Secure cloud backup
+• Works offline - sync when connected
+• Export data to CSV
+• Your data is always accessible
+• Never lose your records
+
+📱 DESIGNED FOR DRIVERS
+• Clean, intuitive interface
+• Fast data entry on the go
+• Mobile-optimized for one-handed use
+• Works on phones and tablets
+• Lightweight and fast
+
+Perfect for:
+✓ Amazon Flex drivers
+✓ DPD couriers
+✓ Evri (Hermes) drivers
+✓ Royal Mail delivery
+✓ Independent couriers
+✓ Multi-drop delivery services
+✓ Food delivery drivers
+✓ Parcel delivery services
+
+Why Choose Stop Tracker?
+• Built by a driver, for drivers
+• No subscription required for basic features
+• Privacy-focused - your data stays yours
+• Regular updates and improvements
+• Responsive customer support
+• Trusted by delivery drivers across the UK
+
+Stop Tracker helps you stay organized, maximize efficiency, and take control of your delivery business. Download now and start tracking your success!
+
+Need help? Contact us at davidwboni@gmail.com
+
+
+🆕 WHAT'S NEW (Release notes for v3.3.0)
+────────────────────────────────────────
+
+Version 3.3.0 - Major Update!
+
+🎉 NEW FEATURES:
+• Route Planner with smart optimization algorithm
+• "Use My Location" for instant route starts
+• Save and load your favorite routes
+• Share routes with teammates via any app
+• Enhanced Invoice Generator with native PDF sharing
+• Improved mobile performance and speed
+
+🎨 IMPROVEMENTS:
+• Better error handling with helpful messages
+• Improved location accuracy
+• Faster app loading times
+• Enhanced dark mode support
+• Mobile-friendly UI improvements
+• Better offline functionality
+
+🐛 BUG FIXES:
+• Fixed route optimization accuracy
+• Improved invoice PDF generation
+• Better handling of network errors
+• Enhanced data sync reliability
+
+Thank you for your continued support!
+
+
+🎯 TARGET AUDIENCE
+──────────────────
+Primary age: 18+
+Secondary age: All ages (but targeted at adults)
+
+
+🌍 COUNTRIES
+─────────────
+Start with: United Kingdom
+Later expand to: United States, Canada, Australia, Ireland
+
+
+📧 CONTACT DETAILS
+──────────────────
+Email: davidwboni@gmail.com
+Website: https://sites.google.com/view/stop-tracker-privacy/home
+Phone: +44 7493 668573 (optional)
+
+
+🔒 PRIVACY POLICY URL
+─────────────────────
+https://sites.google.com/view/stop-tracker-privacy/home
+
+
+🏷️ SEARCH KEYWORDS (for ASO - App Store Optimization)
+───────────────────────────────────────────────────────
+delivery tracker, route planner, delivery driver, amazon flex, invoice generator,
+courier app, delivery app, stops tracker, mileage tracker, driver earnings,
+dpd driver, evri driver, parcel delivery, delivery log, driver tools
+
+
+📱 DATA SAFETY SECTION (for Google Play Console)
+─────────────────────────────────────────────────
+
+Location:
+• Does your app collect location? YES
+  - Is it optional? YES
+  - Why collected? Route planning and navigation
+  - Is it shared? NO
+  - Can users request deletion? YES
+
+Personal info (name, email):
+• Does your app collect? YES
+  - Is it optional? NO (required for invoices)
+  - Why collected? Invoice generation
+  - Is it shared? NO (only when user manually shares invoice)
+  - Can users request deletion? YES
+
+Files and documents:
+• Does your app collect? YES
+  - Is it optional? YES
+  - Why collected? Invoice PDFs, data export
+  - Is it shared? User-controlled via share feature
+  - Can users request deletion? YES
+
+App activity (delivery logs):
+• Does your app collect? YES
+  - Is it optional? NO (core feature)
+  - Why collected? Delivery tracking
+  - Is it shared? NO
+  - Can users request deletion? YES
+
+
+🛡️ CONTENT RATING ANSWERS
+──────────────────────────
+
+Violence: None
+Sexual content: None
+Profanity: None
+Drugs/Alcohol/Tobacco: None
+User-generated content: No
+Social features: No
+Shares user location: Yes (optional, for route planning)
+Accesses personal info: Yes (name, email for invoices)
+Requires payment: No (free with optional premium)
+
+
+═══════════════════════════════════════════════════════════
+END OF CONTENT - Ready to copy into Google Play Console!
+═══════════════════════════════════════════════════════════

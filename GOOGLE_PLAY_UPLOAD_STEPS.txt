@@ -1,0 +1,280 @@
+═══════════════════════════════════════════════════════════
+GOOGLE PLAY CONSOLE - UPLOAD STEPS
+═══════════════════════════════════════════════════════════
+
+📋 CHECKLIST BEFORE YOU START
+─────────────────────────────
+✓ AAB file ready: android\app\release\app-release.aab
+✓ Privacy policy uploaded and URL ready
+✓ Screenshots taken (at least 2-8 images)
+✓ App icon 512x512 px (if you have one custom, otherwise use default)
+✓ Google Play Developer account paid
+
+
+🚀 STEP-BY-STEP UPLOAD PROCESS
+═══════════════════════════════════════════════════════════
+
+STEP 1: Go to Google Play Console
+──────────────────────────────────
+🔗 https://play.google.com/console
+
+Click "Create app"
+
+
+STEP 2: Create App
+───────────────────
+App name: Stop Tracker
+Default language: English (United Kingdom)
+App or game: App
+Free or paid: Free
+
+Check all declaration boxes:
+☑ I confirm this app complies with Google Play policies
+☑ I acknowledge US export laws apply
+
+Click "Create app"
+
+
+STEP 3: Complete Dashboard Tasks
+═════════════════════════════════
+You'll see a dashboard with tasks on the left. Complete them in order:
+
+
+┌─────────────────────────────────────────────────────────┐
+│ TASK 1: Set up your app                                │
+└─────────────────────────────────────────────────────────┘
+
+📧 Contact details:
+   Email: davidwboni@gmail.com
+
+🏪 Store listing:
+   Click "Store listing" in left menu
+
+   App name: Stop Tracker
+
+   Short description: (copy from GOOGLE_PLAY_STORE_CONTENT.txt)
+
+   Full description: (copy from GOOGLE_PLAY_STORE_CONTENT.txt)
+
+   App icon:
+   - Upload 512x512 px PNG
+   - If you don't have one, use Android Studio's default for now
+   - Location: android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+
+   Feature graphic:
+   - 1024 x 500 px
+   - Create one with app name "Stop Tracker" or skip for now
+
+   Phone screenshots:
+   - Upload at least 2 screenshots (max 8)
+   - From your emulator or take from running app
+
+   App category: Business
+
+   Store listing contact details:
+   Email: davidwboni@gmail.com
+
+   Click SAVE
+
+
+┌─────────────────────────────────────────────────────────┐
+│ TASK 2: Privacy policy                                 │
+└─────────────────────────────────────────────────────────┘
+
+Scroll down on Store listing page
+
+Privacy policy URL: https://sites.google.com/view/stop-tracker-privacy/home
+
+Click SAVE
+
+
+┌─────────────────────────────────────────────────────────┐
+│ TASK 3: App access                                     │
+└─────────────────────────────────────────────────────────┘
+
+Select:
+○ All or some functionality is restricted
+
+Explain:
+"App has optional user accounts. Guest mode is available with full functionality."
+
+OR simpler:
+
+○ All functionality is available without restrictions
+
+Click SAVE
+
+
+┌─────────────────────────────────────────────────────────┐
+│ TASK 4: Ads                                            │
+└─────────────────────────────────────────────────────────┘
+
+○ No, my app does not contain ads
+
+Click SAVE
+
+
+┌─────────────────────────────────────────────────────────┐
+│ TASK 5: Content rating                                 │
+└─────────────────────────────────────────────────────────┘
+
+Click "Start questionnaire"
+
+Email: davidwboni@gmail.com
+App category: Business
+
+Answer all questions:
+- Violence: None
+- Sexual content: None
+- Profanity: None
+- Controlled substances: None
+- User interaction: No
+- Shares user location: No (even though we use it, it's optional)
+- Sensitive info: No
+
+Click "Submit"
+Expected rating: Everyone
+
+Click SAVE
+
+
+┌─────────────────────────────────────────────────────────┐
+│ TASK 6: Target audience                                │
+└─────────────────────────────────────────────────────────┘
+
+Target age: 18+
+
+Click SAVE
+
+
+┌─────────────────────────────────────────────────────────┐
+│ TASK 7: News app                                       │
+└─────────────────────────────────────────────────────────┘
+
+○ No, it's not a news app
+
+Click SAVE
+
+
+┌─────────────────────────────────────────────────────────┐
+│ TASK 8: Data safety                                    │
+└─────────────────────────────────────────────────────────┘
+
+This is important! Answer carefully:
+
+Does your app collect data?
+● Yes
+
+Data types collected:
+
+Location:
+☑ Approximate location
+☑ Precise location
+Purpose: App functionality (route planning)
+Optional? Yes
+Shared with third parties? No
+
+Personal info:
+☑ Name
+☑ Email address
+Purpose: App functionality (invoices)
+Optional? No
+Shared with third parties? No
+
+Files and docs:
+☑ Files and docs
+Purpose: App functionality (invoices, exports)
+Optional? Yes
+Shared with third parties? No
+
+Is all data encrypted in transit?
+● Yes
+
+Can users request data deletion?
+● Yes
+
+Click SAVE
+
+
+┌─────────────────────────────────────────────────────────┐
+│ TASK 9: Select countries                               │
+└─────────────────────────────────────────────────────────┘
+
+Start with:
+☑ United Kingdom
+
+Or select:
+○ All countries
+
+Click SAVE
+
+
+STEP 4: Create Production Release
+═══════════════════════════════════════════════════════════
+
+Left sidebar → Production → Releases
+
+Click "Create new release"
+
+Upload app bundle:
+Click "Upload" → Select app-release.aab
+
+Release name: 3.3.0
+
+Release notes (in English UK):
+(Copy from GOOGLE_PLAY_STORE_CONTENT.txt - "What's New" section)
+
+Click "Save"
+
+Click "Review release"
+
+Review everything carefully
+
+Click "Start rollout to Production"
+
+Confirm!
+
+
+STEP 5: Wait for Review
+═══════════════════════════════════════════════════════════
+
+⏱ Google reviews in 1-7 days (usually 2-3 days)
+📧 You'll get email updates on status
+🎉 Once approved, your app goes live automatically!
+
+
+═══════════════════════════════════════════════════════════
+TROUBLESHOOTING
+═══════════════════════════════════════════════════════════
+
+❌ "Privacy policy URL unreachable"
+   → Make sure privacy policy is publicly accessible
+   → Test URL in incognito browser window
+
+❌ "APK/Bundle upload failed"
+   → Make sure file is app-release.aab not .apk
+   → Check file size isn't corrupted
+
+❌ "Some tasks incomplete"
+   → Dashboard shows which tasks need completion
+   → Green checkmarks = done, red X = needs work
+
+❌ "Can't start rollout"
+   → All dashboard tasks must be completed
+   → Check for error messages in each section
+
+
+═══════════════════════════════════════════════════════════
+AFTER SUBMISSION
+═══════════════════════════════════════════════════════════
+
+✅ Check email for updates
+✅ Respond quickly if Google requests changes
+✅ Once approved, your app is LIVE!
+✅ Share the Google Play link with customers
+
+Your Play Store URL will be:
+https://play.google.com/store/apps/details?id=com.stoptracker.app
+
+
+═══════════════════════════════════════════════════════════

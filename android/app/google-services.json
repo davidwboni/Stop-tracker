@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "183138392477",
+    "project_id": "stop-tracker-v1",
+    "storage_bucket": "stop-tracker-v1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:183138392477:android:aaf152403546e73b897774",
+        "android_client_info": {
+          "package_name": "com.stoptracker.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "183138392477-kkih98ou5ee4kgr7o13eo4m82c9loa1q.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.stoptracker.app",
+            "certificate_hash": "d8ea22989bb2d6472554100f6b7f27e444740612"
+          }
+        },
+        {
+          "client_id": "183138392477-fo5rekcoapkkscmgqfjf2drgmas1scqs.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyADktj-aUt20i5oTOBjdJ4IC-nk-XoBUcw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "183138392477-fo5rekcoapkkscmgqfjf2drgmas1scqs.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
