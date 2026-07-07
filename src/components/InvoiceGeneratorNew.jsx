@@ -275,7 +275,7 @@ const InvoiceGeneratorNew = ({ prefill }) => {
       doc.text(`£${subtotal.toFixed(2)}`, summaryX + 10, yPosition);
       yPosition += 6;
 
-      if (vatNumber) {
+      if (vatNumber && !skipVat) {
         doc.text(`VAT #${vatNumber} (20%)`, summaryX - 40, yPosition);
         doc.text(`£${vat}`, summaryX + 10, yPosition);
         yPosition += 8;
