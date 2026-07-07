@@ -3,24 +3,12 @@ import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Alert, AlertDescription } from "../../components/ui/alert";
+import { Money } from "../../components/ui/money";
+import { StatusBadge } from "../../components/ui/status-badge";
 import { CheckCircle2, AlertTriangle, FileText } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { calculatePeriodTotals, comparePeriodToLogs } from "./payPeriodCalculations";
 import { useData } from "../../contexts/DataContext";
-
-const STATUS_LABEL = {
-  match: "Match",
-  mismatch: "Mismatch",
-  "missing-from-log": "Missing from your log",
-  "missing-from-statement": "Missing from statement",
-};
-
-const STATUS_COLOR = {
-  match: "text-emerald-600",
-  mismatch: "text-destructive",
-  "missing-from-log": "text-amber-600",
-  "missing-from-statement": "text-amber-600",
-};
 
 const PayPeriodResults = ({ period, onGenerateInvoice }) => {
   const { logs, paymentConfig } = useData();
@@ -57,11 +45,11 @@ const PayPeriodResults = ({ period, onGenerateInvoice }) => {
         <CardContent>
           <div className="space-y-2">
             {comparison.map((day) => (
-              <div key={day.date} className="flex items-center justify-between p-2 bg-muted rounded border border-border/50">
+              <div key={day.date} className="flex items-center justify-between p-2 bg-muted rounded-[14px] border border-border/50">
                 <span className="text-sm">{format(parseISO(day.date), "EEE, dd MMM yyyy")}</span>
-                <span className="text-sm">Yours: {day.loggedStops ?? "—"}</span>
-                <span className="text-sm">Statement: {day.statementStops ?? "—"}</span>
-                <span className={`text-sm font-semibold ${STATUS_COLOR[day.status]}`}>{STATUS_LABEL[day.status]}</span>
+                <span className="text-sm tabular-nums">Yours: {day.loggedStops ?? "—"}</span>
+                <span className="text-sm tabular-nums">Statement: {day.statementStops ?? "—"}</span>
+                <StatusBadge status={day.status} />
               </div>
             ))}
           </div>
@@ -75,27 +63,27 @@ const PayPeriodResults = ({ period, onGenerateInvoice }) => {
         <CardContent className="space-y-2">
           <div className="flex justify-between text-sm">
             <span>Gross Payment</span>
-            <span>£{totals.grossPayment.toFixed(2)}</span>
+            <Money amount={totals.grossPayment} />
           </div>
           <div className="flex justify-between text-sm">
             <span>DPD Charge</span>
-            <span>-£{totals.dpdCharge.toFixed(2)}</span>
+            <span>-<Money amount={totals.dpdCharge} /></span>
           </div>
           <div className="flex justify-between text-sm">
             <span>Admin Fee</span>
-            <span>-£{totals.adminFee.toFixed(2)}</span>
+            <span>-<Money amount={totals.adminFee} /></span>
           </div>
           <div className="flex justify-between text-sm font-semibold border-t border-border pt-2">
             <span>Total</span>
-            <span>£{totals.total.toFixed(2)}</span>
+            <Money amount={totals.total} />
           </div>
           <div className="flex justify-between text-sm">
             <span>VAT ({(period.vatRate * 100).toFixed(0)}%)</span>
-            <span>£{totals.vat.toFixed(2)}</span>
+            <Money amount={totals.vat} />
           </div>
           <div className="flex justify-between text-lg font-bold border-t border-border pt-2">
             <span>Total with VAT</span>
-            <span>£{totals.totalWithVat.toFixed(2)}</span>
+            <Money amount={totals.totalWithVat} />
           </div>
         </CardContent>
       </Card>
