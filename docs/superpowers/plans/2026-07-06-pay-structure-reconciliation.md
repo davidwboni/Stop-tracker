@@ -29,12 +29,15 @@
 - `src/features/payperiod/PayPeriodList.jsx` — history list, orchestrates Form/Results
 
 **Modify:**
-- `src/contexts/DataContext.jsx` — `paymentConfig` default shape (two places: real-user default, guest default)
-- `src/components/QuickEntry.jsx` — `calculateEarnings` uses the shared `calculateStopFee` instead of its own inline duplicate math
-- `src/components/PaymentConfig.jsx` — add `excessParcelRate` field to the settings screen
+- `src/contexts/DataContext.jsx` — `paymentConfig` default shape (two places: real-user default, guest default); later gains a `normalizePaymentConfig` helper in Task 6
+- `src/components/QuickEntry.jsx` — `calculateEarnings` uses the shared `calculateStopFee` instead of its own inline duplicate math (discovered during Task 5 to be dead code, fixed anyway at negligible cost)
+- `src/components/Layout.jsx` — **(added during execution, not in original plan)** the real live "quick entry" handler (floating action button, `handleQuickEntry`) had the identical bug to `QuickEntry.jsx`; fixed the same way
+- `src/components/PaymentSettings.jsx` — **(retargeted during execution from `PaymentConfig.jsx`, which turned out to be dead code — see Task 6)** add `excessParcelRate` field and migrate to the `{ thresholds }` shape
 - `src/components/InvoicePage.jsx` — swap `InvoiceCompare` for `PayPeriodList`, add invoice prefill handoff
 - `src/components/InvoiceGeneratorNew.jsx` — accept a `prefill` prop, skip double-applying VAT when prefilled
 - `src/index.js` — wrap the app with `PayPeriodProvider`
+
+**Known, deliberately out-of-scope findings from execution** (flagged as follow-ups, not fixed here): `StopEntryForm.jsx` has its own separate, unrelated flat-rate calculation (never reads `paymentConfig` in any shape); `PaymentConfig.jsx` is dead code (imported in `src/router/index.js:14`, never rendered on any route) and is left as-is.
 
 ---
 
@@ -621,92 +624,209 @@ git commit -m "fix: use the thresholds-based payment config shape everywhere (se
 
 ---
 
-### Task 6: Add excess-parcel rate to the settings screen
+### Task 6: Migrate the real settings screen (PaymentSettings.jsx) to the new shape
+
+> **Retargeted during execution (user-approved):** the plan originally named
+> `PaymentConfig.jsx`, but Task 5's implementer discovered it is unreachable
+> dead code (imported in `src/router/index.js:14` but never rendered on any
+> route). The actual live settings screen, routed at `/app/settings` via
+> `PaymentSettingsWrapper`, is `src/components/PaymentSettings.jsx` — and it
+> still reads/writes the *old* flat shape (`cutoffPoint`, `rateBeforeCutoff`,
+> `rateAfterCutoff`) directly to/from Firestore. This task migrates that
+> component instead. `PaymentConfig.jsx` is left untouched (dead code cleanup
+> is a separate, later concern, not part of this plan).
 
 **Files:**
-- Modify: `src/components/PaymentConfig.jsx`
+- Modify: `src/components/PaymentSettings.jsx`
+- Modify: `src/contexts/DataContext.jsx` (defensive normalization so a pre-existing old-shape Firestore document doesn't crash `calculateStopFee` elsewhere in the app)
 
 **Interfaces:**
-- Consumes: existing `thresholds` state/UI pattern already in this file.
-- Produces: the settings screen now persists `{ thresholds, excessParcelRate }` — the exact shape Task 5 made the rest of the app read.
+- Consumes: nothing new — this task closes the loop on Task 5's shape change by fixing the one remaining writer of the old shape.
+- Produces: `PaymentSettings.jsx` now persists `{ thresholds, excessParcelRate }` to Firestore, reading either shape (self-healing on next save if an old-shape document exists). `DataContext.jsx` gains a `normalizePaymentConfig(config)` helper so any code path that loads a raw Firestore/localStorage document — old shape or new — always yields `{ thresholds, excessParcelRate }` before it reaches `paymentConfig` in context, protecting `calculateStopFee` call sites in `QuickEntry.jsx` and `Layout.jsx` from crashing on `undefined thresholds`.
 
-- [ ] **Step 1: Add `excessParcelRate` state**
+**Why the DataContext.jsx change belongs here:** Task 5 changed the *defaults* `DataContext.jsx` uses when no document/field exists, but a real user who saved custom rates through `PaymentSettings.jsx` *before* this fix would have an old-shape document already sitting in Firestore. Task 5's code loads that raw document as-is with no reshaping — `calculateStopFee(stops, config.thresholds)` would receive `undefined` and throw. Fixing the settings screen's shape without also defending the read path would leave that crash in place for exactly the users this whole fix is meant to help.
 
-In `src/components/PaymentConfig.jsx`, after line 20 (`]);` closing the `thresholds` useState), add:
+- [ ] **Step 1: Read the current file first**
+
+Read `src/components/PaymentSettings.jsx` in full before editing — this task's line references may have drifted; match by the surrounding code shown below, not by line number alone.
+
+- [ ] **Step 2: Add an `excessParcelRate` state field**
+
+After the existing `paymentConfig` state declaration:
+
+```js
+  const [paymentConfig, setPaymentConfig] = useState({
+    cutoffPoint: 110,
+    rateBeforeCutoff: 1.98,
+    rateAfterCutoff: 1.48,
+  });
+```
+
+add:
 
 ```js
   const [excessParcelRate, setExcessParcelRate] = useState(0.05);
 ```
 
-- [ ] **Step 2: Load it alongside thresholds**
+Keep `paymentConfig`'s three existing fields as the UI's working state (this screen only ever exposed one cutoff tier — that's unchanged; this task fixes what shape it persists to, not the UI's tier model).
 
-Replace the two blocks that currently only handle `thresholds` (lines 24-29 and 42-45) so both also handle `excessParcelRate`:
+- [ ] **Step 3: Normalize on load, accepting either shape**
 
-```js
-    if (config && config.thresholds) {
-      setThresholds(config.thresholds);
-      setExcessParcelRate(config.excessParcelRate ?? 0.05);
-      setLoading(false);
-      return;
-    }
-```
+Replace the body of `fetchPaymentConfig`'s Firestore branch:
 
 ```js
-        if (docSnap.exists() && docSnap.data().paymentConfig) {
-          setThresholds(docSnap.data().paymentConfig.thresholds || thresholds);
-          setExcessParcelRate(docSnap.data().paymentConfig.excessParcelRate ?? 0.05);
+        const userDoc = await getDoc(doc(db, "users", userId));
+        if (userDoc.exists()) {
+          const config = userDoc.data().paymentConfig || {};
+          setPaymentConfig({
+            cutoffPoint: config.cutoffPoint || 110,
+            rateBeforeCutoff: config.rateBeforeCutoff || 1.98,
+            rateAfterCutoff: config.rateAfterCutoff || 1.48,
+          });
         }
 ```
 
-- [ ] **Step 3: Save it alongside thresholds**
-
-Replace line 110 (`const paymentConfig = { thresholds: thresholds };`) with:
+with:
 
 ```js
-      const paymentConfig = { thresholds, excessParcelRate };
+        const userDoc = await getDoc(doc(db, "users", userId));
+        if (userDoc.exists()) {
+          const config = userDoc.data().paymentConfig || {};
+
+          if (config.thresholds && config.thresholds.length > 0) {
+            const firstTier = config.thresholds[0];
+            const lastTier = config.thresholds[config.thresholds.length - 1];
+            setPaymentConfig({
+              cutoffPoint: firstTier.stopCount ?? 110,
+              rateBeforeCutoff: firstTier.rate ?? 1.98,
+              rateAfterCutoff: lastTier.rate ?? 1.48,
+            });
+          } else {
+            setPaymentConfig({
+              cutoffPoint: config.cutoffPoint || 110,
+              rateBeforeCutoff: config.rateBeforeCutoff || 1.98,
+              rateAfterCutoff: config.rateAfterCutoff || 1.48,
+            });
+          }
+
+          setExcessParcelRate(config.excessParcelRate ?? 0.05);
+        }
 ```
 
-- [ ] **Step 4: Add the input field to the UI**
+- [ ] **Step 4: Save in the new shape**
 
-After the closing `</div>` of the "Payment Tiers Section" block (after line 291's closing `</div>` for the thresholds list, before the "Status Messages" section at line 293), add:
+Replace the Firestore write in `handleSave`:
+
+```js
+      await updateDoc(doc(db, "users", userId), {
+        paymentConfig: paymentConfig,
+        updatedAt: new Date().toISOString()
+      });
+
+      setSuccess("Payment settings saved successfully!");
+      if (onSettingsSaved) onSettingsSaved(paymentConfig);
+```
+
+with:
+
+```js
+      const configToSave = {
+        thresholds: [
+          { stopCount: paymentConfig.cutoffPoint, rate: paymentConfig.rateBeforeCutoff },
+          { rate: paymentConfig.rateAfterCutoff }
+        ],
+        excessParcelRate
+      };
+
+      await updateDoc(doc(db, "users", userId), {
+        paymentConfig: configToSave,
+        updatedAt: new Date().toISOString()
+      });
+
+      setSuccess("Payment settings saved successfully!");
+      if (onSettingsSaved) onSettingsSaved(configToSave);
+```
+
+Also update the guest branch a few lines above it (`if (user?.isGuest) { ...; if (onSettingsSaved) onSettingsSaved(paymentConfig); ... }`) to build and pass the same `configToSave` shape, so guests and real users hand the same shape to `onSettingsSaved`.
+
+- [ ] **Step 5: Check how `onSettingsSaved` is consumed**
+
+Read `src/components/PaymentSettingsWrapper.jsx` (the component that renders `PaymentSettings` and supplies `onSettingsSaved`). If it writes the callback's argument to `localStorage` or passes it into `DataContext` in a way that assumes the old flat shape, update that one call site to expect `{ thresholds, excessParcelRate }` instead. If it just re-fetches from `DataContext` after saving and doesn't touch the shape itself, no change is needed there — note which case applies in your report.
+
+- [ ] **Step 6: Add the excess-parcel-rate input to the UI**
+
+After the "Rate After Cutoff" field block and before the "Example Calculation" block, add a field following this screen's existing `Label`/`Input` pattern (matching the styling already used for the two rate fields above it):
 
 ```jsx
-        <div className="px-4 py-4">
-          <h2 className="text-base font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
-            Excess Parcel Fee
-          </h2>
-          <div className="mx-0 p-4 rounded-2xl bg-white dark:bg-gray-800 shadow-sm">
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
-              Rate per excess parcel (parcels beyond one per stop)
-            </label>
-            <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">£</div>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                value={excessParcelRate.toString()}
-                onChange={(e) => {
-                  const value = parseFloat(e.target.value);
-                  if (!isNaN(value) && value >= 0) setExcessParcelRate(value);
-                }}
-                className="pl-8 h-11 bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-center font-medium transition-all duration-200 text-base"
-              />
+            {/* Excess Parcel Rate */}
+            <div className="space-y-2">
+              <Label htmlFor="excessParcelRate" className="text-base font-semibold">
+                Excess Parcel Fee
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Payment per parcel beyond one per stop
+              </p>
+              <div className="flex items-center gap-3">
+                <span className="text-lg font-semibold text-primary">£</span>
+                <Input
+                  id="excessParcelRate"
+                  name="excessParcelRate"
+                  type="number"
+                  value={excessParcelRate}
+                  onChange={(e) => setExcessParcelRate(parseFloat(e.target.value) || 0)}
+                  className="bg-input border-border focus:ring-2 focus:ring-primary max-w-xs"
+                  min="0"
+                  step="0.01"
+                />
+                <span className="text-sm text-muted-foreground">per excess parcel</span>
+              </div>
             </div>
-          </div>
-        </div>
 ```
 
-- [ ] **Step 5: Manually verify in the dev server**
+- [ ] **Step 7: Add a normalization helper to `DataContext.jsx`**
 
-Run: `npm start`, navigate to Settings, change "Rate per excess parcel" to `0.06`, click Save, reload the page. Expected: the field still shows `0.06` after reload (confirms round-trip through Firestore/localStorage).
+Read the current `src/contexts/DataContext.jsx` first (Task 5 already changed the default `useState` values and guest fallback; match by surrounding content). Above the `DataProvider` component definition, add:
 
-- [ ] **Step 6: Commit**
+```js
+const normalizePaymentConfig = (config) => {
+  if (!config) {
+    return {
+      thresholds: [{ stopCount: 110, rate: 1.98 }, { rate: 1.48 }],
+      excessParcelRate: 0.05
+    };
+  }
+  if (config.thresholds) return config;
+
+  // Legacy flat shape from before the thresholds migration — convert on the fly.
+  return {
+    thresholds: [
+      { stopCount: config.cutoffPoint ?? 110, rate: config.rateBeforeCutoff ?? 1.98 },
+      { rate: config.rateAfterCutoff ?? 1.48 }
+    ],
+    excessParcelRate: config.excessParcelRate ?? 0.05
+  };
+};
+```
+
+Then wrap every place that sets `paymentConfig` from a raw loaded value (not the two `useState` defaults Task 5 already fixed — those are already correct) with this helper. There are three such call sites: the real-user Firestore load (`if (mainUserDoc.exists() && mainUserDoc.data().paymentConfig) { setPaymentConfig(mainUserDoc.data().paymentConfig); }`), the guest localStorage load (`if (guestConfig) setPaymentConfig(JSON.parse(guestConfig));` inside `forceSync`), and the force-refresh path (`if (refreshedData && refreshedData.paymentConfig) { setPaymentConfig(refreshedData.paymentConfig); }`). In each case, wrap the value passed to `setPaymentConfig` with `normalizePaymentConfig(...)`.
+
+- [ ] **Step 8: Run the full test suite**
+
+Run: `npm run test`
+Expected: PASS — 30 existing tests (payPeriodCalculations + periodUtils), no regressions. This task adds no new automated tests (no existing precedent for testing these Firestore-backed components in this codebase — matches the convention already established in Task 5).
+
+- [ ] **Step 9: Manually verify in the dev server**
+
+Run: `npm start`, sign in (a real account, not guest, so the Firestore path is exercised — use whatever test account is available, or guest if that's all that's available and note which you used), navigate to Settings (`/app/settings`), change "Excess Parcel Fee" to `0.06` and one of the rate fields, click Save, reload the page. Expected: all fields — including the new one — still show the changed values after reload. Then check the app doesn't crash on load (dashboard/Quick Entry still work) to confirm the normalization path is safe.
+
+- [ ] **Step 10: Commit**
 
 ```bash
-git add src/components/PaymentConfig.jsx
-git commit -m "feat: add excess-parcel rate to payment settings screen"
+git add src/components/PaymentSettings.jsx src/contexts/DataContext.jsx
+git commit -m "fix: migrate the live settings screen (PaymentSettings.jsx) to the thresholds shape, with backward-compat normalization"
 ```
+
+If `PaymentSettingsWrapper.jsx` also needed a change per Step 5, include it in this same commit.
 
 ---
 
