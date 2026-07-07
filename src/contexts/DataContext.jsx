@@ -16,6 +16,30 @@ const DataContext = createContext({
 
 export const useData = () => useContext(DataContext);
 
+// Normalizes a raw paymentConfig value (from Firestore or localStorage) into the
+// current { thresholds, excessParcelRate } shape, transparently upgrading any
+// pre-existing document still saved in the old flat { cutoffPoint, rateBeforeCutoff,
+// rateAfterCutoff } shape so downstream consumers (e.g. calculateStopFee) never see
+// undefined thresholds.
+const normalizePaymentConfig = (config) => {
+  if (!config) {
+    return {
+      thresholds: [{ stopCount: 110, rate: 1.98 }, { rate: 1.48 }],
+      excessParcelRate: 0.05
+    };
+  }
+  if (config.thresholds) return config;
+
+  // Legacy flat shape from before the thresholds migration — convert on the fly.
+  return {
+    thresholds: [
+      { stopCount: config.cutoffPoint ?? 110, rate: config.rateBeforeCutoff ?? 1.98 },
+      { rate: config.rateAfterCutoff ?? 1.48 }
+    ],
+    excessParcelRate: config.excessParcelRate ?? 0.05
+  };
+};
+
 export const DataProvider = ({ children }) => {
   const { user } = useAuth();
   const [logs, setLogs] = useState([]); // Initialize with empty array
@@ -134,7 +158,7 @@ export const DataProvider = ({ children }) => {
           const mainUserDocRef = doc(db, 'users', user.uid);
           const mainUserDoc = await getDoc(mainUserDocRef);
           if (mainUserDoc.exists() && mainUserDoc.data().paymentConfig) {
-            setPaymentConfig(mainUserDoc.data().paymentConfig);
+            setPaymentConfig(normalizePaymentConfig(mainUserDoc.data().paymentConfig));
           }
           
         } catch (directErr) {
@@ -202,7 +226,7 @@ export const DataProvider = ({ children }) => {
         const guestConfig = localStorage.getItem(`guestConfig_${user.uid}`);
         
         if (guestLogs) setLogs(JSON.parse(guestLogs));
-        if (guestConfig) setPaymentConfig(JSON.parse(guestConfig));
+        if (guestConfig) setPaymentConfig(normalizePaymentConfig(JSON.parse(guestConfig)));
         return true;
       } else {
         // For regular users, sync with Firebase
@@ -214,7 +238,7 @@ export const DataProvider = ({ children }) => {
         }
         
         if (refreshedData && refreshedData.paymentConfig) {
-          setPaymentConfig(refreshedData.paymentConfig);
+          setPaymentConfig(normalizePaymentConfig(refreshedData.paymentConfig));
         }
         
         return true;

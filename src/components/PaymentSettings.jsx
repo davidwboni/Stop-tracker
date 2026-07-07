@@ -21,6 +21,7 @@ const PaymentSettings = ({ userId, user, onSettingsSaved }) => {
     rateBeforeCutoff: 1.98,
     rateAfterCutoff: 1.48,
   });
+  const [excessParcelRate, setExcessParcelRate] = useState(0.05);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState(null);
@@ -38,11 +39,24 @@ const PaymentSettings = ({ userId, user, onSettingsSaved }) => {
         const userDoc = await getDoc(doc(db, "users", userId));
         if (userDoc.exists()) {
           const config = userDoc.data().paymentConfig || {};
-          setPaymentConfig({
-            cutoffPoint: config.cutoffPoint || 110,
-            rateBeforeCutoff: config.rateBeforeCutoff || 1.98,
-            rateAfterCutoff: config.rateAfterCutoff || 1.48,
-          });
+
+          if (config.thresholds && config.thresholds.length > 0) {
+            const firstTier = config.thresholds[0];
+            const lastTier = config.thresholds[config.thresholds.length - 1];
+            setPaymentConfig({
+              cutoffPoint: firstTier.stopCount ?? 110,
+              rateBeforeCutoff: firstTier.rate ?? 1.98,
+              rateAfterCutoff: lastTier.rate ?? 1.48,
+            });
+          } else {
+            setPaymentConfig({
+              cutoffPoint: config.cutoffPoint || 110,
+              rateBeforeCutoff: config.rateBeforeCutoff || 1.98,
+              rateAfterCutoff: config.rateAfterCutoff || 1.48,
+            });
+          }
+
+          setExcessParcelRate(config.excessParcelRate ?? 0.05);
         }
       } catch (err) {
         console.error("Error fetching payment config:", err);
@@ -76,20 +90,28 @@ const PaymentSettings = ({ userId, user, onSettingsSaved }) => {
     setError(null);
 
     try {
+      const configToSave = {
+        thresholds: [
+          { stopCount: paymentConfig.cutoffPoint, rate: paymentConfig.rateBeforeCutoff },
+          { rate: paymentConfig.rateAfterCutoff }
+        ],
+        excessParcelRate
+      };
+
       if (user?.isGuest) {
         setSuccess("Settings saved locally");
-        if (onSettingsSaved) onSettingsSaved(paymentConfig);
+        if (onSettingsSaved) onSettingsSaved(configToSave);
         setUpdating(false);
         return;
       }
 
       await updateDoc(doc(db, "users", userId), {
-        paymentConfig: paymentConfig,
+        paymentConfig: configToSave,
         updatedAt: new Date().toISOString()
       });
 
       setSuccess("Payment settings saved successfully!");
-      if (onSettingsSaved) onSettingsSaved(paymentConfig);
+      if (onSettingsSaved) onSettingsSaved(configToSave);
     } catch (err) {
       console.error("Error updating payment config:", err);
       setError("Failed to save settings. Please try again.");
@@ -219,6 +241,30 @@ const PaymentSettings = ({ userId, user, onSettingsSaved }) => {
                   step="0.01"
                 />
                 <span className="text-sm text-muted-foreground">per stop</span>
+              </div>
+            </div>
+
+            {/* Excess Parcel Rate */}
+            <div className="space-y-2">
+              <Label htmlFor="excessParcelRate" className="text-base font-semibold">
+                Excess Parcel Fee
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Payment per parcel beyond one per stop
+              </p>
+              <div className="flex items-center gap-3">
+                <span className="text-lg font-semibold text-primary">£</span>
+                <Input
+                  id="excessParcelRate"
+                  name="excessParcelRate"
+                  type="number"
+                  value={excessParcelRate}
+                  onChange={(e) => setExcessParcelRate(parseFloat(e.target.value) || 0)}
+                  className="bg-input border-border focus:ring-2 focus:ring-primary max-w-xs"
+                  min="0"
+                  step="0.01"
+                />
+                <span className="text-sm text-muted-foreground">per excess parcel</span>
               </div>
             </div>
 
