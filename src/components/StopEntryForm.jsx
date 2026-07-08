@@ -18,6 +18,7 @@ import {
 import { formatDistanceToNow, format } from "date-fns";
 import { useData } from "../contexts/DataContext";
 import { calculateStopFee } from "../features/payperiod/payPeriodCalculations";
+import { Money } from "./ui/money";
 
 const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
   // Initialize logs as an empty array if null
@@ -504,23 +505,23 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
       }}
     >
       <div>
-        <Card className="mx-0 rounded-none border-0 shadow-none bg-white dark:bg-gray-800">
+        <Card className="mx-0 rounded-none border-0 shadow-none">
           <CardHeader className="px-4 pb-4">
             <div className="text-center mb-4">
-              <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl mb-3 shadow-lg">
-                <Truck className="w-6 h-6 text-white" />
+              <div className="inline-flex items-center justify-center w-12 h-12 bg-primary rounded-[14px] mb-3 shadow-lg">
+                <Truck className="w-6 h-6 text-primary-foreground" />
               </div>
-              <CardTitle className="text-lg font-bold text-gray-900 dark:text-white mb-1">
+              <CardTitle className="text-lg font-bold mb-1">
                 Log Entry
               </CardTitle>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Quick delivery logging</p>
+              <p className="text-sm text-muted-foreground">Quick delivery logging</p>
             </div>
           </CardHeader>
           <CardContent className="px-4 pb-4">
             <form onSubmit={optimizedHandleSubmit} className="space-y-5">
               {/* Main input - Stops (most important, thumb-friendly position) */}
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 p-6 rounded-3xl border border-blue-100 dark:border-blue-800">
-                <label className="block text-sm font-semibold text-blue-700 dark:text-blue-300 mb-3 text-center">
+              <div className="bg-primary/5 p-6 rounded-[18px] border border-primary/20">
+                <label className="block text-sm font-semibold text-primary mb-3 text-center">
                   📦 Number of Stops
                 </label>
                 <Input
@@ -535,11 +536,11 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                   onBlur={handleInputBlur}
                   placeholder="0"
                   required
-                  className="h-16 bg-white dark:bg-gray-800 border-2 border-blue-200 dark:border-blue-600 rounded-2xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-2xl font-bold touch-manipulation text-center shadow-lg"
+                  className="h-16 border-2 border-primary/30 rounded-[18px] focus:border-primary focus:ring-4 focus:ring-primary/20 text-2xl font-bold touch-manipulation text-center shadow-lg tabular-nums"
                 />
                 {entry.stops && (
-                  <p className="text-center text-sm text-blue-600 dark:text-blue-400 mt-2 font-medium">
-                    £{estimatedEarnings.toFixed(2)} estimated
+                  <p className="text-center text-sm text-primary mt-2 font-medium">
+                    <Money amount={estimatedEarnings} /> estimated
                   </p>
                 )}
               </div>
@@ -548,7 +549,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                    <label className="block text-xs font-medium text-muted-foreground mb-2">
                       📅 Date
                     </label>
                     <Input
@@ -559,16 +560,16 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                       onFocus={() => handleInputFocus({ current: null })}
                       onBlur={handleInputBlur}
                       required
-                      className="h-12 bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 rounded-2xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm touch-manipulation"
+                      className="h-12 rounded-[14px] focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm touch-manipulation"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                    <label className="block text-xs font-medium text-muted-foreground mb-2">
                       💰 Extra Pay
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none z-10">
-                        <span className="text-gray-500 text-sm font-medium">£</span>
+                        <span className="text-muted-foreground text-sm font-medium">£</span>
                       </div>
                       <Input
                         ref={extraInputRef}
@@ -581,14 +582,14 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                         onBlur={handleInputBlur}
                         placeholder="0.00"
                         step="0.01"
-                        className="pl-10 h-12 bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 rounded-2xl focus:border-green-500 focus:ring-2 focus:ring-green-500/20 text-sm touch-manipulation text-center font-medium"
+                        className="pl-10 h-12 rounded-[14px] focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm touch-manipulation text-center font-medium tabular-nums"
                       />
                     </div>
                   </div>
                 </div>
                 
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                  <label className="block text-xs font-medium text-muted-foreground mb-2">
                     📝 Notes (Optional)
                   </label>
                   <Input
@@ -599,7 +600,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                     onFocus={() => handleInputFocus({ current: null })}
                     onBlur={handleInputBlur}
                     placeholder="Additional notes..."
-                    className="h-12 bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 rounded-2xl focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 text-sm touch-manipulation"
+                    className="h-12 rounded-[14px] focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm touch-manipulation"
                   />
                 </div>
               </div>
@@ -613,10 +614,10 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                 </div>
                 
                 {/* Large, thumb-friendly submit button */}
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   disabled={isSubmitting || !entry.stops}
-                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-4 px-6 rounded-2xl font-semibold text-base shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed h-14 min-h-[56px] touch-manipulation active:scale-98 flex items-center justify-center"
+                  className="w-full py-4 px-6 rounded-[18px] font-semibold text-base shadow-xl h-14 min-h-[56px] touch-manipulation active:scale-98 flex items-center justify-center"
                 >
                   {saving ? (
                     <>
@@ -648,7 +649,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
-                    className="bg-green-50 border border-green-200 text-green-700 p-3 rounded-xl"
+                    className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 p-3 rounded-[14px]"
                   >
                     <div className="flex items-center">
                       <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
@@ -663,7 +664,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                    className="bg-amber-50 border border-amber-200 p-4 rounded-xl"
+                    className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-[14px]"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
@@ -693,7 +694,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
-                  className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl"
+                  className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-[14px]"
                 >
                   <div className="flex items-start">
                     <svg className="h-4 w-4 text-red-500 mr-2 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -716,7 +717,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-amber-50 border border-amber-200 p-4 rounded-xl"
+                  className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-[14px]"
                 >
                   <div className="flex items-center">
                     <CloudOff className="h-4 w-4 text-amber-500 mr-2" />
@@ -741,10 +742,10 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
       
       {/* Recent Entries - Show only latest 2 in compact form */}
       {safetyLogs.length > 0 && (
-        <Card className="mx-0 rounded-2xl border-0 shadow-sm">
+        <Card className="mx-0 rounded-[18px] border-0 shadow-sm">
           <CardHeader className="px-4 pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
                 Recent Entries
               </CardTitle>
               {safetyLogs.length > 2 && (
@@ -761,19 +762,19 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
           <CardContent className="px-4">
             <div className="space-y-2">
               {safetyLogs.slice(0, 2).map((log, index) => (
-                <div key={log.id} className="bg-gray-50 dark:bg-gray-700/30 p-3 rounded-xl">
+                <div key={log.id} className="bg-muted p-3 rounded-[14px]">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2 min-w-0 flex-1">
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                      <div className="text-xs text-muted-foreground">
                         {format(new Date(log.date), 'MMM d')}
                       </div>
                       <div className="text-xs font-medium">{log.stops} stops</div>
                       {log.extra > 0 && (
-                        <div className="text-xs text-green-600 dark:text-green-400">+£{log.extra}</div>
+                        <div className="text-xs text-emerald-600 dark:text-emerald-400">+£{log.extra}</div>
                       )}
                     </div>
-                    <div className="text-sm font-bold text-blue-600 dark:text-blue-400">
-                      £{log.total?.toFixed(0) || '0'}
+                    <div className="text-sm font-bold text-primary">
+                      <Money amount={log.total || 0} />
                     </div>
                   </div>
                 </div>
