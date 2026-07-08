@@ -115,24 +115,24 @@ const FloatingActionButton = ({ onAddEntry, isVisible = true }) => {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 w-80 max-w-[calc(100vw-2rem)]"
+              className="bg-card rounded-[18px] shadow-2xl border border-border p-6 w-80 max-w-[calc(100vw-2rem)]"
             >
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center">
-                  <Truck className="w-5 h-5 mr-2 text-blue-600" />
+                <h3 className="text-lg font-bold text-card-foreground flex items-center">
+                  <Truck className="w-5 h-5 mr-2 text-primary" />
                   Quick Entry
                 </h3>
                 <button
                   onClick={handleToggle}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+                  className="p-2 hover:bg-muted rounded-full transition-colors"
                 >
-                  <X className="w-5 h-5 text-gray-500" />
+                  <X className="w-5 h-5 text-muted-foreground" />
                 </button>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
                     Number of Stops
                   </label>
                   <Input
@@ -142,17 +142,17 @@ const FloatingActionButton = ({ onAddEntry, isVisible = true }) => {
                     onChange={handleInputChange}
                     placeholder="How many deliveries?"
                     required
-                    className="w-full h-10 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800"
+                    className="w-full h-10 rounded-[14px] focus:border-primary focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
                     Extra Pay (Optional)
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                      <span className="text-gray-500 text-sm">£</span>
+                      <span className="text-muted-foreground text-sm">£</span>
                     </div>
                     <Input
                       type="number"
@@ -161,7 +161,7 @@ const FloatingActionButton = ({ onAddEntry, isVisible = true }) => {
                       onChange={handleInputChange}
                       placeholder="0.00"
                       step="0.01"
-                      className="pl-8 w-full h-10 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-200 dark:focus:ring-green-800"
+                      className="pl-8 w-full h-10 rounded-[14px] focus:border-primary focus:ring-2 focus:ring-primary/20 tabular-nums"
                     />
                   </div>
                 </div>
@@ -169,7 +169,7 @@ const FloatingActionButton = ({ onAddEntry, isVisible = true }) => {
                 <Button
                   type="submit"
                   disabled={isSubmitting || !quickEntry.stops}
-                  className="w-full h-11 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95"
+                  className="w-full h-11 font-semibold rounded-[14px] shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95"
                 >
                   {isSubmitting ? (
                     <div className="flex items-center">
@@ -195,7 +195,7 @@ const FloatingActionButton = ({ onAddEntry, isVisible = true }) => {
               transition={{ duration: 0.2 }}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
-              className="w-14 h-14 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:shadow-blue-500/25 active:shadow-lg"
+              className="w-14 h-14 bg-primary text-primary-foreground hover:opacity-90 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:shadow-primary/25 active:shadow-lg"
             >
               <Plus className="w-6 h-6" />
             </motion.button>
