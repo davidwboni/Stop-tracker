@@ -16,6 +16,8 @@ import {
   Undo
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
+import { useData } from "../contexts/DataContext";
+import { calculateStopFee } from "../features/payperiod/payPeriodCalculations";
 
 const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
   // Initialize logs as an empty array if null
@@ -51,7 +53,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [rate, setRate] = useState(1.90); // Default rate per stop
+  const { paymentConfig } = useData();
   const [showAllEntries, setShowAllEntries] = useState(false);
   const [lastSavedEntry, setLastSavedEntry] = useState(null);
   const [showUndo, setShowUndo] = useState(false);
@@ -65,14 +67,6 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
   const activeInputRef = useRef(null);
   const stopsInputRef = useRef(null);
   const extraInputRef = useRef(null);
-
-  // Get user's rate from local storage or settings
-  useEffect(() => {
-    const savedRate = localStorage.getItem('rate-per-stop');
-    if (savedRate) {
-      setRate(parseFloat(savedRate));
-    }
-  }, []);
 
   // Smart keyboard handling for mobile
   const handleInputFocus = useCallback((inputRef) => {
@@ -242,15 +236,18 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
   // Removed - replaced with debouncedHandleChange below for better performance
 
   // Memoize expensive calculations to prevent unnecessary re-renders
-  const calculateEstimatedEarnings = useMemo(() => {
-    if (!entry.stops) return "£0.00";
-    
+  const estimatedEarnings = useMemo(() => {
+    if (!entry.stops) return 0;
+
     const stopsNum = parseInt(entry.stops, 10) || 0;
     const extraNum = entry.extra ? parseFloat(entry.extra) || 0 : 0;
-    
-    const earnings = (stopsNum * rate) + extraNum;
-    return `£${earnings.toFixed(2)}`;
-  }, [entry.stops, entry.extra, rate]);
+    const config = paymentConfig || {
+      thresholds: [{ stopCount: 110, rate: 1.98 }, { rate: 1.48 }],
+      excessParcelRate: 0.05
+    };
+
+    return calculateStopFee(stopsNum, config.thresholds) + extraNum;
+  }, [entry.stops, entry.extra, paymentConfig]);
 
   // Memoize recent entries to avoid unnecessary re-processing
   const recentEntries = useMemo(() => {
@@ -270,7 +267,11 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
       
       const stops = parseInt(entry.stops, 10);
       const extra = entry.extra ? parseFloat(entry.extra) : 0;
-      const total = (stops * rate) + extra;
+      const config = paymentConfig || {
+        thresholds: [{ stopCount: 110, rate: 1.98 }, { rate: 1.48 }],
+        excessParcelRate: 0.05
+      };
+      const total = calculateStopFee(stops, config.thresholds) + extra;
       
       const newLog = {
         id: Date.now(),
@@ -538,7 +539,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                 />
                 {entry.stops && (
                   <p className="text-center text-sm text-blue-600 dark:text-blue-400 mt-2 font-medium">
-                    {calculateEstimatedEarnings} estimated
+                    £{estimatedEarnings.toFixed(2)} estimated
                   </p>
                 )}
               </div>
