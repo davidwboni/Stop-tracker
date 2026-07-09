@@ -204,7 +204,7 @@ const RoutePlanner = () => {
           id: Date.now()
         };
         setAddresses([...addresses, newAddress]);
-        recordAddressUse(newAddress);
+        recordAddressUse(newAddress).catch(() => {});
       } catch (error) {
         if (error.name === 'AbortError') {
           return;
@@ -216,7 +216,7 @@ const RoutePlanner = () => {
     } else {
       const newAddress = { ...address, id: Date.now() };
       setAddresses([...addresses, newAddress]);
-      recordAddressUse(newAddress);
+      recordAddressUse(newAddress).catch(() => {});
     }
 
     setCurrentAddress("");
