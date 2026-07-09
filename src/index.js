@@ -8,6 +8,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { DataProvider } from './contexts/DataContext';
 import { InvoiceProvider } from './contexts/InvoiceContext';
 import { PayPeriodProvider } from './features/payperiod/PayPeriodContext';
+import { AddressMemoryProvider } from './contexts/AddressMemoryContext';
 
 // Check if root element exists
 const rootElement = document.getElementById('root');
@@ -23,9 +24,11 @@ root.render(
       <ThemeProvider>
         <DataProvider>
           <PayPeriodProvider>
-            <InvoiceProvider>
-              <RouterProvider router={router} />
-            </InvoiceProvider>
+            <AddressMemoryProvider>
+              <InvoiceProvider>
+                <RouterProvider router={router} />
+              </InvoiceProvider>
+            </AddressMemoryProvider>
           </PayPeriodProvider>
         </DataProvider>
       </ThemeProvider>
