@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
@@ -24,6 +24,13 @@ import {
   Share2,
   AlertCircle
 } from "lucide-react";
+import {
+  isPostcodeLike,
+  computeBiasCenter,
+  searchPostcodes,
+  resolvePostcode,
+  searchAddresses
+} from "../services/addressSearch";
 
 const RoutePlanner = () => {
   const [addresses, setAddresses] = useState([]);
@@ -37,6 +44,7 @@ const RoutePlanner = () => {
   const [success, setSuccess] = useState(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [savedRoutes, setSavedRoutes] = useState([]);
+  const activeSearchControllerRef = useRef(null);
 
   // Load saved routes on mount
   useEffect(() => {
@@ -61,52 +69,54 @@ const RoutePlanner = () => {
     setTimeout(() => setSuccess(null), 3000);
   };
 
-  // Real address search using Nominatim (OpenStreetMap)
+  // Postcode-aware, cancellation-safe address search
   const searchAddress = async (query) => {
     if (query.length < 3) {
       setAddressSuggestions([]);
       return;
     }
 
+    if (activeSearchControllerRef.current) {
+      activeSearchControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    activeSearchControllerRef.current = controller;
+
     setIsSearching(true);
 
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?` +
-        `q=${encodeURIComponent(query)}&` +
-        `countrycodes=gb&` +
-        `format=json&` +
-        `addressdetails=1&` +
-        `limit=5`,
-        {
-          headers: {
-            'Accept': 'application/json'
-          }
+      if (isPostcodeLike(query)) {
+        const postcodes = await searchPostcodes(query, controller.signal);
+
+        if (postcodes.length === 0) {
+          showError('No matching postcodes found.');
+          setAddressSuggestions([]);
+          return;
         }
-      );
 
-      if (!response.ok) {
-        throw new Error('Address search failed');
+        setAddressSuggestions(
+          postcodes.map(postcode => ({
+            address: postcode,
+            postcode,
+            isPostcodeSuggestion: true
+          }))
+        );
+      } else {
+        const biasCenter = computeBiasCenter(addresses);
+        const suggestions = await searchAddresses(query, biasCenter, controller.signal);
+
+        if (suggestions.length === 0) {
+          showError('No addresses found. Try a different search term.');
+          setAddressSuggestions([]);
+          return;
+        }
+
+        setAddressSuggestions(suggestions);
       }
-
-      const data = await response.json();
-
-      if (data.length === 0) {
-        showError('No addresses found. Try a different search term.');
-        setAddressSuggestions([]);
+    } catch (error) {
+      if (error.name === 'AbortError') {
         return;
       }
-
-      const suggestions = data.map(place => ({
-        address: place.display_name,
-        postcode: place.address?.postcode || 'N/A',
-        latitude: parseFloat(place.lat),
-        longitude: parseFloat(place.lon),
-        type: place.type
-      }));
-
-      setAddressSuggestions(suggestions);
-    } catch (error) {
       console.error('Address search error:', error);
       showError('Unable to search addresses. Please check your connection.');
       setAddressSuggestions([]);
@@ -178,8 +188,27 @@ const RoutePlanner = () => {
     return () => clearTimeout(delaySearch);
   }, [currentAddress]);
 
-  const addAddress = (address) => {
-    setAddresses([...addresses, { ...address, id: Date.now() }]);
+  const addAddress = async (address) => {
+    if (address.isPostcodeSuggestion) {
+      try {
+        const resolved = await resolvePostcode(address.postcode, new AbortController().signal);
+        setAddresses([...addresses, {
+          address: resolved.postcode,
+          postcode: resolved.postcode,
+          latitude: resolved.latitude,
+          longitude: resolved.longitude,
+          type: 'postcode',
+          id: Date.now()
+        }]);
+      } catch (error) {
+        console.error('Postcode resolve error:', error);
+        showError('Unable to resolve that postcode. Please try again.');
+        return;
+      }
+    } else {
+      setAddresses([...addresses, { ...address, id: Date.now() }]);
+    }
+
     setCurrentAddress("");
     setAddressSuggestions([]);
   };
@@ -578,9 +607,16 @@ const RoutePlanner = () => {
                           className="w-full p-2 text-left text-sm bg-muted hover:bg-muted/80 rounded border border-border/50 transition-colors"
                         >
                           <div className="flex items-start gap-2">
-                            <MapPin className="h-3 w-3 text-primary mt-0.5 flex-shrink-0" />
+                            {suggestion.isPostcodeSuggestion ? (
+                              <Navigation2 className="h-3 w-3 text-primary mt-0.5 flex-shrink-0" />
+                            ) : (
+                              <MapPin className="h-3 w-3 text-primary mt-0.5 flex-shrink-0" />
+                            )}
                             <div className="min-w-0">
                               <p className="truncate text-xs">{suggestion.address}</p>
+                              {suggestion.isPostcodeSuggestion && (
+                                <p className="text-[10px] text-muted-foreground">Postcode area</p>
+                              )}
                             </div>
                           </div>
                         </button>
