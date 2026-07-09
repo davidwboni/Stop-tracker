@@ -4,8 +4,10 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useData } from "../contexts/DataContext";
 import { Card, CardContent } from "./ui/card";
+import { Button } from "./ui/button";
 import StopEntryForm from "./StopEntryForm";
 import { Calendar, Package, TrendingUp, FileText, ArrowRight } from "lucide-react";
+import { Money } from "./ui/money";
 
 const SimpleDashboard = () => {
   const { user } = useAuth();
@@ -39,7 +41,7 @@ const SimpleDashboard = () => {
 
     const weeklyStops = thisWeekLogs.reduce((sum, log) => sum + log.stops, 0);
     const weeklyEarnings = thisWeekLogs.reduce((sum, log) => sum + (log.total || 0), 0);
-    const avgPerDay = thisWeekLogs.length > 0 ? (weeklyEarnings / thisWeekLogs.length).toFixed(2) : 0;
+    const avgPerDay = thisWeekLogs.length > 0 ? (weeklyEarnings / thisWeekLogs.length) : 0;
 
     return {
       stops: weeklyStops,
@@ -95,7 +97,7 @@ const SimpleDashboard = () => {
           <Card className="bg-card border-border/50 overflow-hidden">
             <CardContent className="p-4">
               <div className="text-sm text-muted-foreground mb-1">Today's Earnings</div>
-              <div className="text-3xl font-bold text-primary">£{todayData.earnings.toFixed(2)}</div>
+              <div className="text-3xl font-bold text-primary"><Money amount={todayData.earnings} /></div>
               <div className="text-xs text-muted-foreground mt-1">earned</div>
             </CardContent>
           </Card>
@@ -109,7 +111,7 @@ const SimpleDashboard = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
         >
-          <Card className="bg-gradient-to-br from-primary/10 to-accent/10 border-primary/20">
+          <Card className="bg-primary/5 border-primary/20">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-semibold text-lg">This Week</h2>
@@ -121,11 +123,11 @@ const SimpleDashboard = () => {
                   <div className="text-xs text-muted-foreground mt-1">Total Stops</div>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-primary">£{weekStats.earnings.toFixed(0)}</div>
+                  <div className="text-2xl font-bold text-primary"><Money amount={weekStats.earnings} /></div>
                   <div className="text-xs text-muted-foreground mt-1">Earned</div>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold">£{weekStats.avgPerDay}</div>
+                  <div className="text-2xl font-bold"><Money amount={weekStats.avgPerDay} /></div>
                   <div className="text-xs text-muted-foreground mt-1">Per Day</div>
                 </div>
               </div>
@@ -177,7 +179,7 @@ const SimpleDashboard = () => {
                 key={log.id}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="bg-card rounded-lg p-4 border border-border/50 hover:border-primary/30 transition-colors"
+                className="bg-card rounded-[14px] p-4 border border-border/50 hover:border-primary/30 transition-colors"
               >
                 <div className="flex items-center justify-between">
                   <div>
@@ -193,7 +195,7 @@ const SimpleDashboard = () => {
                     </div>
                   </div>
                   <div className="text-lg font-bold text-primary">
-                    £{log.total?.toFixed(2) || '0.00'}
+                    <Money amount={log.total || 0} />
                   </div>
                 </div>
               </motion.div>
@@ -209,20 +211,22 @@ const SimpleDashboard = () => {
         transition={{ delay: 0.3 }}
         className="grid grid-cols-2 gap-3 pt-2"
       >
-        <button
+        <Button
           onClick={() => navigate('/app/stats')}
-          className="bg-secondary/10 hover:bg-secondary/20 border border-secondary/30 rounded-lg p-4 transition-colors active:scale-95 touch-manipulation"
+          variant="outline"
+          className="flex-col h-auto py-4 gap-2 rounded-[14px] active:scale-95 touch-manipulation"
         >
-          <TrendingUp className="w-6 h-6 text-secondary mb-2" />
-          <div className="font-medium text-sm">Weekly Stats</div>
-        </button>
-        <button
+          <TrendingUp className="w-6 h-6 text-secondary" />
+          <span className="font-medium text-sm">Weekly Stats</span>
+        </Button>
+        <Button
           onClick={() => navigate('/app/invoice')}
-          className="bg-primary/10 hover:bg-primary/20 border border-primary/30 rounded-lg p-4 transition-colors active:scale-95 touch-manipulation"
+          variant="outline"
+          className="flex-col h-auto py-4 gap-2 rounded-[14px] active:scale-95 touch-manipulation"
         >
-          <FileText className="w-6 h-6 text-primary mb-2" />
-          <div className="font-medium text-sm">Manage Invoices</div>
-        </button>
+          <FileText className="w-6 h-6 text-primary" />
+          <span className="font-medium text-sm">Manage Invoices</span>
+        </Button>
       </motion.div>
     </div>
   );
