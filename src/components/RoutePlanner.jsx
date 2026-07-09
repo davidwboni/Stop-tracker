@@ -5,6 +5,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Alert, AlertDescription } from "./ui/alert";
 import RouteMap from "./RouteMap";
+import AddressMiniMap from "./AddressMiniMap";
 import {
   MapPin,
   Navigation,
@@ -23,7 +24,9 @@ import {
   FolderOpen,
   Share2,
   AlertCircle,
-  Clock
+  Clock,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import {
   isPostcodeLike,
@@ -48,6 +51,7 @@ const RoutePlanner = () => {
   const [savedRoutes, setSavedRoutes] = useState([]);
   const activeSearchControllerRef = useRef(null);
   const { frequentAddresses, recordAddressUse } = useAddressMemory();
+  const [expandedAddressId, setExpandedAddressId] = useState(null);
 
   // Load saved routes on mount
   useEffect(() => {
@@ -745,46 +749,71 @@ const RoutePlanner = () => {
               ) : (
                 <div className="space-y-2 max-h-96 overflow-y-auto">
                   {addresses.map((address, index) => (
-                    <div
-                      key={address.id}
-                      className="flex items-start gap-2 p-2 bg-muted rounded border border-border/50 group"
-                    >
-                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground font-bold text-xs flex-shrink-0">
-                        {index + 1}
+                    <div key={address.id}>
+                      <div
+                        className="flex items-start gap-2 p-2 bg-muted rounded border border-border/50 group"
+                      >
+                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground font-bold text-xs flex-shrink-0">
+                          {index + 1}
+                        </div>
+
+                        <button
+                          onClick={() => setExpandedAddressId(expandedAddressId === address.id ? null : address.id)}
+                          className="flex-1 min-w-0 flex items-center gap-1 text-left"
+                        >
+                          <span className="text-xs truncate flex-1">{address.address}</span>
+                          {expandedAddressId === address.id ? (
+                            <ChevronUp className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                          ) : (
+                            <ChevronDown className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                          )}
+                        </button>
+
+                        <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                          <Button
+                            onClick={() => moveAddress(index, 'up')}
+                            disabled={index === 0}
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
+                          >
+                            <ArrowUp className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            onClick={() => moveAddress(index, 'down')}
+                            disabled={index === addresses.length - 1}
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
+                          >
+                            <ArrowDown className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            onClick={() => removeAddress(address.id)}
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0 text-destructive"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </div>
 
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs truncate">{address.address}</p>
-                      </div>
-
-                      <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                        <Button
-                          onClick={() => moveAddress(index, 'up')}
-                          disabled={index === 0}
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 w-6 p-0"
-                        >
-                          <ArrowUp className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          onClick={() => moveAddress(index, 'down')}
-                          disabled={index === addresses.length - 1}
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 w-6 p-0"
-                        >
-                          <ArrowDown className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          onClick={() => removeAddress(address.id)}
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 w-6 p-0 text-destructive"
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
+                      <AnimatePresence>
+                        {expandedAddressId === address.id && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                          >
+                            <AddressMiniMap
+                              latitude={address.latitude}
+                              longitude={address.longitude}
+                              address={address.address}
+                            />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   ))}
                 </div>
