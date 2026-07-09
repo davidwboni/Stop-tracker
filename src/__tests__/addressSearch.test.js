@@ -3,7 +3,8 @@ import {
   isPostcodeLike,
   computeBiasCenter,
   searchPostcodes,
-  resolvePostcode
+  resolvePostcode,
+  searchAddresses
 } from '../services/addressSearch';
 
 describe('isPostcodeLike', () => {
@@ -135,5 +136,73 @@ describe('resolvePostcode', () => {
     await expect(
       resolvePostcode('ZZ99 9ZZ', new AbortController().signal)
     ).rejects.toThrow('Postcode lookup failed');
+  });
+});
+
+describe('searchAddresses', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('returns [] for queries shorter than 3 characters without calling fetch', async () => {
+    const mockFetch = vi.fn();
+    vi.stubGlobal('fetch', mockFetch);
+
+    const result = await searchAddresses('ab', null, new AbortController().signal);
+
+    expect(result).toEqual([]);
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('maps Nominatim results to the expected shape, unbiased when biasCenter is null', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ([
+        {
+          display_name: '10 High Street, Brighton, BN1 1AA, UK',
+          address: { postcode: 'BN1 1AA' },
+          lat: '50.8225',
+          lon: '-0.1372',
+          type: 'house'
+        }
+      ])
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const result = await searchAddresses('High Street', null, new AbortController().signal);
+
+    expect(result).toEqual([{
+      address: '10 High Street, Brighton, BN1 1AA, UK',
+      postcode: 'BN1 1AA',
+      latitude: 50.8225,
+      longitude: -0.1372,
+      type: 'house'
+    }]);
+
+    const calledUrl = mockFetch.mock.calls[0][0];
+    expect(calledUrl).not.toContain('viewbox');
+  });
+
+  it('adds a soft-bias viewbox (not bounded) when a biasCenter is given', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true, json: async () => [] });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await searchAddresses(
+      'High Street',
+      { latitude: 50.9, longitude: -0.2 },
+      new AbortController().signal
+    );
+
+    const calledUrl = mockFetch.mock.calls[0][0];
+    expect(calledUrl).toContain('viewbox=');
+    expect(calledUrl).not.toContain('bounded=1');
+  });
+
+  it('throws when the response is not ok', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }));
+
+    await expect(
+      searchAddresses('High Street', null, new AbortController().signal)
+    ).rejects.toThrow('Address search failed');
   });
 });

@@ -60,3 +60,49 @@ export async function resolvePostcode(postcode, signal) {
     longitude: data.result.longitude
   };
 }
+
+const BIAS_RADIUS_DEGREES = 0.15; // roughly a 15-20km soft-bias radius
+
+function buildViewbox(center) {
+  const minLon = center.longitude - BIAS_RADIUS_DEGREES;
+  const minLat = center.latitude - BIAS_RADIUS_DEGREES;
+  const maxLon = center.longitude + BIAS_RADIUS_DEGREES;
+  const maxLat = center.latitude + BIAS_RADIUS_DEGREES;
+  return `${minLon},${minLat},${maxLon},${maxLat}`;
+}
+
+export async function searchAddresses(query, biasCenter, signal) {
+  if (query.length < 3) {
+    return [];
+  }
+
+  let url = `https://nominatim.openstreetmap.org/search?` +
+    `q=${encodeURIComponent(query)}&` +
+    `countrycodes=gb&` +
+    `format=json&` +
+    `addressdetails=1&` +
+    `limit=5`;
+
+  if (biasCenter) {
+    url += `&viewbox=${buildViewbox(biasCenter)}`;
+  }
+
+  const response = await fetch(url, {
+    headers: { 'Accept': 'application/json' },
+    signal
+  });
+
+  if (!response.ok) {
+    throw new Error('Address search failed');
+  }
+
+  const data = await response.json();
+
+  return data.map(place => ({
+    address: place.display_name,
+    postcode: place.address?.postcode || 'N/A',
+    latitude: parseFloat(place.lat),
+    longitude: parseFloat(place.lon),
+    type: place.type
+  }));
+}
