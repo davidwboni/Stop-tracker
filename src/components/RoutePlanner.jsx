@@ -201,6 +201,9 @@ const RoutePlanner = () => {
           id: Date.now()
         }]);
       } catch (error) {
+        if (error.name === 'AbortError') {
+          return;
+        }
         console.error('Postcode resolve error:', error);
         showError('Unable to resolve that postcode. Please try again.');
         return;
