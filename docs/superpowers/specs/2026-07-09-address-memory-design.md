@@ -32,13 +32,16 @@ this project's job to fix Saved Routes itself, only to not repeat its mistake.
 - Rank by a combination of frequency and recency, not raw use-count alone, so
   an address visited often last year doesn't permanently outrank one visited
   daily this week.
-- Store per-user: Firestore for signed-in users (a field on the same user
-  document that already holds `paymentConfig`), `localStorage` keyed by
-  `guestAddressMemory_${user.uid}` for guests — matching `DataContext.jsx`'s
-  existing branching exactly.
+- Store per-user: Firestore for signed-in users, in its own dedicated
+  collection (mirroring `PayPeriodContext.jsx`'s `payPeriodData/{uid}`
+  pattern, not the shared `users/{uid}` document `paymentConfig` lives on —
+  a dedicated collection avoids write contention with unrelated fields on
+  that document), `localStorage` keyed by `guestAddressMemory_${user.uid}`
+  for guests — matching the guest-vs-signed-in branching `DataContext.jsx`
+  and `PayPeriodContext.jsx` both already use.
 - Follow the precedent set by sub-project A: pure, unit-tested ranking/dedup
   logic in a plain service module, separate from the React/Firestore
-  plumbard.
+  plumbing.
 
 ## Non-goals
 
