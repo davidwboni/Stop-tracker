@@ -22,7 +22,8 @@ import {
   Save,
   FolderOpen,
   Share2,
-  AlertCircle
+  AlertCircle,
+  Clock
 } from "lucide-react";
 import {
   isPostcodeLike,
@@ -31,6 +32,7 @@ import {
   resolvePostcode,
   searchAddresses
 } from "../services/addressSearch";
+import { useAddressMemory } from "../contexts/AddressMemoryContext";
 
 const RoutePlanner = () => {
   const [addresses, setAddresses] = useState([]);
@@ -45,6 +47,7 @@ const RoutePlanner = () => {
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [savedRoutes, setSavedRoutes] = useState([]);
   const activeSearchControllerRef = useRef(null);
+  const { frequentAddresses, recordAddressUse } = useAddressMemory();
 
   // Load saved routes on mount
   useEffect(() => {
@@ -192,14 +195,16 @@ const RoutePlanner = () => {
     if (address.isPostcodeSuggestion) {
       try {
         const resolved = await resolvePostcode(address.postcode, new AbortController().signal);
-        setAddresses([...addresses, {
+        const newAddress = {
           address: resolved.postcode,
           postcode: resolved.postcode,
           latitude: resolved.latitude,
           longitude: resolved.longitude,
           type: 'postcode',
           id: Date.now()
-        }]);
+        };
+        setAddresses([...addresses, newAddress]);
+        recordAddressUse(newAddress);
       } catch (error) {
         if (error.name === 'AbortError') {
           return;
@@ -209,7 +214,9 @@ const RoutePlanner = () => {
         return;
       }
     } else {
-      setAddresses([...addresses, { ...address, id: Date.now() }]);
+      const newAddress = { ...address, id: Date.now() };
+      setAddresses([...addresses, newAddress]);
+      recordAddressUse(newAddress);
     }
 
     setCurrentAddress("");
@@ -576,6 +583,11 @@ const RoutePlanner = () => {
                       placeholder="Search UK address..."
                       value={currentAddress}
                       onChange={(e) => setCurrentAddress(e.target.value)}
+                      onFocus={() => {
+                        if (!currentAddress && frequentAddresses.length > 0) {
+                          setAddressSuggestions(frequentAddresses);
+                        }
+                      }}
                       className="pl-10"
                     />
                   </div>
@@ -612,6 +624,8 @@ const RoutePlanner = () => {
                           <div className="flex items-start gap-2">
                             {suggestion.isPostcodeSuggestion ? (
                               <Navigation2 className="h-3 w-3 text-primary mt-0.5 flex-shrink-0" />
+                            ) : suggestion.isFrequentSuggestion ? (
+                              <Clock className="h-3 w-3 text-primary mt-0.5 flex-shrink-0" />
                             ) : (
                               <MapPin className="h-3 w-3 text-primary mt-0.5 flex-shrink-0" />
                             )}
@@ -619,6 +633,9 @@ const RoutePlanner = () => {
                               <p className="truncate text-xs">{suggestion.address}</p>
                               {suggestion.isPostcodeSuggestion && (
                                 <p className="text-[10px] text-muted-foreground">Postcode area</p>
+                              )}
+                              {suggestion.isFrequentSuggestion && (
+                                <p className="text-[10px] text-muted-foreground">Frequently used</p>
                               )}
                             </div>
                           </div>
