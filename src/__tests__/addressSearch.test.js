@@ -1,5 +1,10 @@
-import { describe, it, expect } from 'vitest';
-import { isPostcodeLike, computeBiasCenter } from '../services/addressSearch';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import {
+  isPostcodeLike,
+  computeBiasCenter,
+  searchPostcodes,
+  resolvePostcode
+} from '../services/addressSearch';
 
 describe('isPostcodeLike', () => {
   it('recognizes a partial outward code', () => {
@@ -55,5 +60,80 @@ describe('computeBiasCenter', () => {
     // Weighted average with weights [1, 2]: closer to the second point.
     expect(result.latitude).toBeCloseTo((51.5 * 1 + 50.9 * 2) / 3, 5);
     expect(result.longitude).toBeCloseTo((-0.1 * 1 + -0.2 * 2) / 3, 5);
+  });
+});
+
+describe('searchPostcodes', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('returns the matching postcodes from postcodes.io', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: 200, result: ['BN44 3DD', 'BN44 3TH'] })
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const result = await searchPostcodes('bn44', new AbortController().signal);
+
+    expect(result).toEqual(['BN44 3DD', 'BN44 3TH']);
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://api.postcodes.io/postcodes/bn44/autocomplete?limit=10',
+      expect.objectContaining({ signal: expect.anything() })
+    );
+  });
+
+  it('returns an empty array when postcodes.io finds no matches', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: 200, result: null })
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const result = await searchPostcodes('zz99', new AbortController().signal);
+
+    expect(result).toEqual([]);
+  });
+
+  it('throws when the response is not ok', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }));
+
+    await expect(
+      searchPostcodes('bn44', new AbortController().signal)
+    ).rejects.toThrow('Postcode search failed');
+  });
+});
+
+describe('resolvePostcode', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('returns the coordinates for a full postcode', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        status: 200,
+        result: { postcode: 'BN44 3DD', latitude: 50.9123, longitude: -0.2456 }
+      })
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const result = await resolvePostcode('BN44 3DD', new AbortController().signal);
+
+    expect(result).toEqual({ postcode: 'BN44 3DD', latitude: 50.9123, longitude: -0.2456 });
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://api.postcodes.io/postcodes/BN44%203DD',
+      expect.objectContaining({ signal: expect.anything() })
+    );
+  });
+
+  it('throws when the response is not ok', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }));
+
+    await expect(
+      resolvePostcode('ZZ99 9ZZ', new AbortController().signal)
+    ).rejects.toThrow('Postcode lookup failed');
   });
 });

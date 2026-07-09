@@ -27,3 +27,36 @@ export function computeBiasCenter(addresses) {
     longitude: weightedLonSum / weightSum
   };
 }
+
+export async function searchPostcodes(query, signal) {
+  const response = await fetch(
+    `https://api.postcodes.io/postcodes/${encodeURIComponent(query)}/autocomplete?limit=10`,
+    { signal }
+  );
+
+  if (!response.ok) {
+    throw new Error('Postcode search failed');
+  }
+
+  const data = await response.json();
+  return data.result || [];
+}
+
+export async function resolvePostcode(postcode, signal) {
+  const response = await fetch(
+    `https://api.postcodes.io/postcodes/${encodeURIComponent(postcode)}`,
+    { signal }
+  );
+
+  if (!response.ok) {
+    throw new Error('Postcode lookup failed');
+  }
+
+  const data = await response.json();
+
+  return {
+    postcode: data.result.postcode,
+    latitude: data.result.latitude,
+    longitude: data.result.longitude
+  };
+}
