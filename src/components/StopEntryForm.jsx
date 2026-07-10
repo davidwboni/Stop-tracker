@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Card, CardContent } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
-import { 
-  Save, 
-  Calendar, 
-  Truck, 
+import {
+  Save,
+  Calendar,
   DollarSign,
   FileText,
   CloudOff,
@@ -15,7 +14,6 @@ import {
   CheckCircle,
   Undo
 } from "lucide-react";
-import { formatDistanceToNow, format } from "date-fns";
 import { useData } from "../contexts/DataContext";
 import { calculateStopFee } from "../features/payperiod/payPeriodCalculations";
 import { Money } from "./ui/money";
@@ -506,22 +504,11 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
     >
       <div>
         <Card className="mx-0 rounded-none border-0 shadow-none">
-          <CardHeader className="px-4 pb-4">
-            <div className="text-center mb-4">
-              <div className="inline-flex items-center justify-center w-12 h-12 bg-primary rounded-[14px] mb-3 shadow-lg">
-                <Truck className="w-6 h-6 text-primary-foreground" />
-              </div>
-              <CardTitle className="text-lg font-bold mb-1">
-                Log Entry
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">Quick delivery logging</p>
-            </div>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
+          <CardContent className="px-4 pt-1 pb-4">
             <form onSubmit={optimizedHandleSubmit} className="space-y-5">
               {/* Main input - Stops (most important, thumb-friendly position) */}
-              <div className="bg-primary/5 p-6 rounded-[18px] border border-primary/20">
-                <label className="block text-sm font-semibold text-primary mb-3 text-center">
+              <div className="bg-primary/5 p-4 rounded-[18px] border border-primary/20">
+                <label className="block text-sm font-semibold text-primary mb-2 text-center">
                   📦 Number of Stops
                 </label>
                 <Input
@@ -739,50 +726,6 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
           </CardContent>
         </Card>
       </div>
-      
-      {/* Recent Entries - Show only latest 2 in compact form */}
-      {safetyLogs.length > 0 && (
-        <Card className="mx-0 rounded-[18px] border-0 shadow-sm">
-          <CardHeader className="px-4 pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Recent Entries
-              </CardTitle>
-              {safetyLogs.length > 2 && (
-                <Button 
-                  variant="link" 
-                  size="sm" 
-                  className="text-xs text-primary p-0 h-auto"
-                >
-                  View All
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="px-4">
-            <div className="space-y-2">
-              {safetyLogs.slice(0, 2).map((log, index) => (
-                <div key={log.id} className="bg-muted p-3 rounded-[14px]">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2 min-w-0 flex-1">
-                      <div className="text-xs text-muted-foreground">
-                        {format(new Date(log.date), 'MMM d')}
-                      </div>
-                      <div className="text-xs font-medium">{log.stops} stops</div>
-                      {log.extra > 0 && (
-                        <div className="text-xs text-emerald-600 dark:text-emerald-400">+£{log.extra}</div>
-                      )}
-                    </div>
-                    <div className="text-sm font-bold text-primary">
-                      <Money amount={log.total || 0} />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 };

@@ -51,6 +51,16 @@ const SimpleDashboard = () => {
     };
   }, [logs]);
 
+  // Most recent activity ordered by actual date (newest first), excluding any
+  // future-dated entries that would otherwise surface here by mistake.
+  const recentActivity = React.useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    return [...(logs || [])]
+      .filter(log => log.date <= today)
+      .sort((a, b) => (a.date < b.date ? 1 : -1))
+      .slice(0, 3);
+  }, [logs]);
+
   const currentHour = new Date().getHours();
   let greeting = "Good evening";
   if (currentHour < 12) greeting = "Good morning";
@@ -157,8 +167,8 @@ const SimpleDashboard = () => {
         </Card>
       </motion.div>
 
-      {/* Recent Entries */}
-      {logs && logs.length > 0 && (
+      {/* Recent Activity */}
+      {recentActivity.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -174,7 +184,7 @@ const SimpleDashboard = () => {
             </button>
           </div>
           <div className="space-y-2">
-            {logs.slice(-3).reverse().map((log) => (
+            {recentActivity.map((log) => (
               <motion.div
                 key={log.id}
                 initial={{ opacity: 0, x: -10 }}
