@@ -11,7 +11,6 @@ import StatsPage from '../components/StatsPage';
 import InvoicePage from '../components/InvoicePage';
 import ErrorBoundary from '../components/ErrorBoundary';
 import ProfileWrapper from '../components/ProfileWrapper';
-import PaymentConfig from '../components/PaymentConfig';
 import PaymentSettingsWrapper from '../components/PaymentSettingsWrapper';
 import UpgradeToPro from '../components/UpgradeToPro';
 import RoutePlannerWrapper from '../components/RoutePlannerWrapper';
