@@ -87,17 +87,17 @@ const SimpleDashboard = () => {
         transition={{ delay: 0.1 }}
       >
         <div className="grid grid-cols-2 gap-3">
-          <Card className="bg-card border-border/50 overflow-hidden">
+          <Card className="bg-card border-border/50 overflow-hidden min-w-0">
             <CardContent className="p-4">
               <div className="text-sm text-muted-foreground mb-1">Today's Stops</div>
-              <div className="text-3xl font-bold">{todayData.stops}</div>
+              <div className="text-2xl sm:text-3xl font-bold">{todayData.stops}</div>
               <div className="text-xs text-muted-foreground mt-1">stops</div>
             </CardContent>
           </Card>
-          <Card className="bg-card border-border/50 overflow-hidden">
+          <Card className="bg-card border-border/50 overflow-hidden min-w-0">
             <CardContent className="p-4">
               <div className="text-sm text-muted-foreground mb-1">Today's Earnings</div>
-              <div className="text-3xl font-bold text-primary"><Money amount={todayData.earnings} /></div>
+              <div className="text-2xl sm:text-3xl font-bold text-primary"><Money amount={todayData.earnings} /></div>
               <div className="text-xs text-muted-foreground mt-1">earned</div>
             </CardContent>
           </Card>
@@ -118,16 +118,16 @@ const SimpleDashboard = () => {
                 <Calendar className="w-5 h-5 text-primary opacity-60" />
               </div>
               <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <div className="text-2xl font-bold">{weekStats.stops}</div>
+                <div className="min-w-0">
+                  <div className="text-xl sm:text-2xl font-bold">{weekStats.stops}</div>
                   <div className="text-xs text-muted-foreground mt-1">Total Stops</div>
                 </div>
-                <div>
-                  <div className="text-2xl font-bold text-primary"><Money amount={weekStats.earnings} /></div>
+                <div className="min-w-0">
+                  <div className="text-xl sm:text-2xl font-bold text-primary"><Money amount={weekStats.earnings} /></div>
                   <div className="text-xs text-muted-foreground mt-1">Earned</div>
                 </div>
-                <div>
-                  <div className="text-2xl font-bold"><Money amount={weekStats.avgPerDay} /></div>
+                <div className="min-w-0">
+                  <div className="text-xl sm:text-2xl font-bold"><Money amount={weekStats.avgPerDay} /></div>
                   <div className="text-xs text-muted-foreground mt-1">Per Day</div>
                 </div>
               </div>

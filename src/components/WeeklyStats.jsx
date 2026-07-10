@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
+import { Money } from "./ui/money";
 import {
   startOfWeek,
   endOfWeek,
@@ -74,7 +75,7 @@ const WeeklyStats = ({ logs = [] }) => {
     const totalEarnings = weeklyLogs.reduce((sum, log) => sum + log.total, 0);
     const daysWorked = weeklyLogs.length;
     const avgStopsPerDay = daysWorked > 0 ? Math.round(totalStops / daysWorked) : 0;
-    const avgEarningsPerDay = daysWorked > 0 ? (totalEarnings / daysWorked).toFixed(2) : 0;
+    const avgEarningsPerDay = daysWorked > 0 ? (totalEarnings / daysWorked) : 0;
 
     const prevWeekStart = startOfWeek(sub(selectedWeek.start, { days: 7 }), { weekStartsOn: 1 });
     const prevWeekEnd = endOfWeek(prevWeekStart, { weekStartsOn: 1 });
@@ -171,7 +172,7 @@ const WeeklyStats = ({ logs = [] }) => {
             <motion.div
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-card rounded-lg p-4 border border-border/50"
+              className="bg-card rounded-[14px] p-4 border border-border/50"
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-muted-foreground">Total Stops</span>
@@ -181,7 +182,7 @@ const WeeklyStats = ({ logs = [] }) => {
               {weekSummary.stopsChange !== 0 && (
                 <div className={`flex items-center text-xs font-medium ${
                   weekSummary.stopsChange >= 0
-                    ? 'text-green-500'
+                    ? 'text-emerald-500'
                     : 'text-destructive'
                 }`}>
                   {weekSummary.stopsChange >= 0 ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
@@ -194,17 +195,17 @@ const WeeklyStats = ({ logs = [] }) => {
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.05 }}
-              className="bg-card rounded-lg p-4 border border-border/50"
+              className="bg-card rounded-[14px] p-4 border border-border/50"
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-muted-foreground">Total Earnings</span>
                 <DollarSign className="w-4 h-4 text-accent opacity-60" />
               </div>
-              <div className="text-2xl font-bold text-primary mb-1">£{weekSummary.totalEarnings.toFixed(2)}</div>
+              <div className="text-2xl font-bold text-primary mb-1"><Money amount={weekSummary.totalEarnings} /></div>
               {weekSummary.earningsChange !== 0 && (
                 <div className={`flex items-center text-xs font-medium ${
                   weekSummary.earningsChange >= 0
-                    ? 'text-green-500'
+                    ? 'text-emerald-500'
                     : 'text-destructive'
                 }`}>
                   {weekSummary.earningsChange >= 0 ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
@@ -217,7 +218,7 @@ const WeeklyStats = ({ logs = [] }) => {
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="bg-card rounded-lg p-4 border border-border/50"
+              className="bg-card rounded-[14px] p-4 border border-border/50"
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-muted-foreground">Days Worked</span>
@@ -231,13 +232,13 @@ const WeeklyStats = ({ logs = [] }) => {
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="bg-card rounded-lg p-4 border border-border/50"
+              className="bg-card rounded-[14px] p-4 border border-border/50"
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-muted-foreground">Avg Per Day</span>
                 <TrendingUp className="w-4 h-4 text-primary opacity-60" />
               </div>
-              <div className="text-2xl font-bold">£{weekSummary.avgEarningsPerDay}</div>
+              <div className="text-2xl font-bold"><Money amount={weekSummary.avgEarningsPerDay} /></div>
               <div className="text-xs text-muted-foreground mt-1">{weekSummary.avgStopsPerDay} stops</div>
             </motion.div>
           </div>
@@ -258,7 +259,7 @@ const WeeklyStats = ({ logs = [] }) => {
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className={`flex items-center justify-between p-3 rounded-lg border ${
+                  className={`flex items-center justify-between p-3 rounded-[14px] border ${
                     day.hasData
                       ? 'bg-card border-border/50'
                       : 'bg-muted/30 border-border/25'
@@ -271,7 +272,7 @@ const WeeklyStats = ({ logs = [] }) => {
                   <div className="text-right">
                     {day.hasData ? (
                       <>
-                        <div className="font-semibold text-primary">£{day.earnings.toFixed(2)}</div>
+                        <div className="font-semibold text-primary"><Money amount={day.earnings} /></div>
                         <div className="text-xs text-muted-foreground">{day.stops} stops</div>
                       </>
                     ) : (

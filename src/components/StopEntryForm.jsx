@@ -446,7 +446,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
     // Show pending sync status
     if (pendingEntries.length > 0) {
       return (
-        <div className="flex items-center text-blue-600 text-sm">
+        <div className="flex items-center text-primary text-sm">
           <Loader className="w-3 h-3 mr-1 animate-spin" />
           <span>Syncing {pendingEntries.length} entries...</span>
         </div>
@@ -752,7 +752,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                 <Button 
                   variant="link" 
                   size="sm" 
-                  className="text-xs text-blue-600 dark:text-blue-400 p-0 h-auto"
+                  className="text-xs text-primary p-0 h-auto"
                 >
                   View All
                 </Button>
