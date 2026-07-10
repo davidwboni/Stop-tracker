@@ -1,19 +1,11 @@
 import React from 'react';
 import { useAuth } from './contexts/AuthContext';
-import { useTheme } from './contexts/ThemeContext';
 import { Navigate } from 'react-router-dom';
 
 // This is now just a loader component that redirects to the proper router paths
 function App() {
   const { user, loading } = useAuth();
-  const { theme } = useTheme();
-  
-  // Make sure theme is applied
-  React.useEffect(() => {
-    document.documentElement.classList.remove('light', 'dark');
-    document.documentElement.classList.add(theme);
-  }, [theme]);
-  
+
   // Loading state
   if (loading) {
     return (

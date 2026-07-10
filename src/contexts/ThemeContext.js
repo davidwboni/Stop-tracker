@@ -1,27 +1,53 @@
-import React, { createContext, useContext, useEffect } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 
 const ThemeContext = createContext();
 
+const STORAGE_KEY = "theme-preference";
+
+function getSystemTheme() {
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function resolveTheme(preference) {
+  return preference === "system" ? getSystemTheme() : preference;
+}
+
+function readStoredPreference() {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  return stored === "light" || stored === "dark" || stored === "system" ? stored : "system";
+}
+
 export function ThemeProvider({ children }) {
-  // Always use dark theme
+  const [preference, setPreference] = useState(readStoredPreference);
+  const [theme, setTheme] = useState(() => resolveTheme(preference));
+
+  // Apply the resolved theme to the DOM whenever it changes.
   useEffect(() => {
     const root = document.documentElement;
-    
-    // Remove light class and add dark class
-    root.classList.remove("light");
-    root.classList.add("dark");
-    
-    // Store user preference as dark
-    localStorage.setItem("theme", "dark");
+    root.classList.remove("light", "dark");
+    root.classList.add(theme);
+  }, [theme]);
+
+  // Re-resolve whenever the preference changes, and (only for "system")
+  // keep listening for live OS-level changes while that preference is active.
+  useEffect(() => {
+    setTheme(resolveTheme(preference));
+
+    if (preference !== "system") return;
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = () => setTheme(getSystemTheme());
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, [preference]);
+
+  const setThemePreference = useCallback((newPreference) => {
+    setPreference(newPreference);
+    localStorage.setItem(STORAGE_KEY, newPreference);
   }, []);
 
-  // Keep toggle function as a no-op to avoid breaking existing code
-  const toggleTheme = () => {
-    // No operation - we always stay in dark mode
-  };
-
   return (
-    <ThemeContext.Provider value={{ theme: "dark", toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, themePreference: preference, setThemePreference }}>
       {children}
     </ThemeContext.Provider>
   );

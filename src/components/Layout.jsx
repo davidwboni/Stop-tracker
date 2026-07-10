@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import ErrorBoundary from './ErrorBoundary';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
 import SyncStatus from './SyncStatus';
 import AppNavigation from './AppNavigation';
 import AppFooter from './AppFooter';
