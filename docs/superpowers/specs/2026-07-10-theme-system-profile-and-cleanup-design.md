@@ -57,6 +57,17 @@ into one implementation pass:
   shared `Button`'s own default primary styling (no override needed).
 
 **Small chores:**
+- `SimpleDashboard.jsx`: fix a real layout bug reported directly by the user
+  on Android — the "Today's Stops"/"Today's Earnings" 2-column grid and the
+  "This Week" 3-column grid both let large bold numbers overflow sideways
+  into the neighboring stat on narrower screens, because CSS grid items
+  don't shrink below their content's natural width by default. Fix: add
+  `min-w-0` to each stat's container (lines ~90/97 for the 2-column grid,
+  ~121/125/129 for the 3-column grid) so they can shrink correctly, and
+  step the number font size down on narrow screens (`text-3xl` →
+  `text-2xl sm:text-3xl` for the 2-column stats, `text-2xl` → `text-xl
+  sm:text-2xl` for the tighter 3-column stats) so real values comfortably
+  fit instead of relying on overflow.
 - `StopEntryForm.jsx`: the sync-status text (`text-blue-600`, line 449) and
   the "View All" link (`text-blue-600 dark:text-blue-400`, line 755) both
   become `text-primary`.
