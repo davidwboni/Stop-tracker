@@ -9,7 +9,8 @@ import {
   Download,
   Search,
   Package,
-  Sparkles
+  Sparkles,
+  ChevronDown
 } from "lucide-react";
 import { Input } from "./ui/input";
 import EntriesList from "./EntriesList";
@@ -21,6 +22,7 @@ const EntriesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
 
   const handleDeleteEntry = (id) => {
     // Add haptic feedback
@@ -105,19 +107,19 @@ const EntriesPage = () => {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="mb-6 sm:mb-8"
+        className="mb-4"
       >
-        <div className="bg-card border border-border rounded-[18px] p-6 sm:p-8 shadow-sm">
+        <div className="bg-card border border-border rounded-[18px] p-4 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center">
-              <div className="p-3 bg-primary/10 rounded-[14px] mr-4">
-                <FileText className="w-8 h-8 text-primary" />
+              <div className="p-2.5 bg-primary/10 rounded-[14px] mr-3">
+                <FileText className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-card-foreground">
+                <h1 className="text-xl sm:text-2xl font-bold text-card-foreground">
                   All Entries
                 </h1>
-                <p className="text-muted-foreground text-sm mt-1">
+                <p className="text-muted-foreground text-sm mt-0.5">
                   {(logs || []).length} total deliveries tracked
                 </p>
               </div>
@@ -141,18 +143,33 @@ const EntriesPage = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
-        className="mb-6"
+        className="mb-4"
       >
         <Card className="border-border/50 shadow-sm rounded-[18px] overflow-hidden">
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex items-center mb-4">
-              <Sparkles className="w-5 h-5 text-primary mr-2" />
-              <h2 className="text-lg font-semibold text-card-foreground">
-                Search & Filter
-              </h2>
-            </div>
+          <CardContent className="p-4 sm:p-5">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="w-full flex items-center justify-between touch-manipulation"
+              aria-expanded={showFilters}
+            >
+              <span className="flex items-center">
+                <Sparkles className="w-5 h-5 text-primary mr-2" />
+                <span className="text-lg font-semibold text-card-foreground">
+                  Search & Filter
+                </span>
+                {(searchTerm || startDate || endDate) && (
+                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary font-medium">
+                    {filteredLogs.length} results
+                  </span>
+                )}
+              </span>
+              <ChevronDown
+                className={`w-5 h-5 text-muted-foreground transition-transform ${showFilters ? 'rotate-180' : ''}`}
+              />
+            </button>
 
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {showFilters && (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
               {/* Search Input */}
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -211,9 +228,10 @@ const EntriesPage = () => {
                 Clear Filters
               </Button>
             </div>
+            )}
 
             {/* Active Filters Display */}
-            {(searchTerm || startDate || endDate) && (
+            {showFilters && (searchTerm || startDate || endDate) && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}

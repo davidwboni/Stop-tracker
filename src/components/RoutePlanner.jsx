@@ -26,7 +26,8 @@ import {
   AlertCircle,
   Clock,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Flag
 } from "lucide-react";
 import {
   isPostcodeLike,
@@ -244,6 +245,17 @@ const RoutePlanner = () => {
     [newAddresses[targetIndex], newAddresses[index]];
 
     setAddresses(newAddresses);
+  };
+
+  // Move an address to the top of the list — the first stop is the route's
+  // start point (optimizeRoute always begins from index 0).
+  const makeStart = (index) => {
+    if (index === 0) return;
+    const newAddresses = [...addresses];
+    const [addr] = newAddresses.splice(index, 1);
+    newAddresses.unshift(addr);
+    setAddresses(newAddresses);
+    if (navigator.vibrate) navigator.vibrate(10);
   };
 
   // Save current route
@@ -494,8 +506,9 @@ const RoutePlanner = () => {
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Map Section - Takes 2 columns on large screens */}
-        <div className="lg:col-span-2">
+        {/* Map Section - second on mobile so Add Stops is immediately reachable,
+            first (left) on large screens */}
+        <div className="lg:col-span-2 order-2 lg:order-1">
           <Card className="border-border/50 h-full">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
@@ -511,7 +524,7 @@ const RoutePlanner = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4">
-              <div className="h-[500px] lg:h-[600px]">
+              <div className="h-64 sm:h-80 lg:h-[600px]">
                 <RouteMap addresses={addresses} />
               </div>
 
@@ -567,8 +580,9 @@ const RoutePlanner = () => {
           </Card>
         </div>
 
-        {/* Address Input & List Section */}
-        <div className="space-y-6">
+        {/* Address Input & List Section - first on mobile for the type-and-go
+            morning workflow, right column on large screens */}
+        <div className="space-y-6 order-1 lg:order-2">
           {/* Address Search */}
           <Card className="border-border/50">
             <CardHeader>
@@ -761,6 +775,11 @@ const RoutePlanner = () => {
                           onClick={() => setExpandedAddressId(expandedAddressId === address.id ? null : address.id)}
                           className="flex-1 min-w-0 flex items-center gap-1 text-left"
                         >
+                          {index === 0 && addresses.length > 1 && (
+                            <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                              Start
+                            </span>
+                          )}
                           <span className="text-xs truncate flex-1">{address.address}</span>
                           {expandedAddressId === address.id ? (
                             <ChevronUp className="h-3 w-3 text-muted-foreground flex-shrink-0" />
@@ -770,6 +789,16 @@ const RoutePlanner = () => {
                         </button>
 
                         <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                          <Button
+                            onClick={() => makeStart(index)}
+                            disabled={index === 0}
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
+                            title="Make this the start point"
+                          >
+                            <Flag className="h-3 w-3" />
+                          </Button>
                           <Button
                             onClick={() => moveAddress(index, 'up')}
                             disabled={index === 0}

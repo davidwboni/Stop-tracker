@@ -71,6 +71,16 @@ function buildViewbox(center) {
   return `${minLon},${minLat},${maxLon},${maxLat}`;
 }
 
+// Squared angular distance with longitude corrected for latitude — plenty
+// accurate for ranking UK-scale results by nearness (no need for haversine).
+function distanceSq(point, center) {
+  const latDiff = point.latitude - center.latitude;
+  const lonDiff =
+    (point.longitude - center.longitude) *
+    Math.cos((center.latitude * Math.PI) / 180);
+  return latDiff * latDiff + lonDiff * lonDiff;
+}
+
 export async function searchAddresses(query, biasCenter, signal) {
   if (query.length < 3) {
     return [];
@@ -81,7 +91,7 @@ export async function searchAddresses(query, biasCenter, signal) {
     `countrycodes=gb&` +
     `format=json&` +
     `addressdetails=1&` +
-    `limit=5`;
+    `limit=10`;
 
   if (biasCenter) {
     url += `&viewbox=${buildViewbox(biasCenter)}`;
@@ -98,11 +108,20 @@ export async function searchAddresses(query, biasCenter, signal) {
 
   const data = await response.json();
 
-  return data.map(place => ({
+  const results = data.map(place => ({
     address: place.display_name,
     postcode: place.address?.postcode || 'N/A',
     latitude: parseFloat(place.lat),
     longitude: parseFloat(place.lon),
     type: place.type
   }));
+
+  // Nominatim's viewbox is only a soft ranking hint and often still surfaces
+  // distant matches first for common names ("High Street", "Cherry Tree").
+  // When we know where the driver is working, hard-sort by actual nearness.
+  if (biasCenter) {
+    results.sort((a, b) => distanceSq(a, biasCenter) - distanceSq(b, biasCenter));
+  }
+
+  return results.slice(0, 5);
 }

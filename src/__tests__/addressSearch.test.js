@@ -205,4 +205,24 @@ describe('searchAddresses', () => {
       searchAddresses('High Street', null, new AbortController().signal)
     ).rejects.toThrow('Address search failed');
   });
+
+  it('orders results by distance to the bias center, nearest first', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ([
+        { display_name: 'Cherry Tree, Edinburgh', address: {}, lat: '55.95', lon: '-3.19', type: 'pub' },
+        { display_name: 'Cherry Tree, Steyning', address: {}, lat: '50.91', lon: '-0.33', type: 'pub' }
+      ])
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const result = await searchAddresses(
+      'Cherry Tree',
+      { latitude: 50.9, longitude: -0.3 },
+      new AbortController().signal
+    );
+
+    expect(result[0].address).toBe('Cherry Tree, Steyning');
+    expect(result[1].address).toBe('Cherry Tree, Edinburgh');
+  });
 });

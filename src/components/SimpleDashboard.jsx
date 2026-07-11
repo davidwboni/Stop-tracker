@@ -33,10 +33,12 @@ const SimpleDashboard = () => {
     const today = new Date();
     const weekStart = new Date(today);
     weekStart.setDate(today.getDate() - today.getDay());
+    const todayStr = today.toISOString().split('T')[0];
 
     const thisWeekLogs = safetyLogs.filter(log => {
       const logDate = new Date(log.date);
-      return logDate >= weekStart;
+      // Cap at today so mistakenly future-dated entries can't inflate the totals
+      return logDate >= weekStart && log.date <= todayStr;
     });
 
     const weeklyStops = thisWeekLogs.reduce((sum, log) => sum + log.stops, 0);
@@ -66,6 +68,29 @@ const SimpleDashboard = () => {
   if (currentHour < 12) greeting = "Good morning";
   else if (currentHour < 18) greeting = "Good afternoon";
 
+  // Rotating sub-messages — deterministic by day of month so the message
+  // changes day to day but stays stable across re-renders within a day.
+  const doneMessages = [
+    "Great job today! You're all set.",
+    "Another day in the books. Nice work!",
+    "All logged. Enjoy the rest of your day!",
+    "Solid shift — everything's tracked.",
+    "Done and dusted. See you tomorrow!",
+    "That's a wrap for today. Well earned!"
+  ];
+  const promptMessages = [
+    "Log today's deliveries to get started.",
+    "Ready when you are — add today's stops.",
+    "How did today go? Log your deliveries.",
+    "Let's get today's stops on the board.",
+    "Track today's round to keep your streak.",
+    "A minute now saves guesswork on payday."
+  ];
+  const dayIndex = new Date().getDate();
+  const subMessage = todayAlreadyLogged
+    ? doneMessages[dayIndex % doneMessages.length]
+    : promptMessages[dayIndex % promptMessages.length];
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -86,7 +111,7 @@ const SimpleDashboard = () => {
           {greeting}, {user?.displayName?.split(' ')[0] || "Driver"}!
         </h1>
         <p className="text-muted-foreground">
-          {todayAlreadyLogged ? "Great job today! You're all set." : "Log today's deliveries to get started."}
+          {subMessage}
         </p>
       </motion.div>
 
@@ -97,14 +122,28 @@ const SimpleDashboard = () => {
         transition={{ delay: 0.1 }}
       >
         <div className="grid grid-cols-2 gap-3">
-          <Card className="bg-card border-border/50 overflow-hidden min-w-0">
+          <Card
+            onClick={() => navigate('/app/entries')}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/app/entries'); }}
+            aria-label="View your recent entries"
+            className="bg-card border-border/50 overflow-hidden min-w-0 cursor-pointer hover:border-primary/30 active:scale-[0.98] transition-all touch-manipulation"
+          >
             <CardContent className="p-4">
               <div className="text-sm text-muted-foreground mb-1">Today's Stops</div>
               <div className="text-2xl sm:text-3xl font-bold">{todayData.stops}</div>
               <div className="text-xs text-muted-foreground mt-1">stops</div>
             </CardContent>
           </Card>
-          <Card className="bg-card border-border/50 overflow-hidden min-w-0">
+          <Card
+            onClick={() => navigate('/app/stats')}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/app/stats'); }}
+            aria-label="View your earnings stats"
+            className="bg-card border-border/50 overflow-hidden min-w-0 cursor-pointer hover:border-primary/30 active:scale-[0.98] transition-all touch-manipulation"
+          >
             <CardContent className="p-4">
               <div className="text-sm text-muted-foreground mb-1">Today's Earnings</div>
               <div className="text-2xl sm:text-3xl font-bold text-primary"><Money amount={todayData.earnings} /></div>
@@ -121,11 +160,21 @@ const SimpleDashboard = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
         >
-          <Card className="bg-primary/5 border-primary/20">
+          <Card
+            onClick={() => navigate('/app/stats')}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/app/stats'); }}
+            aria-label="View your weekly stats"
+            className="bg-primary/5 border-primary/20 cursor-pointer hover:border-primary/40 active:scale-[0.99] transition-all touch-manipulation"
+          >
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-semibold text-lg">This Week</h2>
-                <Calendar className="w-5 h-5 text-primary opacity-60" />
+                <div className="flex items-center gap-1 text-primary opacity-60">
+                  <Calendar className="w-5 h-5" />
+                  <ArrowRight className="w-4 h-4" />
+                </div>
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="min-w-0">
