@@ -15,7 +15,7 @@ L.Icon.Default.mergeOptions({
 
 const AddressMiniMap = ({ latitude, longitude, address }) => {
   return (
-    <div className="w-full h-40 rounded-lg overflow-hidden border border-border mt-2">
+    <div className="w-full h-40 rounded-lg overflow-hidden border border-border mt-2 isolate">
       <MapContainer
         center={[latitude, longitude]}
         zoom={16}

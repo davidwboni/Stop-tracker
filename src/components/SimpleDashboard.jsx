@@ -182,11 +182,11 @@ const SimpleDashboard = () => {
                   <div className="text-xs text-muted-foreground mt-1">Total Stops</div>
                 </div>
                 <div className="min-w-0">
-                  <div className="text-xl sm:text-2xl font-bold text-primary"><Money amount={weekStats.earnings} /></div>
+                  <div className="text-xl sm:text-2xl font-bold text-primary"><Money amount={weekStats.earnings} whole /></div>
                   <div className="text-xs text-muted-foreground mt-1">Earned</div>
                 </div>
                 <div className="min-w-0">
-                  <div className="text-xl sm:text-2xl font-bold"><Money amount={weekStats.avgPerDay} /></div>
+                  <div className="text-xl sm:text-2xl font-bold"><Money amount={weekStats.avgPerDay} whole /></div>
                   <div className="text-xs text-muted-foreground mt-1">Per Day</div>
                 </div>
               </div>

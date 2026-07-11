@@ -61,7 +61,7 @@ const RouteMap = ({ addresses }) => {
   const polylinePositions = addresses.map(addr => [addr.latitude, addr.longitude]);
 
   return (
-    <div className="w-full h-full rounded-lg overflow-hidden border-2 border-border">
+    <div className="w-full h-full rounded-lg overflow-hidden border-2 border-border isolate">
       <MapContainer
         center={center}
         zoom={addresses.length === 0 ? 6 : 13}
