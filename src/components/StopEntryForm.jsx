@@ -15,8 +15,14 @@ import {
   Undo
 } from "lucide-react";
 import { useData } from "../contexts/DataContext";
-import { calculateStopFee } from "../features/payperiod/payPeriodCalculations";
+import { calculateDayEarnings, PAY_MODELS } from "../features/payperiod/payStructure";
 import { Money } from "./ui/money";
+
+const DEFAULT_CONFIG = {
+  model: "tiered_stops",
+  thresholds: [{ stopCount: 110, rate: 1.98 }, { rate: 1.48 }],
+  excessParcelRate: 0.05,
+};
 
 const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
   // Initialize logs as an empty array if null
@@ -31,6 +37,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
         return {
           date: new Date().toISOString().split('T')[0], // Always use today's date
           stops: parsed.stops || "",
+          miles: parsed.miles || "",
           extra: parsed.extra || "",
           notes: parsed.notes || "",
         };
@@ -38,10 +45,11 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
     } catch (error) {
       console.error('Error loading smart defaults:', error);
     }
-    
+
     return {
       date: new Date().toISOString().split('T')[0],
       stops: "",
+      miles: "",
       extra: "",
       notes: "",
     };
@@ -53,6 +61,9 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { paymentConfig } = useData();
+  const config = paymentConfig || DEFAULT_CONFIG;
+  const model = config.model || "tiered_stops";
+  const meta = PAY_MODELS.find((m) => m.id === model) || PAY_MODELS[0];
   const [showAllEntries, setShowAllEntries] = useState(false);
   const [lastSavedEntry, setLastSavedEntry] = useState(null);
   const [showUndo, setShowUndo] = useState(false);
@@ -238,15 +249,13 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
   const estimatedEarnings = useMemo(() => {
     if (!entry.stops) return 0;
 
-    const stopsNum = parseInt(entry.stops, 10) || 0;
     const extraNum = entry.extra ? parseFloat(entry.extra) || 0 : 0;
-    const config = paymentConfig || {
-      thresholds: [{ stopCount: 110, rate: 1.98 }, { rate: 1.48 }],
-      excessParcelRate: 0.05
-    };
 
-    return calculateStopFee(stopsNum, config.thresholds) + extraNum;
-  }, [entry.stops, entry.extra, paymentConfig]);
+    return calculateDayEarnings(config, {
+      quantity: parseFloat(entry.stops) || 0,
+      miles: parseFloat(entry.miles) || 0,
+    }) + extraNum;
+  }, [entry.stops, entry.miles, entry.extra, config]);
 
   // Memoize recent entries to avoid unnecessary re-processing
   const recentEntries = useMemo(() => {
@@ -264,14 +273,11 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
         throw new Error("Please enter number of stops");
       }
       
-      const stops = parseInt(entry.stops, 10);
+      const stops = parseFloat(entry.stops) || 0;
       const extra = entry.extra ? parseFloat(entry.extra) : 0;
-      const config = paymentConfig || {
-        thresholds: [{ stopCount: 110, rate: 1.98 }, { rate: 1.48 }],
-        excessParcelRate: 0.05
-      };
-      const total = calculateStopFee(stops, config.thresholds) + extra;
-      
+      const miles = parseFloat(entry.miles) || 0;
+      const total = calculateDayEarnings(config, { quantity: stops, miles }) + extra;
+
       const newLog = {
         id: Date.now(),
         date: entry.date,
@@ -280,6 +286,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
         total,
         notes: entry.notes,
         timestamp: new Date().toISOString(),
+        ...(model === 'sliding_scale' ? { miles } : {}),
       };
       
       // Store entry for undo functionality
@@ -368,7 +375,8 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
       setEntry({
         date: new Date().toISOString().split('T')[0],
         stops: entry.stops, // Keep the same stops count as smart default
-        extra: entry.extra, // Keep the same extra amount as smart default  
+        miles: entry.miles, // Keep the same miles as smart default (sliding scale)
+        extra: entry.extra, // Keep the same extra amount as smart default
         notes: "", // Clear notes for next entry
       });
       
@@ -506,25 +514,72 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
         <Card className="mx-0 rounded-none border-0 shadow-none">
           <CardContent className="px-4 pt-1 pb-4">
             <form onSubmit={optimizedHandleSubmit} className="space-y-5">
-              {/* Main input - Stops (most important, thumb-friendly position) */}
+              {/* Main input - model-driven hero field (most important, thumb-friendly position) */}
               <div className="bg-primary/5 p-4 rounded-[18px] border border-primary/20">
                 <label className="block text-sm font-semibold text-primary mb-2 text-center">
-                  📦 Number of Stops
+                  {meta.primary.label}
                 </label>
-                <Input
-                  ref={stopsInputRef}
-                  type="number"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  name="stops"
-                  value={entry.stops}
-                  onChange={debouncedHandleChange}
-                  onFocus={() => handleInputFocus(stopsInputRef)}
-                  onBlur={handleInputBlur}
-                  placeholder="0"
-                  required
-                  className="h-16 border-2 border-primary/30 rounded-[18px] focus:border-primary focus:ring-4 focus:ring-primary/20 text-2xl font-bold touch-manipulation text-center shadow-lg tabular-nums"
-                />
+
+                {meta.primary.type === 'toggle' ? (
+                  <div className="flex gap-3 justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setEntry(prev => ({ ...prev, stops: "1" }))}
+                      className={`flex-1 h-14 rounded-[18px] border-2 font-semibold touch-manipulation transition-colors active:scale-95 ${
+                        (parseFloat(entry.stops) || 0) > 0
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'border-primary/30 text-primary'
+                      }`}
+                    >
+                      Yes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEntry(prev => ({ ...prev, stops: "0" }))}
+                      className={`flex-1 h-14 rounded-[18px] border-2 font-semibold touch-manipulation transition-colors active:scale-95 ${
+                        entry.stops !== "" && (parseFloat(entry.stops) || 0) === 0
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'border-primary/30 text-primary'
+                      }`}
+                    >
+                      No
+                    </button>
+                  </div>
+                ) : (
+                  <Input
+                    ref={stopsInputRef}
+                    type="number"
+                    inputMode="numeric"
+                    name="stops"
+                    value={entry.stops}
+                    onChange={debouncedHandleChange}
+                    onFocus={() => handleInputFocus(stopsInputRef)}
+                    onBlur={handleInputBlur}
+                    placeholder="0"
+                    required
+                    className="h-16 border-2 border-primary/30 rounded-[18px] focus:border-primary focus:ring-4 focus:ring-primary/20 text-2xl font-bold touch-manipulation text-center shadow-lg tabular-nums"
+                  />
+                )}
+
+                {meta.secondary?.field === 'miles' && (
+                  <div className="mt-3">
+                    <label className="block text-xs font-medium text-muted-foreground mb-1 text-center">
+                      {meta.secondary.label}
+                    </label>
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      name="miles"
+                      value={entry.miles}
+                      onChange={debouncedHandleChange}
+                      onFocus={() => handleInputFocus({ current: null })}
+                      onBlur={handleInputBlur}
+                      placeholder="0"
+                      className="h-12 border-2 border-primary/30 rounded-[14px] focus:border-primary focus:ring-2 focus:ring-primary/20 text-lg font-semibold touch-manipulation text-center tabular-nums"
+                    />
+                  </div>
+                )}
+
                 {entry.stops && (
                   <p className="text-center text-sm text-primary mt-2 font-medium">
                     <Money amount={estimatedEarnings} /> estimated
