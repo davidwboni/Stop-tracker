@@ -87,10 +87,14 @@ exports.interpretPayStructure = onCall(
         : "Here is my pay-rate sheet. Interpret it into the JSON config.",
     });
 
+    // Tier the model to the input: a dense rate-sheet grid is vision-critical
+    // (Sonnet 5), while a plain text description is simple extraction (Haiku).
+    const model = fileBase64 ? "claude-sonnet-5" : "claude-haiku-4-5";
+
     let message;
     try {
       message = await client.messages.create({
-        model: "claude-opus-4-8",
+        model,
         max_tokens: 8000,
         system: PAY_SYSTEM_PROMPT,
         messages: [{ role: "user", content }],
