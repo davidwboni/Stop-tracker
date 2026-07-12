@@ -1,132 +1,121 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Alert, AlertDescription } from "./ui/alert";
-import { doc, updateDoc, getDoc } from "firebase/firestore";
+import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../services/firebase";
+import { useData } from "../contexts/DataContext";
+import {
+  PAY_MODELS,
+  calculateDayEarnings,
+  normalizePayStructure,
+} from "../features/payperiod/payStructure";
 import {
   DollarSign,
   AlertCircle,
   CheckCircle2,
   Save,
-  Info
+  Info,
 } from "lucide-react";
 
+// Sensible starting params when the user switches into a model.
+const SEED = {
+  tiered_stops: { thresholds: [{ stopCount: 110, rate: 1.98 }, { rate: 1.48 }], excessParcelRate: 0.05 },
+  flat_stops: { ratePerStop: 0, excessParcelRate: 0.05 },
+  per_mile: { ratePerMile: 0, baseFee: 0 },
+  hourly: { ratePerHour: 0 },
+  per_day: { ratePerDay: 0 },
+};
+
+// Representative daily quantity used to render the live worked example.
+const SAMPLE = {
+  tiered_stops: { quantity: 100, unit: "stops" },
+  flat_stops: { quantity: 100, unit: "stops" },
+  per_mile: { quantity: 80, unit: "miles" },
+  hourly: { quantity: 8, unit: "hours" },
+  per_day: { quantity: 1, unit: "day" },
+  sliding_scale: { quantity: 100, miles: 80, unit: "stops" },
+};
+
+const num = (v) => (v === "" || v === undefined || v === null ? 0 : parseFloat(v) || 0);
+
 const PaymentSettings = ({ userId, user, onSettingsSaved }) => {
-  const [paymentConfig, setPaymentConfig] = useState({
-    cutoffPoint: 110,
-    rateBeforeCutoff: 1.98,
-    rateAfterCutoff: 1.48,
-  });
-  const [excessParcelRate, setExcessParcelRate] = useState(0.05);
-  const [loading, setLoading] = useState(true);
+  const { paymentConfig } = useData();
+  const [config, setConfig] = useState(() => normalizePayStructure(paymentConfig));
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(false);
+  const [success, setSuccess] = useState(null);
 
-  // Load payment config
-  useEffect(() => {
-    const fetchPaymentConfig = async () => {
-      try {
-        if (user?.isGuest) {
-          setLoading(false);
-          return;
-        }
+  const model = config.model;
+  const isSliding = model === "sliding_scale";
 
-        const userDoc = await getDoc(doc(db, "users", userId));
-        if (userDoc.exists()) {
-          const config = userDoc.data().paymentConfig || {};
-
-          if (config.thresholds && config.thresholds.length > 0) {
-            const firstTier = config.thresholds[0];
-            const lastTier = config.thresholds[config.thresholds.length - 1];
-            setPaymentConfig({
-              cutoffPoint: firstTier.stopCount ?? 110,
-              rateBeforeCutoff: firstTier.rate ?? 1.98,
-              rateAfterCutoff: lastTier.rate ?? 1.48,
-            });
-          } else {
-            setPaymentConfig({
-              cutoffPoint: config.cutoffPoint || 110,
-              rateBeforeCutoff: config.rateBeforeCutoff || 1.98,
-              rateAfterCutoff: config.rateAfterCutoff || 1.48,
-            });
-          }
-
-          setExcessParcelRate(config.excessParcelRate ?? 0.05);
-        }
-      } catch (err) {
-        console.error("Error fetching payment config:", err);
-        setError("Failed to load payment settings");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPaymentConfig();
-  }, [userId, user]);
-
-  // Clear success after 3 seconds
-  useEffect(() => {
-    if (success) {
-      const timer = setTimeout(() => setSuccess(false), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [success]);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setPaymentConfig(prev => ({
-      ...prev,
-      [name]: parseFloat(value) || 0
-    }));
+  const selectModel = (id) => {
+    if (id === config.model) return;
+    setConfig({ model: id, ...SEED[id] });
+    setSuccess(null);
+    setError(null);
   };
+
+  const setParam = (key, value) =>
+    setConfig((c) => ({ ...c, [key]: num(value) }));
+
+  const setTier = (idx, key, value) =>
+    setConfig((c) => {
+      const thresholds = (c.thresholds || [{ stopCount: 110, rate: 1.98 }, { rate: 1.48 }]).map((t) => ({ ...t }));
+      thresholds[idx] = { ...thresholds[idx], [key]: num(value) };
+      return { ...c, thresholds };
+    });
+
+  const sample = SAMPLE[model] || SAMPLE.tiered_stops;
+  const workedExample = calculateDayEarnings(config, {
+    quantity: sample.quantity,
+    miles: sample.miles,
+  });
 
   const handleSave = async () => {
     setUpdating(true);
     setError(null);
-
     try {
-      const configToSave = {
-        thresholds: [
-          { stopCount: paymentConfig.cutoffPoint, rate: paymentConfig.rateBeforeCutoff },
-          { rate: paymentConfig.rateAfterCutoff }
-        ],
-        excessParcelRate
-      };
-
       if (user?.isGuest) {
         setSuccess("Settings saved locally");
-        if (onSettingsSaved) onSettingsSaved(configToSave);
+        if (onSettingsSaved) onSettingsSaved(config);
         setUpdating(false);
         return;
       }
-
       await updateDoc(doc(db, "users", userId), {
-        paymentConfig: configToSave,
-        updatedAt: new Date().toISOString()
+        paymentConfig: config,
+        updatedAt: new Date().toISOString(),
       });
-
-      setSuccess("Payment settings saved successfully!");
-      if (onSettingsSaved) onSettingsSaved(configToSave);
+      setSuccess("Payment settings saved");
+      if (onSettingsSaved) onSettingsSaved(config);
     } catch (err) {
       console.error("Error updating payment config:", err);
-      setError("Failed to save settings. Please try again.");
+      setError("Couldn't save settings. Try again.");
     } finally {
       setUpdating(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+  const field = (id, label, value, onChange, hint) => (
+    <div className="space-y-2">
+      <Label htmlFor={id} className="text-base font-semibold">{label}</Label>
+      {hint && <p className="text-sm text-muted-foreground">{hint}</p>}
+      <div className="flex items-center gap-3">
+        <span className="text-lg font-semibold text-primary">£</span>
+        <Input
+          id={id}
+          type="number"
+          step="0.01"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="bg-input border-border focus:ring-2 focus:ring-primary max-w-xs"
+        />
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
     <motion.div
@@ -135,200 +124,117 @@ const PaymentSettings = ({ userId, user, onSettingsSaved }) => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6">
         <div className="flex items-center gap-3 mb-2">
           <DollarSign className="w-8 h-8 text-primary" />
-          <h1 className="text-3xl font-bold">Payment Settings</h1>
+          <h1 className="text-3xl font-bold">Pay Structure</h1>
         </div>
-        <p className="text-muted-foreground">
-          Configure how you get paid for deliveries
-        </p>
+        <p className="text-muted-foreground">Set how you get paid — earnings update as you type.</p>
       </div>
 
-      {/* Info Alert */}
       <Alert className="bg-primary/10 border-primary/20">
         <Info className="h-4 w-4 text-primary" />
         <AlertDescription className="text-primary">
-          These settings affect how your earnings are calculated based on the number of stops.
+          Pick the model that matches your job, then fill in your rates.
         </AlertDescription>
       </Alert>
 
-      {/* Payment Configuration Card */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
+      {/* Model picker */}
+      <div className="flex flex-wrap gap-2">
+        {PAY_MODELS.filter((m) => m.id !== "sliding_scale").map((m) => {
+          const on = m.id === model;
+          return (
+            <button
+              key={m.id}
+              onClick={() => selectModel(m.id)}
+              className={`rounded-full px-4 py-2 text-sm font-medium border transition-colors touch-manipulation ${
+                on
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-card text-muted-foreground border-border hover:border-primary/40"
+              }`}
+            >
+              {m.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
         <Card className="bg-card border-border/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <div className="p-2 rounded-lg bg-primary/10">
                 <DollarSign className="w-5 h-5 text-primary" />
               </div>
-              Earnings Configuration
+              Your rates
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Cutoff Point */}
-            <div className="space-y-2">
-              <Label htmlFor="cutoff" className="text-base font-semibold">
-                Daily Cutoff Point
-              </Label>
-              <p className="text-sm text-muted-foreground">
-                The number of stops where your rate changes
-              </p>
-              <div className="flex items-center gap-3">
-                <Input
-                  id="cutoff"
-                  name="cutoffPoint"
-                  type="number"
-                  value={paymentConfig.cutoffPoint}
-                  onChange={handleChange}
-                  className="bg-input border-border focus:ring-2 focus:ring-primary max-w-xs"
-                  min="1"
-                  step="1"
-                />
-                <span className="text-sm text-muted-foreground">stops</span>
+            {isSliding ? (
+              <div className="p-4 rounded-[14px] bg-muted/30 border border-border/50">
+                <p className="font-semibold mb-1">Sliding scale from your uploaded sheet</p>
+                <p className="text-sm text-muted-foreground">
+                  {(config.stopBands?.length || 0)} stop bands × {(config.mileBands?.length || 0)} mileage bands.
+                  To change a sliding scale, re-upload your sheet in AI setup.
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Example: If set to 110, you get one rate for 0-110 stops, another rate for 110+ stops
+            ) : model === "tiered_stops" ? (
+              <>
+                {field("cutoff", "Cutoff (stops)", config.thresholds?.[0]?.stopCount ?? 110, (v) => setTier(0, "stopCount", v), "Where your per-stop rate changes")}
+                {field("rateBefore", "Rate before cutoff", config.thresholds?.[0]?.rate ?? 0, (v) => setTier(0, "rate", v))}
+                {field("rateAfter", "Rate after cutoff", config.thresholds?.[1]?.rate ?? 0, (v) => setTier(1, "rate", v))}
+                {field("excessTiered", "Excess parcel rate", config.excessParcelRate ?? 0, (v) => setParam("excessParcelRate", v), "Per parcel beyond one per stop")}
+              </>
+            ) : model === "flat_stops" ? (
+              <>
+                {field("ratePerStop", "Rate per stop", config.ratePerStop ?? 0, (v) => setParam("ratePerStop", v))}
+                {field("excessFlat", "Excess parcel rate", config.excessParcelRate ?? 0, (v) => setParam("excessParcelRate", v), "Per parcel beyond one per stop")}
+              </>
+            ) : model === "per_mile" ? (
+              <>
+                {field("ratePerMile", "Rate per mile", config.ratePerMile ?? 0, (v) => setParam("ratePerMile", v))}
+                {field("baseFee", "Daily base fee", config.baseFee ?? 0, (v) => setParam("baseFee", v), "A fixed amount added each day (optional)")}
+              </>
+            ) : model === "hourly" ? (
+              <>{field("ratePerHour", "Rate per hour", config.ratePerHour ?? 0, (v) => setParam("ratePerHour", v))}</>
+            ) : (
+              <>{field("ratePerDay", "Rate per day", config.ratePerDay ?? 0, (v) => setParam("ratePerDay", v), "A fixed amount for each day worked")}</>
+            )}
+
+            {/* Worked example */}
+            <div className="mt-4 p-4 rounded-[14px] bg-primary/5 border border-primary/20">
+              <p className="text-xs font-semibold text-primary mb-1">QUICK CHECK</p>
+              <p data-testid="worked-example" className="text-sm tabular-nums">
+                {sample.quantity} {sample.unit}
+                {sample.miles ? ` @ ${sample.miles} miles` : ""} = £{workedExample.toFixed(2)}
               </p>
             </div>
 
-            {/* Rate Before Cutoff */}
-            <div className="space-y-2">
-              <Label htmlFor="rateBefore" className="text-base font-semibold">
-                Rate (Before {paymentConfig.cutoffPoint} stops)
-              </Label>
-              <p className="text-sm text-muted-foreground">
-                Payment per stop for deliveries below cutoff point
-              </p>
-              <div className="flex items-center gap-3">
-                <span className="text-lg font-semibold text-primary">£</span>
-                <Input
-                  id="rateBefore"
-                  name="rateBeforeCutoff"
-                  type="number"
-                  value={paymentConfig.rateBeforeCutoff}
-                  onChange={handleChange}
-                  className="bg-input border-border focus:ring-2 focus:ring-primary max-w-xs"
-                  min="0"
-                  step="0.01"
-                />
-                <span className="text-sm text-muted-foreground">per stop</span>
-              </div>
-            </div>
-
-            {/* Rate After Cutoff */}
-            <div className="space-y-2">
-              <Label htmlFor="rateAfter" className="text-base font-semibold">
-                Rate (After {paymentConfig.cutoffPoint} stops)
-              </Label>
-              <p className="text-sm text-muted-foreground">
-                Payment per stop for deliveries at or above cutoff point
-              </p>
-              <div className="flex items-center gap-3">
-                <span className="text-lg font-semibold text-primary">£</span>
-                <Input
-                  id="rateAfter"
-                  name="rateAfterCutoff"
-                  type="number"
-                  value={paymentConfig.rateAfterCutoff}
-                  onChange={handleChange}
-                  className="bg-input border-border focus:ring-2 focus:ring-primary max-w-xs"
-                  min="0"
-                  step="0.01"
-                />
-                <span className="text-sm text-muted-foreground">per stop</span>
-              </div>
-            </div>
-
-            {/* Excess Parcel Rate */}
-            <div className="space-y-2">
-              <Label htmlFor="excessParcelRate" className="text-base font-semibold">
-                Excess Parcel Fee
-              </Label>
-              <p className="text-sm text-muted-foreground">
-                Payment per parcel beyond one per stop
-              </p>
-              <div className="flex items-center gap-3">
-                <span className="text-lg font-semibold text-primary">£</span>
-                <Input
-                  id="excessParcelRate"
-                  name="excessParcelRate"
-                  type="number"
-                  value={excessParcelRate}
-                  onChange={(e) => setExcessParcelRate(parseFloat(e.target.value) || 0)}
-                  className="bg-input border-border focus:ring-2 focus:ring-primary max-w-xs"
-                  min="0"
-                  step="0.01"
-                />
-                <span className="text-sm text-muted-foreground">per excess parcel</span>
-              </div>
-            </div>
-
-            {/* Example Calculation */}
-            <div className="mt-8 p-4 rounded-lg bg-muted/30 border border-border/50">
-              <h3 className="font-semibold mb-3">Example Calculation</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    100 stops × £{paymentConfig.rateBeforeCutoff}:
-                  </span>
-                  <span className="font-semibold text-primary">
-                    £{(100 * paymentConfig.rateBeforeCutoff).toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    120 stops ({paymentConfig.cutoffPoint} at £{paymentConfig.rateBeforeCutoff} + {120 - paymentConfig.cutoffPoint} at £{paymentConfig.rateAfterCutoff}):
-                  </span>
-                  <span className="font-semibold text-primary">
-                    £{(paymentConfig.cutoffPoint * paymentConfig.rateBeforeCutoff + (120 - paymentConfig.cutoffPoint) * paymentConfig.rateAfterCutoff).toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Status Messages */}
             {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-
             {success && (
               <Alert className="bg-emerald-500/10 border-emerald-500/20">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                <AlertDescription className="text-emerald-500">
-                  {success}
-                </AlertDescription>
+                <AlertDescription className="text-emerald-500">{success}</AlertDescription>
               </Alert>
             )}
 
-            {/* Save Button */}
-            <div className="flex justify-end pt-4">
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Button
-                  onClick={handleSave}
-                  disabled={updating}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                >
+            {!isSliding && (
+              <div className="flex justify-end pt-2">
+                <Button onClick={handleSave} disabled={updating} className="bg-primary hover:bg-primary/90 text-primary-foreground">
                   <Save className="h-4 w-4 mr-2" />
-                  {updating ? "Saving..." : "Save Settings"}
+                  {updating ? "Saving..." : "Save"}
                 </Button>
-              </motion.div>
-            </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>
 
-      {/* Guest Notice */}
       {user?.isGuest && (
         <Alert className="bg-amber-500/10 border-amber-500/20">
           <AlertCircle className="h-4 w-4 text-amber-500" />
