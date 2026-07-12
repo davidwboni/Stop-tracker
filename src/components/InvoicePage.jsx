@@ -4,14 +4,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import InvoiceGeneratorNew from "./InvoiceGeneratorNew";
 import InvoiceHistory from "./InvoiceHistory";
 import PayPeriodList from "../features/payperiod/PayPeriodList";
-import PremiumFeatureGate from "./PremiumFeatureGate";
-import { FileText, CheckCircle2, History, Crown } from "lucide-react";
-import { useAuth } from "../contexts/AuthContext";
+import { FileText, CheckCircle2, History } from "lucide-react";
 
 const InvoicePage = () => {
-  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("create");
-  const isPro = user?.role === "pro";
   const [prefillInvoice, setPrefillInvoice] = useState(null);
 
   const handleGenerateInvoice = (prefill) => {
@@ -30,12 +26,6 @@ const InvoicePage = () => {
       <div className="mb-4">
         <div className="flex items-center gap-3 mb-1">
           <h1 className="text-2xl sm:text-3xl font-bold">Invoices</h1>
-          {!isPro && (
-            <span className="px-3 py-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-semibold rounded-full flex items-center gap-1">
-              <Crown className="w-3 h-3" />
-              PRO FEATURE
-            </span>
-          )}
         </div>
         <p className="text-muted-foreground text-sm">Create invoices and check you've been paid right</p>
       </div>
@@ -70,9 +60,7 @@ const InvoicePage = () => {
             exit={{ opacity: 0, x: -10 }}
             transition={{ duration: 0.2 }}
           >
-            <PremiumFeatureGate featureName="Invoice Creation">
-              <InvoiceGeneratorNew prefill={prefillInvoice} />
-            </PremiumFeatureGate>
+            <InvoiceGeneratorNew prefill={prefillInvoice} />
           </motion.div>
         </TabsContent>
 
@@ -83,9 +71,7 @@ const InvoicePage = () => {
             exit={{ opacity: 0, x: -10 }}
             transition={{ duration: 0.2 }}
           >
-            <PremiumFeatureGate featureName="Invoice History">
-              <InvoiceHistory />
-            </PremiumFeatureGate>
+            <InvoiceHistory />
           </motion.div>
         </TabsContent>
 

@@ -15,13 +15,13 @@ const StatsPage = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <TrendingUp className="w-8 h-8 text-primary" />
-          <h1 className="text-3xl font-bold">Weekly Statistics</h1>
+      {/* Header — compact single line so the week's data sits higher */}
+      <div className="mb-5">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="w-6 h-6 text-primary" />
+          <h1 className="text-2xl font-bold">Weekly Stats</h1>
         </div>
-        <p className="text-muted-foreground">
+        <p className="text-sm text-muted-foreground mt-0.5">
           Track your delivery performance week by week
         </p>
       </div>

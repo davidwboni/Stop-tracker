@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Button } from "./ui/button";
+import { useAuth } from "../contexts/AuthContext";
 import { 
   ChevronRight, 
   ArrowRight, 
@@ -110,8 +111,22 @@ const testimonials = [
 ];
 
 export default function LandingPage({ onGetStarted, onContactUs, onPrivacyPolicy, onTermsOfService }) {
+  const { loginAsGuest } = useAuth();
+  const [guestLoading, setGuestLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isVisible, setIsVisible] = useState(false);
+
+  // One-tap guest: sign in anonymously and drop straight into the app —
+  // no separate "continue as guest" screen.
+  const handleTryDemo = async () => {
+    setGuestLoading(true);
+    const ok = await loginAsGuest();
+    if (ok) {
+      window.location.href = "/app/dashboard";
+    } else {
+      setGuestLoading(false);
+    }
+  };
   const { scrollY } = useScroll();
   const y = useTransform(scrollY, [0, 300], [0, -50]);
   const opacity = useTransform(scrollY, [0, 300], [1, 0.3]);
@@ -203,22 +218,13 @@ export default function LandingPage({ onGetStarted, onContactUs, onPrivacyPolicy
               Start Tracking Now
               <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Button>
-            <Button 
+            <Button
               variant="outline"
-              onClick={() => {
-                // Create a guest session and navigate to the app
-                const guestData = {
-                  isGuest: true,
-                  guestId: 'guest_' + Date.now(),
-                  displayName: 'Demo User',
-                  email: 'demo@stoptracker.com'
-                };
-                localStorage.setItem('guestSession', JSON.stringify(guestData));
-                onGetStarted(); // This will navigate to the app
-              }}
+              onClick={handleTryDemo}
+              disabled={guestLoading}
               className="bg-white/10 backdrop-blur-md border-white/30 text-white hover:bg-white/20 active:scale-95 px-8 py-4 text-lg rounded-2xl transition-all duration-300 group min-h-[48px] touch-manipulation"
             >
-              Try Demo
+              {guestLoading ? "Starting demo…" : "Try as Guest"}
               <Zap className="ml-2 w-5 h-5 group-hover:text-yellow-400 transition-colors" />
             </Button>
           </motion.div>
