@@ -13,12 +13,15 @@ import {
   calculateDayEarnings,
   normalizePayStructure,
 } from "../features/payperiod/payStructure";
+import PayStructureAISetup from "./PayStructureAISetup";
 import {
   DollarSign,
   AlertCircle,
   CheckCircle2,
   Save,
   Info,
+  Sparkles,
+  Pencil,
 } from "lucide-react";
 
 // Sensible starting params when the user switches into a model.
@@ -48,6 +51,7 @@ const PaymentSettings = ({ userId, user, onSettingsSaved }) => {
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [mode, setMode] = useState("ai"); // 'ai' | 'manual'
 
   const model = config.model;
   const isSliding = model === "sliding_scale";
@@ -75,28 +79,37 @@ const PaymentSettings = ({ userId, user, onSettingsSaved }) => {
     miles: sample.miles,
   });
 
-  const handleSave = async () => {
+  const saveConfig = async (cfg) => {
     setUpdating(true);
     setError(null);
     try {
       if (user?.isGuest) {
         setSuccess("Settings saved locally");
-        if (onSettingsSaved) onSettingsSaved(config);
-        setUpdating(false);
+        if (onSettingsSaved) onSettingsSaved(cfg);
         return;
       }
       await updateDoc(doc(db, "users", userId), {
-        paymentConfig: config,
+        paymentConfig: cfg,
         updatedAt: new Date().toISOString(),
       });
       setSuccess("Payment settings saved");
-      if (onSettingsSaved) onSettingsSaved(config);
+      if (onSettingsSaved) onSettingsSaved(cfg);
     } catch (err) {
       console.error("Error updating payment config:", err);
       setError("Couldn't save settings. Try again.");
     } finally {
       setUpdating(false);
     }
+  };
+
+  const handleSave = () => saveConfig(config);
+
+  // AI confirmed a config: adopt it, show it in the manual editor, and save.
+  const handleAIConfirm = (cfg) => {
+    const normalized = normalizePayStructure(cfg);
+    setConfig(normalized);
+    setMode("manual");
+    saveConfig(normalized);
   };
 
   const field = (id, label, value, onChange, hint) => (
@@ -132,6 +145,35 @@ const PaymentSettings = ({ userId, user, onSettingsSaved }) => {
         <p className="text-muted-foreground">Set how you get paid — earnings update as you type.</p>
       </div>
 
+      {/* Setup mode toggle */}
+      <div className="inline-flex rounded-full border border-border p-1 bg-card">
+        <button
+          onClick={() => setMode("ai")}
+          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${mode === "ai" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+        >
+          <Sparkles className="w-4 h-4 mr-1.5 inline-block align-[-2px]" />
+          Describe with AI
+        </button>
+        <button
+          onClick={() => setMode("manual")}
+          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${mode === "manual" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+        >
+          <Pencil className="w-4 h-4 mr-1.5 inline-block align-[-2px]" />
+          Enter manually
+        </button>
+      </div>
+
+      {mode === "ai" && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="bg-card border-border/50">
+            <CardContent className="pt-6 space-y-4">
+              <PayStructureAISetup onConfirm={handleAIConfirm} />
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      <div className={mode === "manual" ? "space-y-6" : "hidden"}>
       <Alert className="bg-primary/10 border-primary/20">
         <Info className="h-4 w-4 text-primary" />
         <AlertDescription className="text-primary">
@@ -234,6 +276,7 @@ const PaymentSettings = ({ userId, user, onSettingsSaved }) => {
           </CardContent>
         </Card>
       </motion.div>
+      </div>
 
       {user?.isGuest && (
         <Alert className="bg-amber-500/10 border-amber-500/20">

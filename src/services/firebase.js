@@ -1,4 +1,5 @@
 import { initializeApp } from "firebase/app";
+import { getFunctions } from "firebase/functions";
 import {
   getAuth,
   GoogleAuthProvider,
@@ -47,6 +48,7 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
+export const functions = getFunctions(app);
 
 // Configure Firestore with persistence for offline capability
 import { enableIndexedDbPersistence, CACHE_SIZE_UNLIMITED } from "firebase/firestore";
