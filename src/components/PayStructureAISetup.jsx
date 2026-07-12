@@ -111,6 +111,9 @@ const PayStructureAISetup = ({ onConfirm }) => {
         </Button>
         {file && <span className="text-xs text-muted-foreground truncate max-w-[180px]">{file.name}</span>}
       </div>
+      <p className="text-xs text-muted-foreground -mt-1">
+        For a rate table, a PDF or screenshot reads most accurately — a clear photo works too.
+      </p>
 
       {error && (
         <Alert variant="destructive">

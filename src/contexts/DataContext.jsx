@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { syncData, db } from '../services/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { normalizePayStructure } from '../features/payperiod/payStructure';
 
 // Create context with default values
@@ -12,6 +12,8 @@ const DataContext = createContext({
   syncing: false,
   isNewUser: false,
   paymentConfig: null,
+  needsOnboarding: false,
+  completeOnboarding: () => Promise.resolve(),
   forceSync: () => Promise.resolve(false)
 });
 
@@ -24,6 +26,7 @@ export const DataProvider = ({ children }) => {
   const [syncing, setSyncing] = useState(false);
   const [isNewUser, setIsNewUser] = useState(false);
   const [paymentConfig, setPaymentConfig] = useState(normalizePayStructure(null));
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
   // Initial data load - with error handling and retry mechanism
   useEffect(() => {
@@ -108,12 +111,14 @@ export const DataProvider = ({ children }) => {
           const userDocRef = doc(db, 'users', user.uid, 'deliveryLogs', 'data');
           const userDoc = await getDoc(userDocRef);
           
+          let logsEmpty = true;
           if (userDoc.exists()) {
             const userData = userDoc.data();
             const userLogs = userData.logs || [];
             console.log("Successfully loaded logs:", userLogs.length);
             setLogs(userLogs);
             setIsNewUser(userLogs.length === 0);
+            logsEmpty = userLogs.length === 0;
           } else {
             setLogs([]);
             setIsNewUser(true);
@@ -122,9 +127,14 @@ export const DataProvider = ({ children }) => {
           // Get payment config from main user document
           const mainUserDocRef = doc(db, 'users', user.uid);
           const mainUserDoc = await getDoc(mainUserDocRef);
-          if (mainUserDoc.exists() && mainUserDoc.data().paymentConfig) {
-            setPaymentConfig(normalizePayStructure(mainUserDoc.data().paymentConfig));
+          const mainData = mainUserDoc.exists() ? mainUserDoc.data() : {};
+          if (mainData.paymentConfig) {
+            setPaymentConfig(normalizePayStructure(mainData.paymentConfig));
           }
+
+          // First-run: prompt pay setup only for a genuinely new user who has no
+          // logs, no saved pay config, and hasn't already completed onboarding.
+          setNeedsOnboarding(logsEmpty && !mainData.onboarded && !mainData.paymentConfig);
           
         } catch (directErr) {
           console.warn("Direct fetch failed, trying force refresh:", directErr);
@@ -179,6 +189,26 @@ export const DataProvider = ({ children }) => {
     }
   };
 
+  // Complete first-run onboarding: optionally save the chosen pay config, mark
+  // the account onboarded, and clear the gate. Guests persist locally.
+  const completeOnboarding = async (config) => {
+    if (config) setPaymentConfig(normalizePayStructure(config));
+    setNeedsOnboarding(false);
+    if (!user?.uid) return;
+    try {
+      if (user.isGuest) {
+        if (config) localStorage.setItem(`guestConfig_${user.uid}`, JSON.stringify(config));
+        localStorage.setItem(`onboarded_${user.uid}`, '1');
+      } else {
+        const payload = { onboarded: true, updatedAt: new Date().toISOString() };
+        if (config) payload.paymentConfig = config;
+        await setDoc(doc(db, 'users', user.uid), payload, { merge: true });
+      }
+    } catch (err) {
+      console.warn("Could not persist onboarding:", err);
+    }
+  };
+
   // Force sync all data
   const forceSync = async () => {
     if (!user?.uid) return;
@@ -223,6 +253,8 @@ export const DataProvider = ({ children }) => {
     syncing,
     isNewUser,
     paymentConfig,
+    needsOnboarding,
+    completeOnboarding,
     forceSync
   };
 

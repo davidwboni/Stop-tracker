@@ -6,12 +6,13 @@ import SyncStatus from './SyncStatus';
 import AppNavigation from './AppNavigation';
 import AppFooter from './AppFooter';
 import FloatingActionButton from './FloatingActionButton';
+import PayOnboarding from './PayOnboarding';
 import { useData } from '../contexts/DataContext';
 import { calculateStopFee } from '../features/payperiod/payPeriodCalculations';
 
 const Layout = () => {
   const { user } = useAuth();
-  const { logs, updateLogs, paymentConfig } = useData();
+  const { logs, updateLogs, paymentConfig, needsOnboarding, completeOnboarding } = useData();
   const navigate = useNavigate();
 
   // Handle quick entry from floating action button
@@ -54,6 +55,11 @@ const Layout = () => {
       throw error;
     }
   };
+
+  // First-run gate: brand-new users set up their pay before entering the app.
+  if (needsOnboarding) {
+    return <PayOnboarding onComplete={completeOnboarding} />;
+  }
 
   return (
     <div className="min-h-[100dvh] bg-gradient-to-br from-gray-50 via-blue-50/20 to-purple-50/30 dark:from-gray-900 dark:via-blue-900/10 dark:to-purple-900/20 flex flex-col pt-safe">
