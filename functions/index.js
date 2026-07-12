@@ -51,7 +51,9 @@ Rules:
 - Output valid JSON only.`;
 
 exports.interpretPayStructure = onCall(
-  { secrets: [ANTHROPIC_API_KEY], cors: true, memory: "512MiB", timeoutSeconds: 120 },
+  // invoker:"public" lets the Firebase callable protocol reach the function;
+  // auth is still enforced below via request.auth (no anonymous access).
+  { secrets: [ANTHROPIC_API_KEY], cors: true, invoker: "public", memory: "512MiB", timeoutSeconds: 120 },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "You must be signed in.");
