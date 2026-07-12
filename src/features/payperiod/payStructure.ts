@@ -127,6 +127,29 @@ const DEFAULT_TIERED: PayStructure = {
   excessParcelRate: 0.05,
 };
 
+// A short human label for a configured pay structure — used in the welcome pill
+// and anywhere we want to echo "here's what you set up" in a few words.
+export function describePayStructure(config: PayStructure): string {
+  switch (config.model) {
+    case 'tiered_stops': {
+      const t0 = config.thresholds?.[0];
+      return t0 ? `Tiered · £${t0.rate}/stop to ${t0.stopCount}` : 'Tiered per stop';
+    }
+    case 'flat_stops':
+      return `£${config.ratePerStop ?? 0} per stop`;
+    case 'per_mile':
+      return `£${config.ratePerMile ?? 0} per mile`;
+    case 'hourly':
+      return `£${config.ratePerHour ?? 0} per hour`;
+    case 'per_day':
+      return `£${config.ratePerDay ?? 0} per day`;
+    case 'sliding_scale':
+      return 'Sliding scale';
+    default:
+      return 'Pay set up';
+  }
+}
+
 export function normalizePayStructure(config: any): PayStructure {
   if (!config) return { ...DEFAULT_TIERED };
   if (config.model) return config as PayStructure;
