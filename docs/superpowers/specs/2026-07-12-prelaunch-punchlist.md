@@ -62,6 +62,27 @@
     short showcase video (discuss later).
 21. **Notifications** — later (limited on web).
 
+## E. Round-2 feedback (after testing sliding-scale end-to-end)
+
+22. **Miles must appear everywhere for sliding scale** — ✅ daily form already renders it;
+    ✅ FAB quick-entry now model-aware with a miles field + live estimate + correct total.
+    Still TODO: **Entries and Stats should display both stops and miles** for mileage-based
+    pay (so the user sees what drove each day's total). If the daily form ever shows no miles,
+    the saved model isn't `sliding_scale` — surface/verify that.
+23. **Invoice overhaul (UI-specialist)** — modernise the whole tab. Specifics:
+    - "New Client" should be a **button** that reveals a client **dropdown**; the client-details
+      form only appears **after** the user chooses to add a new client (not shown by default).
+    - **Invoice setup / sender details** — first time into Invoices, prompt for the user's own
+      company name and details, so invoices aren't hard-coded to one person's name (per-user).
+    - **Start/end date not mandatory.**
+    - **Invoice number auto-increments** on each new invoice.
+    - Once a client is set → **Download** or **quick-share via email / WhatsApp**.
+24. **Entries simplification** — drop **Export CSV**; keep **search + filter** but make the
+    **day-by-day entries the focus** (filters/ranges below the list, less prominent). "I did
+    this much on this day" first, tools second.
+25. **Compactness pass (whole app)** — shave whitespace (dashboard especially), tighten spacing
+    so there's less scrolling; add tab-transition animations for a more fluid, less "boring" feel.
+
 ## Background
 - **UI audit** — a UI-specialist pass checking colour/appearance, alignment, overflow, and
   real usability across tabs, in both light and dark.
