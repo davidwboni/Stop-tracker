@@ -8,7 +8,7 @@ import AppFooter from './AppFooter';
 import FloatingActionButton from './FloatingActionButton';
 import PayOnboarding from './PayOnboarding';
 import { useData } from '../contexts/DataContext';
-import { calculateStopFee } from '../features/payperiod/payPeriodCalculations';
+import { calculateDayEarnings } from '../features/payperiod/payStructure';
 
 // Bottom-nav tab order — swiping left/right steps through these.
 const TAB_ORDER = [
@@ -57,20 +57,18 @@ const Layout = () => {
   // Handle quick entry from floating action button
   const handleQuickEntry = async (entryData) => {
     try {
-      // Calculate earnings based on payment config
-      const calculateEarnings = (stops, extra = 0) => {
-        const config = paymentConfig || {
-          thresholds: [{ stopCount: 110, rate: 1.98 }, { rate: 1.48 }],
-          excessParcelRate: 0.05
-        };
-
-        return calculateStopFee(stops, config.thresholds) + (parseFloat(extra) || 0);
-      };
+      // Model-aware total: uses stops/miles/hours per the active pay structure,
+      // plus any extra. Matches the daily form and the FAB.
+      const total =
+        calculateDayEarnings(paymentConfig, {
+          quantity: parseFloat(entryData.stops) || 0,
+          miles: parseFloat(entryData.miles) || 0,
+        }) + (parseFloat(entryData.extra) || 0);
 
       const newEntry = {
         id: Date.now(),
         ...entryData,
-        total: calculateEarnings(entryData.stops, entryData.extra),
+        total,
         timestamp: new Date().toISOString(),
       };
       

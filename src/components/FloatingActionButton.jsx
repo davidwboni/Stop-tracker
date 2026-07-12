@@ -1,78 +1,67 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, Truck, DollarSign, Save } from 'lucide-react';
+import { Plus, X, Truck, Save } from 'lucide-react';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
+import { useData } from '../contexts/DataContext';
+import { PAY_MODELS, calculateDayEarnings } from '../features/payperiod/payStructure';
 
 const FloatingActionButton = ({ onAddEntry, isVisible = true }) => {
+  // Follow the user's active pay model: the primary field (stops / miles / hours),
+  // a second miles field for sliding scale, and a live estimate.
+  const { paymentConfig } = useData();
+  const model = paymentConfig?.model || 'tiered_stops';
+  const meta = PAY_MODELS.find((m) => m.id === model) || PAY_MODELS[0];
+  const isToggle = meta.primary.type === 'toggle';
+  const hasMiles = meta.secondary?.field === 'miles';
+
   const [isExpanded, setIsExpanded] = useState(false);
-  const [quickEntry, setQuickEntry] = useState({
-    stops: '',
-    extra: '',
-  });
+  const [quickEntry, setQuickEntry] = useState({ stops: '', miles: '', extra: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const reset = () => setQuickEntry({ stops: '', miles: '', extra: '' });
+
   const handleToggle = () => {
-    // Add haptic feedback
-    if (navigator.vibrate) {
-      navigator.vibrate(10);
-    }
-    setIsExpanded(!isExpanded);
-    
-    // Reset form when closing
-    if (isExpanded) {
-      setQuickEntry({ stops: '', extra: '' });
-    }
+    if (navigator.vibrate) navigator.vibrate(10);
+    setIsExpanded((v) => !v);
+    if (isExpanded) reset();
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setQuickEntry(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setQuickEntry((prev) => ({ ...prev, [name]: value }));
   };
+
+  const primaryQty = isToggle ? 1 : parseFloat(quickEntry.stops) || 0;
+  const canSubmit = isToggle || primaryQty > 0;
+  const estimate =
+    calculateDayEarnings(paymentConfig || {}, {
+      quantity: primaryQty,
+      miles: parseFloat(quickEntry.miles) || 0,
+    }) + (parseFloat(quickEntry.extra) || 0);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!quickEntry.stops) {
-      // Add error haptic feedback
-      if (navigator.vibrate) {
-        navigator.vibrate([50, 50, 50]);
-      }
+    if (!canSubmit) {
+      if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
       return;
     }
-
     setIsSubmitting(true);
-
     try {
       const entryData = {
         date: new Date().toISOString().split('T')[0],
-        stops: parseInt(quickEntry.stops, 10),
+        stops: primaryQty,
         extra: quickEntry.extra ? parseFloat(quickEntry.extra) : 0,
-        notes: 'Quick entry'
+        notes: 'Quick entry',
+        ...(hasMiles ? { miles: parseFloat(quickEntry.miles) || 0 } : {}),
       };
-
-      if (onAddEntry) {
-        await onAddEntry(entryData);
-      }
-
-      // Success haptic feedback
-      if (navigator.vibrate) {
-        navigator.vibrate([10, 50, 10]);
-      }
-
-      // Reset and close
-      setQuickEntry({ stops: '', extra: '' });
+      if (onAddEntry) await onAddEntry(entryData);
+      if (navigator.vibrate) navigator.vibrate([10, 50, 10]);
+      reset();
       setIsExpanded(false);
-
     } catch (error) {
       console.error('Error adding quick entry:', error);
-      // Error haptic feedback
-      if (navigator.vibrate) {
-        navigator.vibrate([100, 50, 100]);
-      }
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
     } finally {
       setIsSubmitting(false);
     }
@@ -100,12 +89,7 @@ const FloatingActionButton = ({ onAddEntry, isVisible = true }) => {
         className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-50"
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ 
-          type: "spring", 
-          stiffness: 260, 
-          damping: 20,
-          delay: 0.1
-        }}
+        transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.1 }}
       >
         <AnimatePresence mode="wait">
           {isExpanded ? (
@@ -131,20 +115,44 @@ const FloatingActionButton = ({ onAddEntry, isVisible = true }) => {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-2">
-                    Number of Stops
-                  </label>
-                  <Input
-                    type="number"
-                    name="stops"
-                    value={quickEntry.stops}
-                    onChange={handleInputChange}
-                    placeholder="How many deliveries?"
-                    required
-                    className="w-full h-10 rounded-[14px] focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
+                {isToggle ? (
+                  <div className="text-sm text-muted-foreground">
+                    Log today as a worked day ({meta.label}).
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">
+                      {meta.primary.label}
+                    </label>
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      name="stops"
+                      value={quickEntry.stops}
+                      onChange={handleInputChange}
+                      placeholder={`How many ${meta.primary.unit}?`}
+                      required
+                      className="w-full h-10 rounded-[14px] focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                )}
+
+                {hasMiles && (
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">
+                      {meta.secondary.label}
+                    </label>
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      name="miles"
+                      value={quickEntry.miles}
+                      onChange={handleInputChange}
+                      placeholder="How many miles?"
+                      className="w-full h-10 rounded-[14px] focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-muted-foreground mb-2">
@@ -156,6 +164,7 @@ const FloatingActionButton = ({ onAddEntry, isVisible = true }) => {
                     </div>
                     <Input
                       type="number"
+                      inputMode="decimal"
                       name="extra"
                       value={quickEntry.extra}
                       onChange={handleInputChange}
@@ -166,9 +175,15 @@ const FloatingActionButton = ({ onAddEntry, isVisible = true }) => {
                   </div>
                 </div>
 
+                {canSubmit && (
+                  <p className="text-center text-sm text-primary font-medium tabular-nums">
+                    £{estimate.toFixed(2)} estimated
+                  </p>
+                )}
+
                 <Button
                   type="submit"
-                  disabled={isSubmitting || !quickEntry.stops}
+                  disabled={isSubmitting || !canSubmit}
                   className="w-full h-11 font-semibold rounded-[14px] shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95"
                 >
                   {isSubmitting ? (
