@@ -39,9 +39,16 @@ shapes. Users never pick from this list directly — it's what the config *is*, 
 | `per_mile` | miles | `ratePerMile`, `baseFee?` | `baseFee + miles * ratePerMile` |
 | `hourly` | hours | `ratePerHour` | `hours * ratePerHour` |
 | `per_day` | (a "worked today?" tick) | `ratePerDay` | `ratePerDay` |
+| `sliding_scale` | stops **and** miles | `stopBands[]`, `mileBands[]`, `rateMatrix[][]` | `stops * lookupRate(stops, miles)` |
+
+`sliding_scale` is a real, common DPD structure (e.g. the "e3.5tn Standard Sliding Scale"): a 2D
+lookup where the £-per-stop rate depends on **both** the stop count (rows) and the mileage
+(columns), and daily pay is `stops × rate[stopBand][mileBand]`. It is the reason the upload path
+matters — no fixed menu of single-axis models can express a matrix; an AI transcribing the grid
+can. It is the one model that needs **two** daily inputs (stops and miles) rather than one.
 
 Every model also adds the universal optional **`extra`** (£) the user types (bonuses, tips,
-waiting time). Daily total is always `modelEarnings(mainQuantity) + extra`.
+waiting time). Daily total is always `modelEarnings(inputs) + extra`.
 
 ## Data model
 
@@ -63,6 +70,10 @@ PayStructure = {
   ratePerHour?: number,
   // per_day:
   ratePerDay?: number,
+  // sliding_scale (2D lookup, e.g. DPD e3.5tn):
+  stopBands?: number[],     // row headers, ascending, e.g. [5,10,15,...,300]
+  mileBands?: number[],     // column headers, ascending, e.g. [10,20,...,300]
+  rateMatrix?: number[][],  // rateMatrix[rowIndex][colIndex] = £ per stop
 }
 ```
 
@@ -87,22 +98,34 @@ reconciliation. The field name is an internal misnomer for non-stop models; the 
 by the model, so users never see "stops" for a mileage driver. A future cleanup can introduce a
 neutral `quantity`/`unit` pair. Documented here so it's a deliberate choice, not an accident.
 
+**Second input for `sliding_scale`.** This is the one model that needs a second daily number
+(miles). Store it in a new optional **`miles`** field on the log row (`stops` still holds the stop
+count, so Stats/Invoice keep reading `stops`/`total` unchanged). `miles` is written only for
+sliding-scale entries and ignored elsewhere.
+
 ## Components / architecture
 
 ### New: pay calculator (`src/features/payperiod/payStructure.ts`)
 
-Pure, unit-tested. `calculateDayEarnings(config: PayStructure, quantity: number): number` dispatches
-on `config.model` and reuses the existing `calculateStopFee` for `tiered_stops`. Also exports
-`PAY_MODELS` metadata (id, main-field label, unit, which params it needs) so the UI and the daily
-form are data-driven rather than hard-coding five branches each.
+Pure, unit-tested. `calculateDayEarnings(config: PayStructure, inputs: { quantity: number; miles?: number }): number`
+dispatches on `config.model`, reuses the existing `calculateStopFee` for `tiered_stops`, and does a
+2-axis band lookup for `sliding_scale` (`lookupRate(stops, miles, config)` → `stops * rate`). Also
+exports `PAY_MODELS` metadata (id, main-field label(s), unit(s), whether a second `miles` input is
+needed, which params it stores) so the setup UI and the daily form are data-driven rather than
+hard-coding a branch per model.
 
 ### New: AI interpretation (Firebase Function + client)
 
 - **`functions/interpretPayStructure`** — a callable Firebase Function that takes `{ text }` or
-  `{ fileBase64, mimeType }`, calls the Claude API (Haiku 4.5, `model: 'claude-haiku-4-5'`) with a
-  system prompt describing the five models + the JSON schema, and returns a validated `PayStructure`
-  plus a plain-English summary and a worked example. The API key lives in Function config (never in
-  the client bundle). Runs only at setup/edit — cost is a fraction of a penny per call.
+  `{ fileBase64, mimeType }` (PDF or image), calls the Claude API with a system prompt describing the
+  six models + the JSON schema, and returns a validated `PayStructure` plus a plain-English summary
+  and a worked example. The API key lives in Function config (never in the client bundle). Runs only
+  at setup/edit — cost is a fraction of a penny per call. **Model choice:** a vision-capable model is
+  required because sliding-scale sheets arrive as images/PDFs; use `claude-opus-4-8` (or another
+  current vision model) for the transcription so the rate grid is captured accurately — the accuracy
+  of a whole pay table is worth more than the sub-penny saving of a smaller model, and it still runs
+  only at setup. Transcribing a full matrix is the hardest thing the AI does here, which is exactly
+  why the worked-example confirm exists.
 - **Client:** the describe/upload UI calls the Function, renders the summary + worked example for
   confirmation, and on "Looks right" saves the returned `PayStructure`. On "Not quite", the user
   rewords, or falls through to the manual field editor.
@@ -124,8 +147,9 @@ form are data-driven rather than hard-coding five branches each.
 ### Changed: daily entry (`StopEntryForm.jsx`)
 
 Reads the active model from `paymentConfig` and swaps its hero input's label/type accordingly
-(stops number / miles number / hours number / a day-rate tick). The live estimate uses
-`calculateDayEarnings`. The "Extra £" and notes fields are unchanged.
+(stops number / miles number / hours number / a day-rate tick). For `sliding_scale` it shows **two**
+inputs — stops **and** miles — and the estimate is `stops × lookedUpRate`. The live estimate always
+uses `calculateDayEarnings`. The "Extra £" and notes fields are unchanged.
 
 ### New: welcome animation
 
@@ -145,12 +169,14 @@ model. (Detailed timing/confetti/sign-in placement to be refined during build.)
 
 ## Build phases
 
-1. **Foundation** — `PayStructure` type, `calculateDayEarnings` + `PAY_MODELS`, extend
-   `normalizePaymentConfig` (legacy → `tiered_stops`), unit tests. No UI change; existing behaviour
+1. **Foundation** — `PayStructure` type (all six models), `calculateDayEarnings` + `PAY_MODELS` +
+   the `sliding_scale` band lookup, extend `normalizePaymentConfig` (legacy → `tiered_stops`), unit
+   tests (including the `Sliding Scale.pdf` grid as a fixture). No UI change; existing behaviour
    identical.
 2. **Config editing surface** — model-aware manual editor at `/app/settings`; add reachable
    "Pay Structure" row in Profile. Shippable/testable with no AI.
-3. **Daily entry field-swap** — `StopEntryForm` hero field + estimate driven by model.
+3. **Daily entry field-swap** — `StopEntryForm` hero field(s) + estimate driven by model, including
+   the two-input (stops + miles) `sliding_scale` case.
 4. **AI-assisted setup** — `interpretPayStructure` Function + describe/upload UI + worked-example
    confirm; becomes the onboarding front door. (Requires an Anthropic API key with billing on the
    Function — user-provided.)
@@ -161,5 +187,16 @@ model. (Detailed timing/confetti/sign-in placement to be refined during build.)
 
 - **Anthropic API key with billing** for the Function (Phase 4). User provides; stored in Firebase
   Function config, never in the client.
+- **Sliding-scale band-lookup rule** — when a day's exact stops/miles fall between table bands
+  (e.g. 176 stops at 85 miles), decide the rule: nearest band, round-down, or interpolate. Confirm
+  against a few of the reference driver's real paid days before finalising `lookupRate`. The
+  worked-example confirm step surfaces any mismatch.
 - Exact onboarding trigger (new-user detection already exists via `isNewUser` in `DataContext`).
 - Welcome-animation fine details (timing, sign-in placement) — refined in Phase 5.
+
+## Reference materials
+
+- `Sliding Scale.pdf` (DPD "e3.5tn Standard Sliding Scale") — a real `sliding_scale` example:
+  stops 5–300 (rows) × miles 10–300 (columns), each cell the £-per-stop rate, daily pay =
+  `stops × rate`. Kept as the canonical test fixture for the sliding-scale calculator and the
+  AI transcription.
