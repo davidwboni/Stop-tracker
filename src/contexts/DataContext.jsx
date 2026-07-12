@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { syncData, db } from '../services/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { normalizePayStructure } from '../features/payperiod/payStructure';
 
 // Create context with default values
 const DataContext = createContext({
@@ -16,43 +17,13 @@ const DataContext = createContext({
 
 export const useData = () => useContext(DataContext);
 
-// Normalizes a raw paymentConfig value (from Firestore or localStorage) into the
-// current { thresholds, excessParcelRate } shape, transparently upgrading any
-// pre-existing document still saved in the old flat { cutoffPoint, rateBeforeCutoff,
-// rateAfterCutoff } shape so downstream consumers (e.g. calculateStopFee) never see
-// undefined thresholds.
-const normalizePaymentConfig = (config) => {
-  if (!config) {
-    return {
-      thresholds: [{ stopCount: 110, rate: 1.98 }, { rate: 1.48 }],
-      excessParcelRate: 0.05
-    };
-  }
-  if (config.thresholds) return config;
-
-  // Legacy flat shape from before the thresholds migration — convert on the fly.
-  return {
-    thresholds: [
-      { stopCount: config.cutoffPoint ?? 110, rate: config.rateBeforeCutoff ?? 1.98 },
-      { rate: config.rateAfterCutoff ?? 1.48 }
-    ],
-    excessParcelRate: config.excessParcelRate ?? 0.05
-  };
-};
-
 export const DataProvider = ({ children }) => {
   const { user } = useAuth();
   const [logs, setLogs] = useState([]); // Initialize with empty array
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [isNewUser, setIsNewUser] = useState(false);
-  const [paymentConfig, setPaymentConfig] = useState({
-    thresholds: [
-      { stopCount: 110, rate: 1.98 },
-      { rate: 1.48 }
-    ],
-    excessParcelRate: 0.05
-  });
+  const [paymentConfig, setPaymentConfig] = useState(normalizePayStructure(null));
 
   // Initial data load - with error handling and retry mechanism
   useEffect(() => {
@@ -109,13 +80,7 @@ export const DataProvider = ({ children }) => {
             if (!guestLogs) {
               localStorage.setItem(`guestLogs_${user.uid}`, JSON.stringify(demoLogs));
             }
-            setPaymentConfig(guestConfig ? JSON.parse(guestConfig) : {
-              thresholds: [
-                { stopCount: 110, rate: 1.98 },
-                { rate: 1.48 }
-              ],
-              excessParcelRate: 0.05
-            });
+            setPaymentConfig(normalizePayStructure(guestConfig ? JSON.parse(guestConfig) : null));
             setIsNewUser(true); // Guest users are always "new" for demo purposes
           } catch (err) {
             console.error("Error loading guest data:", err);
@@ -158,7 +123,7 @@ export const DataProvider = ({ children }) => {
           const mainUserDocRef = doc(db, 'users', user.uid);
           const mainUserDoc = await getDoc(mainUserDocRef);
           if (mainUserDoc.exists() && mainUserDoc.data().paymentConfig) {
-            setPaymentConfig(normalizePaymentConfig(mainUserDoc.data().paymentConfig));
+            setPaymentConfig(normalizePayStructure(mainUserDoc.data().paymentConfig));
           }
           
         } catch (directErr) {
@@ -226,7 +191,7 @@ export const DataProvider = ({ children }) => {
         const guestConfig = localStorage.getItem(`guestConfig_${user.uid}`);
         
         if (guestLogs) setLogs(JSON.parse(guestLogs));
-        if (guestConfig) setPaymentConfig(normalizePaymentConfig(JSON.parse(guestConfig)));
+        if (guestConfig) setPaymentConfig(normalizePayStructure(JSON.parse(guestConfig)));
         return true;
       } else {
         // For regular users, sync with Firebase
@@ -238,7 +203,7 @@ export const DataProvider = ({ children }) => {
         }
         
         if (refreshedData && refreshedData.paymentConfig) {
-          setPaymentConfig(normalizePaymentConfig(refreshedData.paymentConfig));
+          setPaymentConfig(normalizePayStructure(refreshedData.paymentConfig));
         }
         
         return true;
