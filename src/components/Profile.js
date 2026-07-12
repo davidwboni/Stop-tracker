@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
@@ -22,7 +23,9 @@ import {
   Loader2,
   Sun,
   Moon,
-  Monitor
+  Monitor,
+  DollarSign,
+  ChevronRight
 } from "lucide-react";
 
 const Profile = ({ userId, user, onLogout, onHome, updateProfilePic }) => {
@@ -39,6 +42,7 @@ const Profile = ({ userId, user, onLogout, onHome, updateProfilePic }) => {
   });
   
   const storage = getStorage();
+  const navigate = useNavigate();
   const { themePreference, setThemePreference } = useTheme();
   
   // Load user data
@@ -714,6 +718,23 @@ const Profile = ({ userId, user, onLogout, onHome, updateProfilePic }) => {
                   </button>
                 </div>
               </div>
+
+              <button
+                onClick={() => navigate('/app/settings')}
+                className="w-full flex justify-between items-center p-3 rounded-[14px] border border-border/50 hover:border-primary/40 active:scale-[0.99] transition-all touch-manipulation text-left"
+                aria-label="Edit how you get paid"
+              >
+                <div className="flex items-center gap-3">
+                  <DollarSign className="w-5 h-5 text-primary" />
+                  <div>
+                    <h3 className="font-medium">Pay Structure</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Change how you get paid
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </button>
 
               <div className="flex justify-between items-center p-3 rounded-[14px] border border-border/50">
                 <div>
