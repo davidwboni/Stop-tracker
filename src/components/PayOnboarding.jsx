@@ -45,7 +45,7 @@ const WelcomeStep = ({ firstName, config, onStart }) => {
         You're all set, {firstName}
       </motion.h1>
       <motion.p variants={rise} custom={1} initial="hidden" animate="show" className="text-muted-foreground leading-relaxed">
-        Welcome to Stop Tracker. Just log your day — we'll do the maths.
+        Welcome to Stop Tracker. Just log your day, we'll do the maths.
       </motion.p>
 
       <motion.div
@@ -104,12 +104,10 @@ const PayOnboarding = ({ onComplete }) => {
             <PayStructureAISetup onConfirm={(config) => setConfirmed(config)} />
           </div>
 
-          <button
-            onClick={() => onComplete()}
-            className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2 touch-manipulation"
-          >
-            I'll set this up later
-          </button>
+          <p className="text-center text-xs text-muted-foreground px-6">
+            This takes a few seconds and makes every daily total accurate. You can change it
+            anytime in Profile &rsaquo; Pay Structure.
+          </p>
         </motion.div>
       )}
     </div>

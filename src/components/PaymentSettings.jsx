@@ -142,7 +142,7 @@ const PaymentSettings = ({ userId, user, onSettingsSaved }) => {
           <DollarSign className="w-8 h-8 text-primary" />
           <h1 className="text-3xl font-bold">Pay Structure</h1>
         </div>
-        <p className="text-muted-foreground">Set how you get paid — earnings update as you type.</p>
+        <p className="text-muted-foreground">Set how you get paid. Earnings update as you type.</p>
       </div>
 
       {/* Setup mode toggle */}

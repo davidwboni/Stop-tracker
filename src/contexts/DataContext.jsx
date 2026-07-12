@@ -85,6 +85,8 @@ export const DataProvider = ({ children }) => {
             }
             setPaymentConfig(normalizePayStructure(guestConfig ? JSON.parse(guestConfig) : null));
             setIsNewUser(true); // Guest users are always "new" for demo purposes
+            // First-run pay setup for guests too — survives reload via localStorage.
+            setNeedsOnboarding(!localStorage.getItem(`onboarded_${user.uid}`) && !guestConfig);
           } catch (err) {
             console.error("Error loading guest data:", err);
             setLogs([]);

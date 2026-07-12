@@ -86,7 +86,7 @@ const PayStructureAISetup = ({ onConfirm }) => {
         <h3 className="font-semibold text-lg">Describe how you get paid</h3>
       </div>
       <p className="text-sm text-muted-foreground">
-        In your own words, any language — e.g. "£1.70 per stop until 150, then 90p". Or attach your rate sheet.
+        In your own words, any language. e.g. "£1.70 per stop until 150, then 90p", or attach your rate sheet.
       </p>
 
       <textarea
@@ -112,7 +112,7 @@ const PayStructureAISetup = ({ onConfirm }) => {
         {file && <span className="text-xs text-muted-foreground truncate max-w-[180px]">{file.name}</span>}
       </div>
       <p className="text-xs text-muted-foreground -mt-1">
-        For a rate table, a PDF or screenshot reads most accurately — a clear photo works too.
+        For a rate table, a PDF or screenshot reads most accurately. A clear photo works too.
       </p>
 
       {error && (

@@ -16,7 +16,7 @@ const PAY_SYSTEM_PROMPT = `You convert a delivery driver's description of how th
 Return ONLY a JSON object (no prose, no markdown fences) with this shape:
 {
   "config": { ... one of the six models below ... },
-  "summary": "one short plain-English sentence describing the pay, in English",
+  "summary": "one short sentence describing the pay, written in the SAME language the user used in their description (match their language so the reply feels personal); if the input is a document with no clear language, use English",
   "sample": { "quantity": <number>, "miles": <number, only for sliding_scale> }
 }
 
@@ -93,15 +93,28 @@ exports.interpretPayStructure = onCall(
 
     let message;
     try {
-      message = await client.messages.create({
+      const createParams = {
         model,
-        max_tokens: 8000,
+        max_tokens: 16000,
         system: PAY_SYSTEM_PROMPT,
         messages: [{ role: "user", content }],
-      });
+      };
+      // Sonnet 5 turns on adaptive thinking by default, which would consume the
+      // token budget and truncate a large rate-grid transcription mid-JSON.
+      // Disable it — this is deterministic extraction, not reasoning.
+      if (fileBase64) createParams.thinking = { type: "disabled" };
+      message = await client.messages.create(createParams);
     } catch (err) {
       console.error("Anthropic call failed:", err);
       throw new HttpsError("internal", "Could not interpret the pay structure. Please try again.");
+    }
+
+    if (message.stop_reason === "max_tokens") {
+      console.error("Output truncated (max_tokens) for model", model);
+      throw new HttpsError(
+        "internal",
+        "That rate sheet is very large to read in one go. Try a clearer single-page image, or type your key rates instead."
+      );
     }
 
     const raw = (message.content || [])
@@ -112,7 +125,13 @@ exports.interpretPayStructure = onCall(
 
     let parsed;
     try {
-      const jsonStr = raw.startsWith("{") ? raw : raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1);
+      let jsonStr = raw
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/```\s*$/, "")
+        .trim();
+      if (!jsonStr.startsWith("{")) {
+        jsonStr = jsonStr.slice(jsonStr.indexOf("{"), jsonStr.lastIndexOf("}") + 1);
+      }
       parsed = JSON.parse(jsonStr);
     } catch (err) {
       console.error("Failed to parse model output:", raw);

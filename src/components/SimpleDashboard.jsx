@@ -75,13 +75,13 @@ const SimpleDashboard = () => {
     "Great job today! You're all set.",
     "Another day in the books. Nice work!",
     "All logged. Enjoy the rest of your day!",
-    "Solid shift — everything's tracked.",
+    "Solid shift, everything's tracked.",
     "Done and dusted. See you tomorrow!",
     "That's a wrap for today. Well earned!"
   ];
   const promptMessages = [
     "Log today's deliveries to get started.",
-    "Ready when you are — add today's stops.",
+    "Ready when you are. Add today's stops.",
     "How did today go? Log your deliveries.",
     "Let's get today's stops on the board.",
     "Track today's round to keep your streak.",

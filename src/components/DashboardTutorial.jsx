@@ -26,18 +26,20 @@ const STEPS = [
 // A one-time coaching overlay for brand-new users on the daily screen. Shows
 // only when the account has essentially no logs yet and hasn't seen it before.
 const DashboardTutorial = () => {
-  const { logs, loading } = useData();
+  // Gate on isNewUser (true for guests and brand-new accounts) rather than log
+  // count, so guests — who are seeded demo logs — still get the walkthrough once.
+  const { isNewUser, loading } = useData();
   const [step, setStep] = useState(0);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     if (loading) return;
     const seen = localStorage.getItem(FLAG);
-    if (!seen && (logs?.length || 0) <= 1) {
+    if (!seen && isNewUser) {
       const t = setTimeout(() => setVisible(true), 600);
       return () => clearTimeout(t);
     }
-  }, [loading, logs]);
+  }, [loading, isNewUser]);
 
   const finish = () => {
     try {
