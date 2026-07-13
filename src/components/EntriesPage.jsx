@@ -4,6 +4,7 @@ import { Button } from "./ui/button";
 import { FileText, Filter, Search, Package, ChevronDown } from "lucide-react";
 import { Input } from "./ui/input";
 import EntriesList from "./EntriesList";
+import TabCoach from "./TabCoach";
 import { useData } from "../contexts/DataContext";
 
 const EntriesPage = () => {
@@ -46,6 +47,12 @@ const EntriesPage = () => {
 
   return (
     <div className="max-w-3xl mx-auto px-4 pb-24 pt-4">
+      <TabCoach
+        id="entries"
+        title="Your entries"
+        body="Every day you log lands here, newest first. Tap a day to see the detail; search and date filters sit just below the list. Swipe left or right to hop between tabs."
+      />
+
       {/* Slim header */}
       <div className="flex items-center gap-3 mb-4">
         <div className="p-2 bg-primary/10 rounded-[12px]">

@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import ErrorBoundary from './ErrorBoundary';
 import { motion } from 'framer-motion';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import SwipeHint from './SwipeHint';
 import { useAuth } from '../contexts/AuthContext';
 import SyncStatus from './SyncStatus';
 import AppNavigation from './AppNavigation';
@@ -121,6 +122,7 @@ const Layout = () => {
         <AppFooter />
       </main>
 
+      <SwipeHint />
       <AppNavigation className="flex-shrink-0 pb-safe" />
 
       {/* Floating Action Button for Quick Entry */}

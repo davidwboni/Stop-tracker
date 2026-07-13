@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import InvoiceCreate from "./InvoiceCreate";
 import InvoiceHistory from "./InvoiceHistory";
 import PayPeriodList from "../features/payperiod/PayPeriodList";
+import TabCoach from "./TabCoach";
 import { FileText, CheckCircle2, History } from "lucide-react";
 
 const InvoicePage = () => {
@@ -23,6 +24,12 @@ const InvoicePage = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
+      <TabCoach
+        id="invoice"
+        title="Invoices"
+        body="Create builds a new invoice (set your business details once, add a client, add lines). History keeps them. Check Pay compares a statement against what you actually delivered."
+      />
+
       <div className="mb-4">
         <div className="flex items-center gap-3 mb-1">
           <h1 className="text-2xl sm:text-3xl font-bold">Invoices</h1>
