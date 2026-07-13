@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import InvoiceGeneratorNew from "./InvoiceGeneratorNew";
+import InvoiceCreate from "./InvoiceCreate";
 import InvoiceHistory from "./InvoiceHistory";
 import PayPeriodList from "../features/payperiod/PayPeriodList";
 import { FileText, CheckCircle2, History } from "lucide-react";
@@ -31,16 +31,16 @@ const InvoicePage = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-muted h-auto">
-          <TabsTrigger value="create" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2.5">
+        <TabsList className="grid w-full grid-cols-3 bg-muted h-auto rounded-[16px] p-1 gap-1">
+          <TabsTrigger value="create" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2.5 rounded-[12px]">
             <FileText className="h-4 w-4" />
             <span className="text-xs sm:text-sm">Create</span>
           </TabsTrigger>
-          <TabsTrigger value="history" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2.5">
+          <TabsTrigger value="history" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2.5 rounded-[12px]">
             <History className="h-4 w-4" />
             <span className="text-xs sm:text-sm">History</span>
           </TabsTrigger>
-          <TabsTrigger value="verify" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2.5">
+          <TabsTrigger value="verify" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2.5 rounded-[12px]">
             <CheckCircle2 className="h-4 w-4" />
             <span className="text-xs sm:text-sm">Check Pay</span>
           </TabsTrigger>
@@ -60,7 +60,7 @@ const InvoicePage = () => {
             exit={{ opacity: 0, x: -10 }}
             transition={{ duration: 0.2 }}
           >
-            <InvoiceGeneratorNew prefill={prefillInvoice} />
+            <InvoiceCreate prefill={prefillInvoice} />
           </motion.div>
         </TabsContent>
 

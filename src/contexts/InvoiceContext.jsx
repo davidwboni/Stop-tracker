@@ -19,6 +19,8 @@ export const InvoiceProvider = ({ children }) => {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastInvoiceNumber, setLastInvoiceNumber] = useState(0);
+  // The user's own business details, printed as the sender on every invoice.
+  const [senderProfile, setSenderProfile] = useState(null);
 
   // Load data from Firebase or localStorage
   useEffect(() => {
@@ -35,9 +37,11 @@ export const InvoiceProvider = ({ children }) => {
           const savedInvoices = localStorage.getItem(`invoice_history_${user.uid}`);
           const savedLastNumber = localStorage.getItem(`last_invoice_number_${user.uid}`);
 
+          const savedSender = localStorage.getItem(`invoice_sender_${user.uid}`);
           if (savedClients) setClients(JSON.parse(savedClients));
           if (savedInvoices) setInvoices(JSON.parse(savedInvoices));
           if (savedLastNumber) setLastInvoiceNumber(parseInt(savedLastNumber));
+          if (savedSender) setSenderProfile(JSON.parse(savedSender));
         } else {
           // Load from Firestore for regular users
           const invoiceDoc = await getDoc(doc(db, "invoiceData", user.uid));
@@ -46,6 +50,7 @@ export const InvoiceProvider = ({ children }) => {
             setClients(data.clients || []);
             setInvoices(data.invoices || []);
             setLastInvoiceNumber(data.lastInvoiceNumber || 0);
+            setSenderProfile(data.senderProfile || null);
           }
         }
       } catch (error) {
@@ -143,6 +148,26 @@ export const InvoiceProvider = ({ children }) => {
     return lastInvoiceNumber + 1;
   };
 
+  // Save the user's own business/sender details (used on every invoice).
+  const saveSenderProfile = async (profile) => {
+    setSenderProfile(profile);
+    if (!user) return;
+    try {
+      if (user.isGuest) {
+        localStorage.setItem(`invoice_sender_${user.uid}`, JSON.stringify(profile));
+      } else {
+        await setDoc(
+          doc(db, "invoiceData", user.uid),
+          { senderProfile: profile, updatedAt: new Date() },
+          { merge: true }
+        );
+      }
+    } catch (error) {
+      console.error("Error saving sender profile:", error);
+      throw error;
+    }
+  };
+
   const value = {
     clients,
     invoices,
@@ -152,7 +177,9 @@ export const InvoiceProvider = ({ children }) => {
     addInvoice,
     deleteInvoice,
     getNextInvoiceNumber,
-    lastInvoiceNumber
+    lastInvoiceNumber,
+    senderProfile,
+    saveSenderProfile
   };
 
   return (
