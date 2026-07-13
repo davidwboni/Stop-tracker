@@ -101,7 +101,7 @@ const SimpleDashboard = () => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 pb-24 space-y-6">
+    <div className="max-w-2xl mx-auto px-4 py-4 pb-24 space-y-4">
       <DashboardTutorial />
 
       {/* Greeting Header */}

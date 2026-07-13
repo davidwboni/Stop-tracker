@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import ErrorBoundary from './ErrorBoundary';
+import { motion } from 'framer-motion';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import SyncStatus from './SyncStatus';
@@ -108,9 +109,14 @@ const Layout = () => {
         onTouchEnd={onTouchEnd}
       >
         <ErrorBoundary>
-          <div className="transition-all duration-500 ease-out">
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+          >
             <Outlet />
-          </div>
+          </motion.div>
         </ErrorBoundary>
         <AppFooter />
       </main>

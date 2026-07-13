@@ -11,7 +11,8 @@ import {
   TrendingUp,
   DollarSign,
   Zap,
-  Package
+  Package,
+  MapPin
 } from "lucide-react";
 import _ from "lodash";
 import { Money } from "./ui/money";
@@ -211,9 +212,17 @@ const EntriesList = ({ logs, onDeleteEntry }) => {
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Package className="w-4 h-4" />
-                        <span className="font-medium">{log.stops} stops</span>
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1.5 font-medium">
+                          <Package className="w-4 h-4" />
+                          {log.stops} stops
+                        </span>
+                        {log.miles > 0 && (
+                          <span className="flex items-center gap-1.5 font-medium">
+                            <MapPin className="w-4 h-4" />
+                            {log.miles} mi
+                          </span>
+                        )}
                       </div>
                       {log.notes && (
                         <div className="text-sm text-muted-foreground mt-2 italic">

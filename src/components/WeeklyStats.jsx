@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Money } from "./ui/money";
@@ -24,6 +25,7 @@ import {
 
 const WeeklyStats = ({ logs = [] }) => {
   const [weekOffset, setWeekOffset] = useState(0);
+  const navigate = useNavigate();
 
   const safetyLogs = useMemo(() => logs || [], [logs]);
 
@@ -172,7 +174,11 @@ const WeeklyStats = ({ logs = [] }) => {
             <motion.div
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-card rounded-[14px] p-4 border border-border/50"
+              onClick={() => navigate('/app/entries')}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/app/entries'); }}
+              className="bg-card rounded-[14px] p-4 border border-border/50 cursor-pointer hover:border-primary/40 active:scale-[0.98] transition-all touch-manipulation"
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-muted-foreground">Total Stops</span>
