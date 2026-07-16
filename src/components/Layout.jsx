@@ -105,21 +105,26 @@ const Layout = () => {
       <SyncStatus />
 
       <main
-        className="max-w-6xl mx-auto pt-8 pb-8 px-4 flex-grow overflow-y-auto touch-manipulation"
+        className="w-full flex-grow overflow-y-auto touch-manipulation"
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
-        <ErrorBoundary>
-          <motion.div
-            key={location.pathname}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
-          >
-            <Outlet />
-          </motion.div>
-        </ErrorBoundary>
-        <AppFooter />
+        {/* Full-width scroll area; an inner block owns the max-width + centering
+            so it stays centred on iOS WebKit (a flex item with max-width can
+            left-bias under align-items:stretch). */}
+        <div className="w-full max-w-6xl mx-auto pt-8 pb-8 px-4">
+          <ErrorBoundary>
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+            >
+              <Outlet />
+            </motion.div>
+          </ErrorBoundary>
+          <AppFooter />
+        </div>
       </main>
 
       <SwipeHint />
