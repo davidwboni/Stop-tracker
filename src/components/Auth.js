@@ -97,7 +97,7 @@ const Auth = ({ onBack }) => {
         className="relative z-10 w-full max-w-md"
       >
         <Card className="overflow-hidden shadow-2xl border-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl">
-          <CardHeader className="relative bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 text-white py-10 text-center">
+          <CardHeader className="relative bg-gradient-to-br from-blue-500 via-cyan-500 to-teal-600 text-white py-10 text-center">
             <div className="absolute inset-0 bg-black/10"></div>
             <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full"></div>
             <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-white/5 rounded-full"></div>

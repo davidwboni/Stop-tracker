@@ -242,7 +242,7 @@ const StatsOverview = ({ logs = [], loading = false }) => {
   return (
     <div className="space-y-4 -mx-6 -mt-6">
       {/* Header - 2.0 Style */}
-      <div className="px-4 py-6 bg-gradient-to-br from-purple-500 via-pink-500 to-rose-600 text-white relative overflow-hidden">
+      <div className="px-4 py-6 bg-gradient-to-br from-teal-500 via-pink-500 to-rose-600 text-white relative overflow-hidden">
         <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/10 rounded-full"></div>
         <div className="absolute -bottom-4 -left-4 w-24 h-24 bg-white/5 rounded-full"></div>
         <div className="text-center relative z-10">
@@ -277,7 +277,7 @@ const StatsOverview = ({ logs = [], loading = false }) => {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 }}
             whileHover={{ scale: 1.05 }}
-            className="bg-gradient-to-br from-purple-500 to-pink-600 p-4 rounded-2xl shadow-lg text-white touch-manipulation"
+            className="bg-gradient-to-br from-teal-500 to-pink-600 p-4 rounded-2xl shadow-lg text-white touch-manipulation"
           >
             <div className="text-center">
               <div className="text-2xl font-bold">{overallStats.avgStopsPerDay}</div>
@@ -343,7 +343,7 @@ const StatsOverview = ({ logs = [], loading = false }) => {
       {/* MONTHLY TREND - 2.0 Style */}
       <div className="px-4">
         <Card className="rounded-2xl border-2 border-purple-100 dark:border-purple-900 shadow-xl overflow-hidden">
-          <CardHeader className="pb-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20">
+          <CardHeader className="pb-3 bg-gradient-to-r from-teal-50 to-pink-50 dark:from-teal-900/20 dark:to-pink-900/20">
             <CardTitle className="text-sm font-semibold text-purple-900 dark:text-purple-100 flex items-center gap-2">
               📈 Monthly Trend
             </CardTitle>

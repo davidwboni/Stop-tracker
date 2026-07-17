@@ -21,7 +21,7 @@ const AppFooter = () => {
             href="https://www.linkedin.com/in/davidwboni/"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-transparent bg-gradient-to-r from-emerald-400 via-cyan-400 to-purple-400 bg-clip-text font-semibold hover:from-emerald-300 hover:via-cyan-300 hover:to-purple-300 transition-all duration-300 transform hover:scale-105"
+            className="text-transparent bg-gradient-to-r from-emerald-400 via-cyan-400 to-teal-400 bg-clip-text font-semibold hover:from-emerald-300 hover:via-cyan-300 hover:to-teal-300 transition-all duration-300 transform hover:scale-105"
           >
             david boni
           </a>

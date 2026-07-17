@@ -6,7 +6,7 @@ import { ArrowLeft, ShieldCheck, Shield, Lock, Eye, Database } from 'lucide-reac
 
 const PrivacyPolicy = ({ onBack }) => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-purple-50 px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-teal-50 px-4 sm:px-6 lg:px-8 py-8">
       <div className="max-w-6xl mx-auto">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
@@ -23,7 +23,7 @@ const PrivacyPolicy = ({ onBack }) => {
         </Button>
         
         <Card className="overflow-hidden shadow-apple-card hover:shadow-apple-card-hover transition-all duration-500 border-0">
-          <CardHeader className="relative bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 text-white py-12 overflow-hidden">
+          <CardHeader className="relative bg-gradient-to-br from-blue-600 via-indigo-600 to-teal-700 text-white py-12 overflow-hidden">
             <div className="absolute inset-0 bg-black/10"></div>
             <div className="absolute -top-4 -right-4 w-32 h-32 bg-white/10 rounded-full"></div>
             <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-white/5 rounded-full"></div>

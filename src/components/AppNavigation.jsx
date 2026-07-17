@@ -39,9 +39,9 @@ const AppNavigation = () => {
   const navItems = [
     { path: '/app/dashboard', icon: Home, label: 'Home', color: 'from-primary to-secondary' },
     { path: '/app/entries', icon: FileText, label: 'Entries', color: 'from-orange-500 to-red-600' },
-    { path: '/app/routes', icon: MapPin, label: 'Routes', color: 'from-indigo-500 to-blue-600' },
+    { path: '/app/routes', icon: MapPin, label: 'Routes', color: 'from-cyan-500 to-blue-600' },
     { path: '/app/invoice', icon: Calculator, label: 'Invoice', color: 'from-rose-500 to-pink-600' },
-    { path: '/app/stats', icon: TrendingUp, label: 'Stats', color: 'from-secondary to-purple-600' },
+    { path: '/app/stats', icon: TrendingUp, label: 'Stats', color: 'from-teal-500 to-cyan-600' },
     { path: '/app/profile', icon: User, label: 'Profile', color: 'from-emerald-500 to-teal-600' },
   ];
   

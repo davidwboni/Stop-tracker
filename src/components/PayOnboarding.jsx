@@ -83,7 +83,7 @@ const PayOnboarding = ({ onComplete }) => {
   const [confirmed, setConfirmed] = useState(null); // the config once confirmed
 
   return (
-    <div className="min-h-[100dvh] bg-gradient-to-br from-gray-50 via-blue-50/20 to-purple-50/30 dark:from-gray-900 dark:via-blue-900/10 dark:to-purple-900/20 flex flex-col items-center justify-center px-4 py-10 pt-safe">
+    <div className="min-h-[100dvh] bg-gradient-to-br from-gray-50 via-blue-50/20 to-teal-50/30 dark:from-gray-900 dark:via-blue-900/10 dark:to-teal-900/20 flex flex-col items-center justify-center px-4 py-10 pt-safe">
       {confirmed ? (
         <WelcomeStep firstName={firstName} config={confirmed} onStart={() => onComplete(confirmed)} />
       ) : (

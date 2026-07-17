@@ -6,7 +6,7 @@ import { ArrowLeft, Shield, FileText, Scale, User, Lock, CreditCard, Gavel } fro
 
 const TermsOfService = ({ onBack }) => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-purple-50 px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-teal-50 px-4 sm:px-6 lg:px-8 py-8">
       <div className="max-w-6xl mx-auto">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
@@ -23,7 +23,7 @@ const TermsOfService = ({ onBack }) => {
         </Button>
         
         <Card className="overflow-hidden shadow-apple-card hover:shadow-apple-card-hover transition-all duration-500 border-0">
-          <CardHeader className="relative bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-700 text-white py-12 overflow-hidden">
+          <CardHeader className="relative bg-gradient-to-br from-indigo-600 via-teal-600 to-pink-700 text-white py-12 overflow-hidden">
             <div className="absolute inset-0 bg-black/10"></div>
             <div className="absolute -top-4 -right-4 w-32 h-32 bg-white/10 rounded-full"></div>
             <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-white/5 rounded-full"></div>
@@ -178,7 +178,7 @@ const TermsOfService = ({ onBack }) => {
           <h2>12. Governing Law</h2>
           <p>These Terms shall be governed by the laws of the United Kingdom, without respect to its conflict of laws principles.</p>
           
-          <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 p-8 rounded-3xl border-2 border-indigo-100 dark:border-indigo-800 mt-12">
+          <div className="bg-gradient-to-br from-indigo-50 to-teal-50 dark:from-indigo-900/20 dark:to-teal-900/20 p-8 rounded-3xl border-2 border-indigo-100 dark:border-indigo-800 mt-12">
             <h2 className="text-2xl font-bold mb-4 flex items-center">
               <Shield className="w-6 h-6 mr-3 text-indigo-600" />
               Contact Us

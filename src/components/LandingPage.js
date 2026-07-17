@@ -53,7 +53,7 @@ const features = [
     title: "📱 Mobile First",
     description: "Designed for drivers on the go. Quick entry, instant sync, works everywhere.",
     icon: <Smartphone className="w-8 h-8" />,
-    gradient: "from-purple-500 to-pink-600", 
+    gradient: "from-teal-500 to-pink-600", 
     stats: "Lightning fast",
   },
   {
@@ -74,7 +74,7 @@ const features = [
     title: "💎 Invoice Checker",
     description: "Compare your records with company invoices. Catch discrepancies and get paid correctly.",
     icon: <CheckCircle className="w-8 h-8" />,
-    gradient: "from-violet-500 to-purple-600",
+    gradient: "from-violet-500 to-teal-600",
     stats: "Save money",
   }
 ];
@@ -148,11 +148,11 @@ export default function LandingPage({ onGetStarted, onContactUs, onPrivacyPolicy
   }, [activeTab]);
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900 relative">
       {/* Animated Background */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-r from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-r from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-r from-blue-400/20 to-teal-400/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-r from-teal-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
         <div className="absolute top-1/2 left-1/2 w-60 h-60 bg-gradient-to-r from-cyan-400/10 to-blue-400/10 rounded-full blur-3xl animate-pulse delay-500"></div>
       </div>
 
@@ -183,10 +183,10 @@ export default function LandingPage({ onGetStarted, onContactUs, onPrivacyPolicy
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.8 }}
           >
-            <span className="bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent leading-tight block">
+            <span className="bg-gradient-to-r from-white via-blue-100 to-teal-100 bg-clip-text text-transparent leading-tight block">
               Stop Tracker
             </span>
-            <span className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-purple-400 bg-clip-text text-transparent text-3xl md:text-5xl lg:text-6xl block mt-2">
+            <span className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-teal-400 bg-clip-text text-transparent text-3xl md:text-5xl lg:text-6xl block mt-2">
               Your Earnings, Perfected
             </span>
           </motion.h1>
@@ -267,12 +267,12 @@ export default function LandingPage({ onGetStarted, onContactUs, onPrivacyPolicy
               viewport={{ once: true }}
               transition={{ duration: 0.8 }}
             >
-              <div className="inline-flex items-center px-4 py-2 mb-6 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full">
+              <div className="inline-flex items-center px-4 py-2 mb-6 bg-gradient-to-r from-teal-100 to-pink-100 rounded-full">
                 <Zap className="w-4 h-4 text-purple-600 mr-2" />
                 <span className="text-purple-800 font-semibold text-sm">Game-Changing Features</span>
               </div>
               <h2 className="text-4xl md:text-6xl font-bold mb-6">
-                <span className="bg-gradient-to-r from-gray-900 via-purple-800 to-pink-800 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-gray-900 via-teal-800 to-pink-800 bg-clip-text text-transparent">
                   Everything You Need
                 </span>
               </h2>
@@ -336,7 +336,7 @@ export default function LandingPage({ onGetStarted, onContactUs, onPrivacyPolicy
       </div>
       
       {/* Testimonials Section */}
-      <div className="py-32 bg-gradient-to-br from-slate-50 to-purple-50 relative overflow-hidden">
+      <div className="py-32 bg-gradient-to-br from-slate-50 to-teal-50 relative overflow-hidden">
         {/* Background decoration */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_40%,rgba(120,119,198,0.1),transparent_50%)]"></div>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_60%,rgba(236,72,153,0.1),transparent_50%)]"></div>
@@ -387,7 +387,7 @@ export default function LandingPage({ onGetStarted, onContactUs, onPrivacyPolicy
                   </blockquote>
                   
                   <div className="flex items-center">
-                    <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold text-sm mr-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold text-sm mr-4">
                       {testimonial.avatar}
                     </div>
                     <div>
@@ -403,7 +403,7 @@ export default function LandingPage({ onGetStarted, onContactUs, onPrivacyPolicy
       </div>
       
       {/* Final CTA Section */}
-      <div className="py-32 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+      <div className="py-32 bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900 relative overflow-hidden">
         {/* Background effects */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(120,119,198,0.1),transparent_70%)]"></div>
         
@@ -415,11 +415,11 @@ export default function LandingPage({ onGetStarted, onContactUs, onPrivacyPolicy
             transition={{ duration: 0.8 }}
           >
             <h2 className="text-4xl md:text-6xl font-bold mb-8">
-              <span className="bg-gradient-to-r from-white via-purple-100 to-cyan-100 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-white via-teal-100 to-cyan-100 bg-clip-text text-transparent">
                 Ready to maximize your
               </span>
               <br />
-              <span className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-purple-400 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-teal-400 bg-clip-text text-transparent">
                 delivery earnings?
               </span>
             </h2>
@@ -513,7 +513,7 @@ export default function LandingPage({ onGetStarted, onContactUs, onPrivacyPolicy
                   href="https://www.linkedin.com/in/davidwboni/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-transparent bg-gradient-to-r from-emerald-400 via-cyan-400 to-purple-400 bg-clip-text font-semibold hover:from-emerald-300 hover:via-cyan-300 hover:to-purple-300 transition-all duration-300 transform hover:scale-110 px-2 py-1 rounded"
+                  className="text-transparent bg-gradient-to-r from-emerald-400 via-cyan-400 to-teal-400 bg-clip-text font-semibold hover:from-emerald-300 hover:via-cyan-300 hover:to-teal-300 transition-all duration-300 transform hover:scale-110 px-2 py-1 rounded"
                 >
                   david boni
                 </a>
