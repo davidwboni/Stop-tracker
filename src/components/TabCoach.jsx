@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Lightbulb, X } from "lucide-react";
 
@@ -29,7 +30,15 @@ const TabCoach = ({ id, title, body }) => {
     setVisible(false);
   };
 
-  return (
+  // Portaled straight to document.body: every page wraps its content in a
+  // Framer Motion <motion.div> for tab transitions, and any ancestor with a
+  // CSS transform (which Framer Motion applies for animation) creates a new
+  // containing block for position:fixed children. Without the portal, this
+  // tooltip was "fixed" relative to that page wrapper (max-w-5xl, clipped by
+  // overflow-y-auto) instead of the real viewport — centering on the content
+  // column instead of the screen, clipping off the right edge, and pushing
+  // the dismiss/"Got it" buttons out of reach on narrow phone widths.
+  return createPortal(
     <AnimatePresence>
       {visible && (
         <motion.div
@@ -62,7 +71,8 @@ const TabCoach = ({ id, title, body }) => {
           </div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
 

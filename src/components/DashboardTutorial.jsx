@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Package, Save, TrendingUp, ArrowRight } from "lucide-react";
 import { useData } from "../contexts/DataContext";
@@ -56,7 +57,10 @@ const DashboardTutorial = () => {
   const s = STEPS[step];
   const Icon = s.icon;
 
-  return (
+  // Portal to document.body so the overlay is fixed to the real viewport, not
+  // the page's Framer Motion transform wrapper (which would left-bias it and
+  // push the dismiss buttons off a narrow phone screen).
+  return createPortal(
     <AnimatePresence>
       <motion.div
         className="fixed inset-0 z-[70] bg-black/60 flex items-end justify-center p-4 pb-28"
@@ -104,7 +108,8 @@ const DashboardTutorial = () => {
           </div>
         </motion.div>
       </motion.div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
 
