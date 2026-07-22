@@ -36,6 +36,8 @@ import {
   resolvePostcode,
   searchAddresses
 } from "../services/addressSearch";
+import { resolvePlace } from "../services/googlePlaces";
+import { optimizeRouteGoogle, isGoogleRoutesConfigured } from "../services/googleRoutes";
 import { useAddressMemory } from "../contexts/AddressMemoryContext";
 
 const RoutePlanner = () => {
@@ -197,6 +199,32 @@ const RoutePlanner = () => {
   }, [currentAddress]);
 
   const addAddress = async (address) => {
+    // Google Places predictions arrive without coordinates (one billed Details
+    // call is spent here, on commit, rather than on every keystroke).
+    if (address.needsResolve && address.placeId) {
+      try {
+        const resolved = await resolvePlace(address.placeId, new AbortController().signal);
+        const newAddress = {
+          address: resolved.address || address.address,
+          postcode: resolved.postcode,
+          latitude: resolved.latitude,
+          longitude: resolved.longitude,
+          type: 'place',
+          id: Date.now()
+        };
+        setAddresses([...addresses, newAddress]);
+        recordAddressUse(newAddress).catch(() => {});
+      } catch (error) {
+        if (error.name === 'AbortError') return;
+        console.error('Place resolve error:', error);
+        showError('Unable to look up that address. Please try again.');
+        return;
+      }
+      setCurrentAddress("");
+      setAddressSuggestions([]);
+      return;
+    }
+
     if (address.isPostcodeSuggestion) {
       try {
         const resolved = await resolvePostcode(address.postcode, new AbortController().signal);
@@ -330,8 +358,65 @@ const RoutePlanner = () => {
     }
   };
 
-  // Nearest Neighbor algorithm for route optimization
-  const optimizeRoute = () => {
+  // Nearest Neighbor algorithm — straight-line (haversine) fallback used
+  // when Google Routes isn't configured or the API call fails.
+  const optimizeRouteLocally = () => {
+    const coords = addresses.map(addr => ({
+      ...addr,
+      lat: addr.latitude,
+      lon: addr.longitude
+    }));
+
+    const optimized = [];
+    let current = coords[0];
+    let remaining = coords.slice(1);
+    optimized.push(current);
+
+    while (remaining.length > 0) {
+      let nearest = null;
+      let nearestDistance = Infinity;
+      let nearestIndex = -1;
+
+      remaining.forEach((point, index) => {
+        const distance = calculateDistance(
+          current.lat, current.lon,
+          point.lat, point.lon
+        );
+
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          nearest = point;
+          nearestIndex = index;
+        }
+      });
+
+      optimized.push(nearest);
+      remaining.splice(nearestIndex, 1);
+      current = nearest;
+    }
+
+    let totalDistance = 0;
+    for (let i = 0; i < optimized.length - 1; i++) {
+      totalDistance += calculateDistance(
+        optimized[i].lat, optimized[i].lon,
+        optimized[i + 1].lat, optimized[i + 1].lon
+      );
+    }
+
+    setOptimizedRoute({
+      route: optimized,
+      totalDistance: totalDistance.toFixed(2),
+      estimatedTime: Math.ceil(totalDistance / 30 * 60),
+      source: 'local'
+    });
+    setAddresses(optimized);
+  };
+
+  // Route optimization entry point — tries Google's Routes API first
+  // (real road distances/times + true waypoint optimization) and falls
+  // back to the local straight-line nearest-neighbor algorithm if no API
+  // key is configured or the request fails for any reason.
+  const optimizeRoute = async () => {
     if (addresses.length < 2) {
       showError("Please add at least 2 addresses to optimize");
       return;
@@ -339,60 +424,30 @@ const RoutePlanner = () => {
 
     setIsOptimizing(true);
 
+    if (isGoogleRoutesConfigured()) {
+      try {
+        const result = await optimizeRouteGoogle(addresses);
+        if (result) {
+          setOptimizedRoute({
+            route: result.route,
+            totalDistance: (result.totalDistanceKm * 0.621371).toFixed(2), // km -> miles to match existing units
+            estimatedTime: result.totalDurationMin,
+            source: 'google'
+          });
+          setAddresses(result.route);
+          setIsOptimizing(false);
+          return;
+        }
+      } catch (err) {
+        console.error('Google route optimization failed, falling back to local algorithm:', err);
+      }
+    }
+
+    // Fallback path — small delay retained so the loading state doesn't flash
     setTimeout(() => {
-      const coords = addresses.map(addr => ({
-        ...addr,
-        lat: addr.latitude,
-        lon: addr.longitude
-      }));
-
-      // Simple Nearest Neighbor Algorithm
-      const optimized = [];
-      let current = coords[0];
-      let remaining = coords.slice(1);
-      optimized.push(current);
-
-      while (remaining.length > 0) {
-        let nearest = null;
-        let nearestDistance = Infinity;
-        let nearestIndex = -1;
-
-        remaining.forEach((point, index) => {
-          const distance = calculateDistance(
-            current.lat, current.lon,
-            point.lat, point.lon
-          );
-
-          if (distance < nearestDistance) {
-            nearestDistance = distance;
-            nearest = point;
-            nearestIndex = index;
-          }
-        });
-
-        optimized.push(nearest);
-        remaining.splice(nearestIndex, 1);
-        current = nearest;
-      }
-
-      // Calculate total distance
-      let totalDistance = 0;
-      for (let i = 0; i < optimized.length - 1; i++) {
-        totalDistance += calculateDistance(
-          optimized[i].lat, optimized[i].lon,
-          optimized[i + 1].lat, optimized[i + 1].lon
-        );
-      }
-
-      setOptimizedRoute({
-        route: optimized,
-        totalDistance: totalDistance.toFixed(2),
-        estimatedTime: Math.ceil(totalDistance / 30 * 60)
-      });
-
-      setAddresses(optimized);
+      optimizeRouteLocally();
       setIsOptimizing(false);
-    }, 1000);
+    }, 400);
   };
 
   // Haversine formula
@@ -732,6 +787,11 @@ const RoutePlanner = () => {
                       <p className="text-xl font-bold text-emerald-600">{optimizedRoute.estimatedTime} min</p>
                     </div>
                   </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    {optimizedRoute.source === 'google'
+                      ? 'Based on real road distances and current traffic (Google Maps)'
+                      : 'Estimated from straight-line distances'}
+                  </p>
 
                   <Button
                     onClick={copyRouteToClipboard}
