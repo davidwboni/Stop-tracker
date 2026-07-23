@@ -190,7 +190,7 @@ const Profile = ({ userId, user, onLogout }) => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      {/* Identity — photo + name at the very top */}
+      {/* Identity, photo + name at the very top */}
       <div className="flex flex-col items-center text-center">
         <div className="relative mb-3">
           <div className="w-20 h-20 rounded-full overflow-hidden bg-primary flex items-center justify-center text-white text-2xl font-semibold ring-4 ring-border">
@@ -349,7 +349,7 @@ const Profile = ({ userId, user, onLogout }) => {
         </div>
       </div>
 
-      {/* Achievements — de-emphasised */}
+      {/* Achievements, de-emphasised */}
       <div className="opacity-60">
         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
           Achievements

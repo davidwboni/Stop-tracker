@@ -3,14 +3,14 @@
 // Cost model matters here: Autocomplete is billed per *session*, so we generate
 // a session token, reuse it across keystrokes, and only spend a Place Details
 // call when the user actually picks a suggestion (which closes the session).
-// Predictions therefore carry a placeId and no coordinates — RoutePlanner
+// Predictions therefore carry a placeId and no coordinates, RoutePlanner
 // resolves them on select, exactly like it already does for postcodes.
 //
 // The key is a browser key (public by design) restricted by HTTP referrer +
 // API in the Google Cloud console. If it's absent we return null so callers
 // transparently fall back to the free Nominatim search.
 
-// Same key as googleRoutes.js — one Maps key, restricted by referrer + API.
+// Same key as googleRoutes.js, one Maps key, restricted by referrer + API.
 const KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
 const AUTOCOMPLETE_URL = 'https://places.googleapis.com/v1/places:autocomplete';
 

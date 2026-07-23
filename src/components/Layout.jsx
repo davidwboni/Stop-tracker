@@ -12,7 +12,7 @@ import PayOnboarding from './PayOnboarding';
 import { useData } from '../contexts/DataContext';
 import { calculateDayEarnings } from '../features/payperiod/payStructure';
 
-// Bottom-nav tab order — swiping left/right steps through these.
+// Bottom-nav tab order, swiping left/right steps through these.
 const TAB_ORDER = [
   '/app/dashboard',
   '/app/entries',

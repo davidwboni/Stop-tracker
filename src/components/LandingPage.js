@@ -116,7 +116,7 @@ export default function LandingPage({ onGetStarted, onContactUs, onPrivacyPolicy
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isVisible, setIsVisible] = useState(false);
 
-  // One-tap guest: sign in anonymously and drop straight into the app —
+  // One-tap guest: sign in anonymously and drop straight into the app -
   // no separate "continue as guest" screen.
   const handleTryDemo = async () => {
     setGuestLoading(true);

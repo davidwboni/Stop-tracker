@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Fix for default marker icons in React Leaflet (same fix RouteMap.jsx applies —
+// Fix for default marker icons in React Leaflet (same fix RouteMap.jsx applies -
 // duplicated here rather than shared, since it's five lines and this component
 // has no other dependency on RouteMap.jsx).
 delete L.Icon.Default.prototype._getIconUrl;

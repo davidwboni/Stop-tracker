@@ -167,7 +167,7 @@ export default function InvoiceCreate({ prefill }) {
       docPdf.text(String(l), margin, y + 29 + i * 12);
     });
     if (dateFrom || dateTo) {
-      docPdf.text(`Period: ${dateFrom || "—"} to ${dateTo || "—"}`, 555, y + 15, { align: "right" });
+      docPdf.text(`Period: ${dateFrom || "-"} to ${dateTo || "-"}`, 555, y + 15, { align: "right" });
     }
 
     autoTable(docPdf, {
@@ -176,7 +176,7 @@ export default function InvoiceCreate({ prefill }) {
       body: lines
         .filter((l) => l.desc || l.qty || l.rate)
         .map((l) => [
-          l.desc || "—",
+          l.desc || "-",
           l.qty || "1",
           money(l.rate),
           money((parseFloat(l.qty) || 0) * (parseFloat(l.rate) || 0)),

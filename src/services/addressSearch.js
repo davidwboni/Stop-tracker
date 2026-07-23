@@ -73,7 +73,7 @@ function buildViewbox(center) {
   return `${minLon},${minLat},${maxLon},${maxLat}`;
 }
 
-// Squared angular distance with longitude corrected for latitude — plenty
+// Squared angular distance with longitude corrected for latitude, plenty
 // accurate for ranking UK-scale results by nearness (no need for haversine).
 function distanceSq(point, center) {
   const latDiff = point.latitude - center.latitude;
@@ -88,7 +88,7 @@ export async function searchAddresses(query, biasCenter, signal) {
     return [];
   }
 
-  // Prefer Google Places when a key is configured — far better UK address
+  // Prefer Google Places when a key is configured, far better UK address
   // coverage than Nominatim. Falls through to Nominatim if it's not set up or
   // the call fails, so the planner keeps working with no key at all.
   if (isGooglePlacesEnabled()) {

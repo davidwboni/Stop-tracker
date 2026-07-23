@@ -22,7 +22,7 @@ const StatsPage = () => {
         body="Your week at a glance. Tap Total Stops to jump to those entries, and use the arrows to step back through previous weeks."
       />
 
-      {/* Header — compact single line so the week's data sits higher */}
+      {/* Header, compact single line so the week's data sits higher */}
       <div className="mb-5">
         <div className="flex items-center gap-2">
           <TrendingUp className="w-6 h-6 text-primary" />

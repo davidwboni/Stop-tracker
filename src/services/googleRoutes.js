@@ -2,7 +2,7 @@
 //
 // Falls back gracefully (returns null) if no API key is configured, so the
 // caller can fall back to the existing haversine nearest-neighbor algorithm.
-// Requires REACT_APP_GOOGLE_MAPS_API_KEY in .env.local — see
+// Requires REACT_APP_GOOGLE_MAPS_API_KEY in .env.local, see
 // GOOGLE_MAPS_SETUP.md for how to create and restrict the key.
 
 const ROUTES_API_URL = 'https://routes.googleapis.com/directions/v2:computeRoutes';
@@ -20,7 +20,7 @@ export function isGoogleRoutesConfigured() {
  *   existing nearest-neighbor optimizer.
  * @param {AbortSignal} [signal]
  * @returns {Promise<{route: Array, totalDistanceKm: number, totalDurationMin: number} | null>}
- *   null if not configured or the API call fails — caller should fall back.
+ *   null if not configured or the API call fails, caller should fall back.
  */
 export async function optimizeRouteGoogle(addresses, signal) {
   const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
@@ -55,7 +55,7 @@ export async function optimizeRouteGoogle(addresses, signal) {
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': apiKey,
-        // Field mask is required by the Routes API — keep it minimal to
+        // Field mask is required by the Routes API, keep it minimal to
         // control cost/latency; add fields here if you need more detail.
         'X-Goog-FieldMask': [
           'routes.optimizedIntermediateWaypointIndex',

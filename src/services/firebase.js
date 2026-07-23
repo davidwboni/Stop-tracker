@@ -142,7 +142,7 @@ export const loginWithEmail = async (email, password) => {
 /**
  * Sign in with Google.
  * On Android (Capacitor): uses the native Google Sign-In SDK via @capacitor-firebase/authentication,
- * then exchanges the idToken for a Firebase credential — no browser opens.
+ * then exchanges the idToken for a Firebase credential, no browser opens.
  * On web: uses the standard Firebase popup flow.
  */
 export const signInWithGoogle = async () => {

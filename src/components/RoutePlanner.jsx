@@ -280,7 +280,7 @@ const RoutePlanner = () => {
     setAddresses(newAddresses);
   };
 
-  // Move an address to the top of the list — the first stop is the route's
+  // Move an address to the top of the list, the first stop is the route's
   // start point (optimizeRoute always begins from index 0).
   const makeStart = (index) => {
     if (index === 0) return;
@@ -363,7 +363,7 @@ const RoutePlanner = () => {
     }
   };
 
-  // Nearest Neighbor algorithm — straight-line (haversine) fallback used
+  // Nearest Neighbor algorithm, straight-line (haversine) fallback used
   // when Google Routes isn't configured or the API call fails.
   const optimizeRouteLocally = () => {
     const coords = addresses.map(addr => ({
@@ -417,7 +417,7 @@ const RoutePlanner = () => {
     setAddresses(optimized);
   };
 
-  // Route optimization entry point — tries Google's Routes API first
+  // Route optimization entry point, tries Google's Routes API first
   // (real road distances/times + true waypoint optimization) and falls
   // back to the local straight-line nearest-neighbor algorithm if no API
   // key is configured or the request fails for any reason.
@@ -448,7 +448,7 @@ const RoutePlanner = () => {
       }
     }
 
-    // Fallback path — small delay retained so the loading state doesn't flash
+    // Fallback path, small delay retained so the loading state doesn't flash
     setTimeout(() => {
       optimizeRouteLocally();
       setIsOptimizing(false);

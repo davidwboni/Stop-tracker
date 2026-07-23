@@ -17,7 +17,7 @@ export function fileToBase64(file) {
 }
 
 // Calls the deployed Cloud Function. Returns { config, summary, sample }.
-// The caller recomputes the worked example locally with tested code — the AI
+// The caller recomputes the worked example locally with tested code, the AI
 // result is only ever the structured config, never a money figure to trust.
 export async function interpretPayStructure({ text, file }) {
   const payload = {};

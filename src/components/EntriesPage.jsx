@@ -64,7 +64,7 @@ const EntriesPage = () => {
         </div>
       </div>
 
-      {/* Day-by-day list — the focus */}
+      {/* Day-by-day list, the focus */}
       {(logs || []).length === 0 ? (
         <Card className="border-2 border-dashed border-border rounded-[18px]">
           <CardContent className="py-12 text-center">
@@ -79,7 +79,7 @@ const EntriesPage = () => {
         <EntriesList logs={filteredLogs} onDeleteEntry={handleDeleteEntry} />
       )}
 
-      {/* Search & filter — secondary, below the list */}
+      {/* Search & filter, secondary, below the list */}
       {(logs || []).length > 0 && (
         <div className="mt-5">
           <button

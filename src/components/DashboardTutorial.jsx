@@ -10,7 +10,7 @@ const STEPS = [
   {
     icon: Package,
     title: "Log your day here",
-    body: "Type your stops (or miles / hours) in the box below — you'll see your estimated pay update instantly.",
+    body: "Type your stops (or miles / hours) in the box below, you'll see your estimated pay update instantly.",
   },
   {
     icon: Save,
@@ -20,7 +20,7 @@ const STEPS = [
   {
     icon: TrendingUp,
     title: "Watch it add up",
-    body: "Your week — stops, earnings, per-day — is always up top. Tap any card to dig into the details.",
+    body: "Your week, stops, earnings, per-day, is always up top. Tap any card to dig into the details.",
   },
 ];
 
@@ -28,7 +28,7 @@ const STEPS = [
 // only when the account has essentially no logs yet and hasn't seen it before.
 const DashboardTutorial = () => {
   // Gate on isNewUser (true for guests and brand-new accounts) rather than log
-  // count, so guests — who are seeded demo logs — still get the walkthrough once.
+  // count, so guests, who are seeded demo logs, still get the walkthrough once.
   const { isNewUser, loading } = useData();
   const [step, setStep] = useState(0);
   const [visible, setVisible] = useState(false);

@@ -36,7 +36,7 @@ const PayStructureAISetup = ({ onConfirm }) => {
     setError(null);
   };
 
-  // Confirmation view — worked example computed locally, never from the AI.
+  // Confirmation view, worked example computed locally, never from the AI.
   if (result) {
     const cfg = result.config;
     const meta = PAY_MODELS.find((m) => m.id === cfg.model);

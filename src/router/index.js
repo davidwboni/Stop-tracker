@@ -12,7 +12,8 @@ import InvoicePage from '../components/InvoicePage';
 import ErrorBoundary from '../components/ErrorBoundary';
 import ProfileWrapper from '../components/ProfileWrapper';
 import PaymentSettingsWrapper from '../components/PaymentSettingsWrapper';
-import UpgradeToPro from '../components/UpgradeToPro';
+// UpgradeToPro import disabled with the route below, no working billing backend yet.
+// import UpgradeToPro from '../components/UpgradeToPro';
 import RoutePlannerWrapper from '../components/RoutePlannerWrapper';
 import ContactUs from '../components/pages/ContactUs';
 import PrivacyPolicy from '../components/pages/PrivacyPolicy';
@@ -86,7 +87,10 @@ const router = createBrowserRouter([
           { path: 'stats', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><StatsPage /></React.Suspense></ErrorBoundary> },
           { path: 'profile', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><ProfileWrapper /></React.Suspense></ErrorBoundary> },
           { path: 'settings', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><PaymentSettingsWrapper /></React.Suspense></ErrorBoundary> },
-          { path: 'upgrade', element: <UpgradeToPro /> },
+          // Pro purchase flow has no working billing backend yet (no Stripe/Play Billing wired up) -
+          // route disabled for v1 launch so nothing dead-ends users. Re-point at <UpgradeToPro />
+          // once Google Play Billing is integrated.
+          { path: 'upgrade', element: <Navigate to="/app/dashboard" replace /> },
           { path: 'contact', element: <ContactUs /> },
           { path: 'privacy', element: <PrivacyPolicy /> },
           { path: 'terms', element: <TermsOfService /> },

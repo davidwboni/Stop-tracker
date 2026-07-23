@@ -69,7 +69,7 @@ const SimpleDashboard = () => {
   if (currentHour < 12) greeting = "Good morning";
   else if (currentHour < 18) greeting = "Good afternoon";
 
-  // Rotating sub-messages — deterministic by day of month so the message
+  // Rotating sub-messages, deterministic by day of month so the message
   // changes day to day but stays stable across re-renders within a day.
   const doneMessages = [
     "Great job today! You're all set.",

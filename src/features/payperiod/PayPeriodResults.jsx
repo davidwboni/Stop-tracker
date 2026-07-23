@@ -28,7 +28,7 @@ const PayPeriodResults = ({ period, onGenerateInvoice }) => {
         <Alert className="bg-destructive/10 border-destructive/20">
           <AlertTriangle className="h-4 w-4 text-destructive" />
           <AlertDescription className="text-destructive">
-            Discrepancy found — review the daily breakdown below.
+            Discrepancy found, review the daily breakdown below.
           </AlertDescription>
         </Alert>
       ) : (
@@ -47,8 +47,8 @@ const PayPeriodResults = ({ period, onGenerateInvoice }) => {
             {comparison.map((day) => (
               <div key={day.date} className="flex items-center justify-between p-2 bg-muted rounded-[14px] border border-border/50">
                 <span className="text-sm">{format(parseISO(day.date), "EEE, dd MMM yyyy")}</span>
-                <span className="text-sm tabular-nums">Yours: {day.loggedStops ?? "—"}</span>
-                <span className="text-sm tabular-nums">Statement: {day.statementStops ?? "—"}</span>
+                <span className="text-sm tabular-nums">Yours: {day.loggedStops ?? "-"}</span>
+                <span className="text-sm tabular-nums">Statement: {day.statementStops ?? "-"}</span>
                 <StatusBadge status={day.status} />
               </div>
             ))}
