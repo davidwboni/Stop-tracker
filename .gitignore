@@ -31,8 +31,12 @@ android/KEYSTORE_CREDENTIALS.txt
 android/**/KEYSTORE_CREDENTIALS.txt
 android/key.properties
 
+# Google Play publisher service account key — never commit
+secrets/
+
 # Editor / local tooling artifacts
 .idea/
 .claude/worktrees/
 .claude/launch.json
 .superpowers/
+Stop-tracker/
