@@ -1,6 +1,6 @@
 {
   "name": "Stop-tracker",
-  "version": "3.3.0",
+  "version": "3.4.2",
   "private": true,
   "dependencies": {
     "@babel/runtime": "^7.21.0",
@@ -13,6 +13,7 @@
     "@headlessui/react": "^1.7.18",
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-select": "^2.2.6",
+    "@react-google-maps/api": "^2.20.8",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
