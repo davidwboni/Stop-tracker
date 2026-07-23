@@ -74,6 +74,7 @@ const WeeklyStats = ({ logs = [] }) => {
 
   const weekSummary = useMemo(() => {
     const totalStops = weeklyLogs.reduce((sum, log) => sum + log.stops, 0);
+    const totalMiles = weeklyLogs.reduce((sum, log) => sum + (log.miles || 0), 0);
     const totalEarnings = weeklyLogs.reduce((sum, log) => sum + log.total, 0);
     const daysWorked = weeklyLogs.length;
     const avgStopsPerDay = daysWorked > 0 ? Math.round(totalStops / daysWorked) : 0;
@@ -100,6 +101,7 @@ const WeeklyStats = ({ logs = [] }) => {
 
     return {
       totalStops,
+      totalMiles,
       totalEarnings,
       daysWorked,
       avgStopsPerDay,
@@ -185,6 +187,11 @@ const WeeklyStats = ({ logs = [] }) => {
                 <Package className="w-4 h-4 text-primary opacity-60" />
               </div>
               <div className="text-2xl font-bold mb-1">{weekSummary.totalStops}</div>
+              {weekSummary.totalMiles > 0 && (
+                <div className="text-xs text-muted-foreground mb-1 tabular-nums">
+                  {weekSummary.totalMiles} miles driven
+                </div>
+              )}
               {weekSummary.stopsChange !== 0 && (
                 <div className={`flex items-center text-xs font-medium ${
                   weekSummary.stopsChange >= 0
