@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Truck, Zap, Sparkles, FileText, ArrowRight, Loader2 } from "lucide-react";
-import { useAuth } from "../contexts/AuthContext";
+import { Truck, Zap, Sparkles, FileText, ArrowRight } from "lucide-react";
+import SignInSheet from "./SignInSheet";
 
 // App-style first-run screen, not a marketing website: one screen, no scroll,
 // three benefits, and a single primary action that drops the user straight into
@@ -24,25 +24,8 @@ const BENEFITS = [
   },
 ];
 
-export default function LandingPage({ onGetStarted, onContactUs, onPrivacyPolicy, onTermsOfService }) {
-  const { loginAsGuest } = useAuth();
-  const [starting, setStarting] = useState(false);
-
-  // One-tap guest: sign in anonymously and go straight to the dashboard.
-  const startFree = async () => {
-    setStarting(true);
-    try {
-      const ok = await loginAsGuest();
-      if (ok) {
-        window.location.href = "/app/dashboard";
-        return;
-      }
-    } catch (err) {
-      console.error("Guest start failed:", err);
-    }
-    setStarting(false);
-    if (onGetStarted) onGetStarted();
-  };
+export default function LandingPage({ onContactUs, onPrivacyPolicy, onTermsOfService }) {
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const rise = {
     hidden: { opacity: 0, y: 14 },
@@ -50,8 +33,16 @@ export default function LandingPage({ onGetStarted, onContactUs, onPrivacyPolicy
   };
 
   return (
-    <div className="min-h-[100dvh] bg-background flex flex-col items-center px-6 pt-safe pb-safe">
-      <div className="w-full max-w-sm flex flex-col flex-1 py-6">
+    <div className="relative min-h-[100dvh] animated-gradient overflow-hidden flex flex-col items-center px-6 pt-safe pb-safe">
+      {/* Ambient depth behind the content. Decorative only. */}
+      <div className="ambient-blob w-72 h-72 bg-primary/25 -top-16 -left-20" aria-hidden="true" />
+      <div
+        className="ambient-blob w-80 h-80 bg-secondary/20 -bottom-24 -right-24"
+        style={{ animationDelay: "-9s" }}
+        aria-hidden="true"
+      />
+
+      <div className="relative w-full max-w-sm flex flex-col flex-1 py-6">
         <motion.div variants={rise} custom={0} initial="hidden" animate="show" className="flex items-center gap-2.5">
           <div className="w-10 h-10 rounded-[12px] bg-primary flex items-center justify-center">
             <Truck className="w-5 h-5 text-primary-foreground" />
@@ -113,26 +104,16 @@ export default function LandingPage({ onGetStarted, onContactUs, onPrivacyPolicy
           className="mt-auto pt-7 space-y-2.5"
         >
           <button
-            onClick={startFree}
-            disabled={starting}
-            className="w-full min-h-[52px] rounded-[16px] bg-primary text-primary-foreground font-medium flex items-center justify-center touch-manipulation active:scale-[0.98] transition-transform disabled:opacity-70"
+            onClick={() => setSheetOpen(true)}
+            className="w-full min-h-[52px] rounded-[16px] bg-primary text-primary-foreground font-medium flex items-center justify-center touch-manipulation active:scale-[0.98] transition-transform"
           >
-            {starting ? (
-              <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Setting you up
-              </>
-            ) : (
-              <>
-                Start tracking free
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </>
-            )}
+            Get started
+            <ArrowRight className="w-5 h-5 ml-2" />
           </button>
 
           <button
             onClick={() => { window.location.href = "/login"; }}
-            className="w-full min-h-[48px] rounded-[16px] border border-border font-medium text-sm text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors touch-manipulation"
+            className="w-full min-h-[48px] rounded-[16px] border border-border bg-card/60 font-medium text-sm text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors touch-manipulation"
           >
             I already have an account
           </button>
@@ -148,6 +129,8 @@ export default function LandingPage({ onGetStarted, onContactUs, onPrivacyPolicy
           </div>
         </motion.div>
       </div>
+
+      <SignInSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
     </div>
   );
 }

@@ -193,3 +193,52 @@
     @apply bg-muted-foreground;
   }
 }
+/* Ambient animated gradient, used behind the landing screen and any other
+   full-bleed surface that would otherwise read as a flat empty background.
+   Slow and low-contrast on purpose: it should feel alive, not distracting. */
+@layer utilities {
+  .animated-gradient {
+    background: linear-gradient(125deg, #F0FDF9 0%, #ECFDF5 25%, #ECFEFF 50%, #F0FDFA 75%, #F0FDF9 100%);
+    background-size: 300% 300%;
+    animation: gradient-drift 22s ease-in-out infinite;
+  }
+
+  .dark .animated-gradient {
+    background: linear-gradient(125deg, #0A0A0A 0%, #04211C 25%, #06282F 50%, #04211C 75%, #0A0A0A 100%);
+    background-size: 300% 300%;
+    animation: gradient-drift 22s ease-in-out infinite;
+  }
+
+  /* Soft drifting blobs layered over the gradient for depth. */
+  .ambient-blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(64px);
+    opacity: 0.5;
+    pointer-events: none;
+    animation: blob-drift 26s ease-in-out infinite;
+  }
+
+  .dark .ambient-blob {
+    opacity: 0.28;
+  }
+}
+
+@keyframes gradient-drift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes blob-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  33% { transform: translate3d(6%, -8%, 0) scale(1.12); }
+  66% { transform: translate3d(-5%, 6%, 0) scale(0.94); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animated-gradient,
+  .dark .animated-gradient,
+  .ambient-blob {
+    animation: none;
+  }
+}
