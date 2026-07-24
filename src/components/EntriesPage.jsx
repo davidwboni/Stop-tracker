@@ -4,6 +4,7 @@ import { Button } from "./ui/button";
 import { FileText, Filter, Search, Package, ChevronDown } from "lucide-react";
 import { Input } from "./ui/input";
 import EntriesList from "./EntriesList";
+import EntryChecker from "./EntryChecker";
 import TabCoach from "./TabCoach";
 import { useData } from "../contexts/DataContext";
 
@@ -63,6 +64,8 @@ const EntriesPage = () => {
           <p className="text-xs text-muted-foreground">{(logs || []).length} days tracked</p>
         </div>
       </div>
+
+      <EntryChecker />
 
       {/* Day-by-day list, the focus */}
       {(logs || []).length === 0 ? (

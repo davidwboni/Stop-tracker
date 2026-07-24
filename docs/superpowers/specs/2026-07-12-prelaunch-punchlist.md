@@ -83,6 +83,19 @@
 25. **Compactness pass (whole app)** — shave whitespace (dashboard especially), tighten spacing
     so there's less scrolling; add tab-transition animations for a more fluid, less "boring" feel.
 
+## F. Round-3 feedback (native alpha testing)
+
+26. **Entries needs its own log-checker / reconciliation.** David gets an invoice from the
+    subcontractor he works under and wants to check his logged entries match what DPD sent.
+    Add a simple reconciliation panel *inside Entries*: enter the invoice's total deliveries
+    (and optionally amount) over a date range → compare to the sum of his logged entries →
+    flag discrepancies. This overlaps the existing Invoice → "Check Pay" (PayPeriodList /
+    `comparePeriodToLogs`), but he wants it reachable from Entries, simpler and quicker.
+27. **Native app was a stale build** — alpha AAB predated Google map / centered tutorials /
+    dash cleanup, so native showed Leaflet + off-centre tutorials + dashes while web was current.
+    Fixed by rebuilding AAB v48 (3.5.1) from current code; David to upload to the alpha track.
+    Lesson: after any web change we want testers to see, rebuild + `cap sync` + new AAB.
+
 ## Background
 - **UI audit** — a UI-specialist pass checking colour/appearance, alignment, overflow, and
   real usability across tabs, in both light and dark.
