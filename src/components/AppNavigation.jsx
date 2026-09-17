@@ -93,7 +93,7 @@ const AppNavigation = () => {
               <div className="relative z-10 flex flex-col items-center">
                 <IconComponent size={22} className={isActive ? 'text-primary' : ''} />
                 <span className={`text-xs mt-1 font-medium truncate max-w-full ${
-                  isActive ? 'text-white' : ''
+                  isActive ? 'text-primary' : ''
                 }`}>
                   {item.label}
                 </span>
