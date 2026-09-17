@@ -35,11 +35,14 @@ const EntryChecker = () => {
 
   React.useEffect(() => {
     if (!result?.hasInvoice) return;
-    trackEvent("invoice_check_result", {
-      surface: "entries",
-      discrepancy_found: result.diff !== 0,
-      direction: result.diff === 0 ? "match" : result.diff > 0 ? "logged_more" : "logged_fewer",
-    });
+    const timer = setTimeout(() => {
+      trackEvent("invoice_check_result", {
+        surface: "entries",
+        discrepancy_found: result.diff !== 0,
+        direction: result.diff === 0 ? "match" : result.diff > 0 ? "logged_more" : "logged_fewer",
+      });
+    }, 800);
+    return () => clearTimeout(timer);
   }, [result?.hasInvoice, result?.diff]);
 
   return (
