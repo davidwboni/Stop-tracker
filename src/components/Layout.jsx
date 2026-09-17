@@ -102,6 +102,7 @@ const Layout = () => {
         entry_method: 'quick',
         pay_model: paymentConfig?.model || 'unknown',
         offline: !navigator.onLine,
+        is_first_entry: (logs || []).length === 0,
       });
       
       // Add haptic feedback for success
