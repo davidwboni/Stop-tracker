@@ -1,5 +1,5 @@
 // src/features/payperiod/PayPeriodResults.jsx
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Alert, AlertDescription } from "../../components/ui/alert";
@@ -9,6 +9,7 @@ import { CheckCircle2, AlertTriangle, FileText } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { calculatePeriodTotals, comparePeriodToLogs } from "./payPeriodCalculations";
 import { useData } from "../../contexts/DataContext";
+import { trackEvent } from "../../services/productAnalytics";
 
 const PayPeriodResults = ({ period, onGenerateInvoice }) => {
   const { logs, paymentConfig } = useData();
@@ -21,6 +22,14 @@ const PayPeriodResults = ({ period, onGenerateInvoice }) => {
   const comparison = useMemo(() => comparePeriodToLogs(period.dailyEntries, logs || []), [period, logs]);
 
   const hasDiscrepancy = comparison.some((day) => day.status !== "match");
+
+  useEffect(() => {
+    trackEvent("invoice_check_result", {
+      surface: "invoice",
+      discrepancy_found: hasDiscrepancy,
+      compared_days: comparison.length,
+    });
+  }, [hasDiscrepancy, comparison.length]);
 
   return (
     <div className="space-y-4">
