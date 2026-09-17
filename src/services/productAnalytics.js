@@ -13,6 +13,7 @@ import {
 // counts and pay-model IDs). Never send earnings, rates, invoice contents,
 // notes, addresses, names, email addresses or free-form AI prompts.
 let analyticsPromise = null;
+let pendingEvents = [];
 const CONSENT_KEY = "stoptracker_analytics_consent";
 const warned = new Set();
 
@@ -55,10 +56,23 @@ const getAnalyticsClient = async () => {
 };
 
 export const trackEvent = (name, params = {}) => {
+  const consent = getAnalyticsConsent();
+  const clean = cleanParams(params);
+
+  // Before the user chooses, hold only the already-sanitised event in memory.
+  // Nothing is persisted or transmitted until consent is granted.
+  if (consent === null) {
+    pendingEvents.push({ name, params: clean });
+    if (pendingEvents.length > 30) pendingEvents = pendingEvents.slice(-30);
+    return;
+  }
+
+  if (consent === false) return;
+
   getAnalyticsClient()
     .then((analytics) => {
       if (!analytics) return;
-      firebaseLogEvent(analytics, name, cleanParams(params));
+      firebaseLogEvent(analytics, name, clean);
     })
     .catch(() => {
       // Analytics must never block or break the product experience.
@@ -88,6 +102,7 @@ export const setAnalyticsConsent = async (granted) => {
   localStorage.setItem(CONSENT_KEY, granted ? "granted" : "denied");
 
   if (!granted) {
+    pendingEvents = [];
     try {
       const analytics = analyticsPromise ? await analyticsPromise : null;
       if (analytics) setAnalyticsCollectionEnabled(analytics, false);
@@ -97,5 +112,10 @@ export const setAnalyticsConsent = async (granted) => {
 
   analyticsPromise = null;
   const analytics = await getAnalyticsClient();
-  if (analytics) setAnalyticsCollectionEnabled(analytics, true);
+  if (analytics) {
+    setAnalyticsCollectionEnabled(analytics, true);
+    const queued = pendingEvents;
+    pendingEvents = [];
+    queued.forEach(({ name, params }) => firebaseLogEvent(analytics, name, params));
+  }
 };
