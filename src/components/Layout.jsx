@@ -116,7 +116,12 @@ const Layout = () => {
 
   // First-run gate: brand-new users set up their pay before entering the app.
   if (needsOnboarding) {
-    return <PayOnboarding onComplete={completeOnboarding} />;
+    return (
+      <>
+        <PayOnboarding onComplete={completeOnboarding} />
+        <AnalyticsConsent />
+      </>
+    );
   }
 
   return (
