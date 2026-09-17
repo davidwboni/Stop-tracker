@@ -125,7 +125,7 @@ const PayStructureAISetup = ({ onConfirm }) => {
         {file && <span className="text-xs text-muted-foreground truncate max-w-[180px]">{file.name}</span>}
       </div>
       <p className="text-xs text-muted-foreground -mt-1">
-        For a rate table, a PDF or screenshot reads most accurately. A clear photo works too.
+        For a rate table, a PDF or screenshot reads most accurately. Maximum file size 8 MB.
       </p>
 
       {error && (
@@ -143,7 +143,7 @@ const PayStructureAISetup = ({ onConfirm }) => {
         {loading ? (
           <>
             <Loader className="w-4 h-4 mr-2 animate-spin" />
-            Reading…
+            {file ? "Reading rate sheet…" : "Understanding your pay…"}
           </>
         ) : (
           <>
