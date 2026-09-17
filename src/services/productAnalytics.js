@@ -4,6 +4,7 @@ import {
   isSupported,
   logEvent as firebaseLogEvent,
   setUserProperties as firebaseSetUserProperties,
+  setAnalyticsCollectionEnabled,
 } from "firebase/analytics";
 
 // Product analytics for validation.
@@ -12,6 +13,7 @@ import {
 // counts and pay-model IDs). Never send earnings, rates, invoice contents,
 // notes, addresses, names, email addresses or free-form AI prompts.
 let analyticsPromise = null;
+const CONSENT_KEY = "stoptracker_analytics_consent";
 const warned = new Set();
 
 const cleanParams = (params = {}) =>
@@ -25,8 +27,17 @@ const cleanParams = (params = {}) =>
       })
   );
 
+export const getAnalyticsConsent = () => {
+  if (typeof window === "undefined") return null;
+  const value = localStorage.getItem(CONSENT_KEY);
+  if (value === "granted") return true;
+  if (value === "denied") return false;
+  return null;
+};
+
 const getAnalyticsClient = async () => {
   if (typeof window === "undefined") return null;
+  if (getAnalyticsConsent() !== true) return null;
 
   if (!analyticsPromise) {
     analyticsPromise = isSupported()
@@ -70,4 +81,21 @@ export const setAnalyticsUserProperties = (properties = {}) => {
     .catch(() => {
       // Best-effort only.
     });
+};
+
+export const setAnalyticsConsent = async (granted) => {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(CONSENT_KEY, granted ? "granted" : "denied");
+
+  if (!granted) {
+    try {
+      const analytics = analyticsPromise ? await analyticsPromise : null;
+      if (analytics) setAnalyticsCollectionEnabled(analytics, false);
+    } catch (_) {}
+    return;
+  }
+
+  analyticsPromise = null;
+  const analytics = await getAnalyticsClient();
+  if (analytics) setAnalyticsCollectionEnabled(analytics, true);
 };
