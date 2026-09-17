@@ -295,12 +295,12 @@ const SimpleDashboard = () => {
           <span className="font-medium text-xs">Stats</span>
         </Button>
         <Button
-          onClick={() => navigate('/app/invoice')}
+          onClick={() => navigate('/app/invoice?tab=verify')}
           variant="outline"
           className="flex-col h-auto py-4 gap-2 rounded-[14px] active:scale-95 touch-manipulation"
         >
           <FileText className="w-6 h-6 text-primary" />
-          <span className="font-medium text-xs">Invoices</span>
+          <span className="font-medium text-xs">Check Pay</span>
         </Button>
         <Button
           onClick={() => navigate('/app/settings')}
