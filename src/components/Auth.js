@@ -14,10 +14,10 @@ import {
 } from "firebase/auth";
 import { auth, signInWithGoogle } from "../services/firebase";
 import { Loader2, Mail, Phone, AlertCircle } from "lucide-react";
-
-const PHONE_SIGN_IN_ENABLED = false;
 import Logo from "./Logo";
 import { trackEvent } from "../services/productAnalytics";
+
+const PHONE_SIGN_IN_ENABLED = false;
 
 const Auth = ({ onBack }) => {
   const [method, setMethod] = useState("email"); // 'email', 'phone', 'google', 'anonymous'
