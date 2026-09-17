@@ -21,6 +21,18 @@ export function fileToBase64(file) {
 // result is only ever the structured config, never a money figure to trust.
 export async function interpretPayStructure({ text, file }) {
   const payload = {};
+
+  if (file) {
+    const supported =
+      file.type === "application/pdf" ||
+      ["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type);
+    if (!supported) {
+      throw new Error("Use a PDF, JPG, PNG, WEBP or GIF rate sheet.");
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      throw new Error("That file is over 8 MB. Use a smaller PDF or a clear screenshot instead.");
+    }
+  }
   if (text && text.trim()) payload.text = text.trim();
   if (file) {
     const { base64, mimeType } = await fileToBase64(file);
