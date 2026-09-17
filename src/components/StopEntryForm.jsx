@@ -527,7 +527,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
           <CardContent className="px-4 pt-1 pb-4">
             <form onSubmit={optimizedHandleSubmit} className="space-y-5">
               {/* Main input - model-driven hero field (most important, thumb-friendly position) */}
-              <div className="bg-primary/5 p-4 rounded-[18px] border border-primary/20">
+              <div className="brand-surface p-4 rounded-[18px]">
                 <label className="block text-sm font-semibold text-primary mb-2 text-center">
                   {meta.primary.label}
                 </label>
@@ -592,11 +592,25 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                   </div>
                 )}
 
-                {entry.stops && (
-                  <p className="text-center text-sm text-primary mt-2 font-medium">
-                    <Money amount={estimatedEarnings} /> estimated
-                  </p>
-                )}
+                <AnimatePresence mode="wait">
+                  {entry.stops && (
+                    <motion.div
+                      key={estimatedEarnings}
+                      initial={{ opacity: 0, y: 6, scale: 0.985 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.18 }}
+                      className="mt-3 rounded-[14px] border border-primary/20 bg-card/75 px-4 py-3 text-center"
+                    >
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                        Expected earnings
+                      </div>
+                      <div className="mt-0.5 text-2xl font-extrabold tracking-[-0.03em] text-primary tabular-nums">
+                        <Money amount={estimatedEarnings} />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* Secondary inputs in thumb-reach zone */}
@@ -671,7 +685,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                 <Button
                   type="submit"
                   disabled={isSubmitting || !entry.stops}
-                  className="w-full py-4 px-6 rounded-[18px] font-semibold text-base shadow-xl h-14 min-h-[56px] touch-manipulation active:scale-98 flex items-center justify-center"
+                  className="w-full py-4 px-6 rounded-[18px] font-semibold text-base h-14 min-h-[56px] touch-manipulation pressable brand-glow flex items-center justify-center"
                 >
                   {saving ? (
                     <>
