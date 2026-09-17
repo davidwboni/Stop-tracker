@@ -130,7 +130,7 @@ const Layout = () => {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-gradient-to-br from-gray-50 via-blue-50/20 to-teal-50/30 dark:from-gray-900 dark:via-blue-900/10 dark:to-teal-900/20 flex flex-col pt-safe">
+    <div className="min-h-[100dvh] bg-gradient-to-br from-background via-background to-primary/5 flex flex-col pt-safe">
       <SyncStatus />
 
       <main
