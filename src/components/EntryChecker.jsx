@@ -3,6 +3,7 @@ import { useData } from "../contexts/DataContext";
 import { Input } from "./ui/input";
 import { Money } from "./ui/money";
 import { ClipboardCheck, ChevronDown, CheckCircle2, AlertTriangle } from "lucide-react";
+import { trackEvent } from "../services/productAnalytics";
 
 // Dead-simple reconciliation, right where the driver keeps their logs: pick the
 // invoice's period, type its total stops, and see instantly whether your logged
@@ -32,10 +33,23 @@ const EntryChecker = () => {
     };
   }, [logs, from, to, invoiceStops]);
 
+  React.useEffect(() => {
+    if (!result?.hasInvoice) return;
+    trackEvent("invoice_check_result", {
+      surface: "entries",
+      discrepancy_found: result.diff !== 0,
+      direction: result.diff === 0 ? "match" : result.diff > 0 ? "logged_more" : "logged_fewer",
+    });
+  }, [result?.hasInvoice, result?.diff]);
+
   return (
     <div className="mb-4">
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          const next = !open;
+          setOpen(next);
+          if (next) trackEvent("invoice_check_started", { surface: "entries" });
+        }}
         className="w-full flex items-center justify-between bg-card border border-border rounded-[14px] px-4 py-3 touch-manipulation active:scale-[0.99] transition-transform"
         aria-expanded={open}
       >
