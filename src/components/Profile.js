@@ -9,6 +9,7 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { updateProfile } from "firebase/auth";
 import { db, auth } from "../services/firebase";
 import { useTheme } from "../contexts/ThemeContext";
+import { getAnalyticsConsent, setAnalyticsConsent } from "../services/productAnalytics";
 import {
   User,
   Camera,
@@ -26,6 +27,7 @@ import {
   Trophy,
   Flame,
   Star,
+  BarChart3,
 } from "lucide-react";
 
 const Profile = ({ userId, user, onLogout }) => {
@@ -37,6 +39,7 @@ const Profile = ({ userId, user, onLogout }) => {
   const [editMode, setEditMode] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [formData, setFormData] = useState({ displayName: "", email: "", bio: "" });
+  const [analyticsEnabled, setAnalyticsEnabled] = useState(() => getAnalyticsConsent() === true);
 
   const storage = getStorage();
   const navigate = useNavigate();
@@ -82,6 +85,13 @@ const Profile = ({ userId, user, onLogout }) => {
       return () => clearTimeout(timer);
     }
   }, [success]);
+
+  const handleAnalyticsToggle = async () => {
+    const next = !analyticsEnabled;
+    await setAnalyticsConsent(next);
+    setAnalyticsEnabled(next);
+    setSuccess(next ? "Usage analytics enabled" : "Usage analytics disabled");
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -301,6 +311,28 @@ const Profile = ({ userId, user, onLogout }) => {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className={rowBase}>
+            <span className="flex items-center gap-3 text-sm">
+              <BarChart3 className="w-5 h-5 text-muted-foreground" />
+              <span>
+                <span className="block">Usage analytics</span>
+                <span className="block text-[11px] text-muted-foreground">No pay, invoice, address or note contents</span>
+              </span>
+            </span>
+            <button
+              type="button"
+              onClick={handleAnalyticsToggle}
+              aria-pressed={analyticsEnabled}
+              className={`relative h-7 w-12 rounded-full transition-colors ${analyticsEnabled ? "bg-primary" : "bg-muted"}`}
+            >
+              <span
+                className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                  analyticsEnabled ? "translate-x-5" : "translate-x-1"
+                }`}
+              />
+            </button>
           </div>
 
           <button onClick={() => setEditMode((v) => !v)} className={`${rowBase} hover:bg-muted/40`}>
