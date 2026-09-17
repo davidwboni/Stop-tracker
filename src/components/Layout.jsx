@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import ErrorBoundary from './ErrorBoundary';
 import { motion } from 'framer-motion';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
@@ -11,6 +11,7 @@ import FloatingActionButton from './FloatingActionButton';
 import PayOnboarding from './PayOnboarding';
 import { useData } from '../contexts/DataContext';
 import { calculateDayEarnings } from '../features/payperiod/payStructure';
+import { trackEvent, trackPageView, setAnalyticsUserProperties } from '../services/productAnalytics';
 
 // Bottom-nav tab order, swiping left/right steps through these.
 const TAB_ORDER = [
@@ -28,6 +29,18 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const touchStart = useRef(null);
+
+  useEffect(() => {
+    trackPageView(location.pathname);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!user) return;
+    setAnalyticsUserProperties({
+      account_type: user.isGuest ? 'guest' : (user.role || 'free'),
+      pay_model: paymentConfig?.model || 'unknown',
+    });
+  }, [user, paymentConfig?.model]);
 
   const onTouchStart = (e) => {
     // Don't hijack pans on the map or any horizontal scroller.
@@ -79,6 +92,11 @@ const Layout = () => {
       );
       
       await updateLogs(updatedLogs);
+      trackEvent('daily_entry_created', {
+        entry_method: 'quick',
+        pay_model: paymentConfig?.model || 'unknown',
+        offline: !navigator.onLine,
+      });
       
       // Add haptic feedback for success
       if (navigator.vibrate) {
