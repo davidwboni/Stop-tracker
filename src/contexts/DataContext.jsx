@@ -46,42 +46,19 @@ export const DataProvider = ({ children }) => {
             const guestLogs = localStorage.getItem(`guestLogs_${user.uid}`);
             const guestConfig = localStorage.getItem(`guestConfig_${user.uid}`);
             
-            // Create demo data if it doesn't exist
-            const demoLogs = guestLogs ? JSON.parse(guestLogs) : [
-              {
-                id: 'demo_1',
-                date: new Date().toISOString().split('T')[0],
-                stops: 25,
-                extra: 7.50,
-                total: 54.50,
-                notes: "Busy day with lots of packages",
-                timestamp: new Date(Date.now() - 86400000).toISOString()
-              },
-              {
-                id: 'demo_2', 
-                date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-                stops: 32,
-                extra: 8.75,
-                total: 68.75,
-                notes: "Peak time deliveries",
-                timestamp: new Date(Date.now() - 172800000).toISOString()
-              },
-              {
-                id: 'demo_3',
-                date: new Date(Date.now() - 172800000).toISOString().split('T')[0],
-                stops: 28,
-                extra: 8.00,
-                total: 61.20,
-                notes: "Smooth delivery route",
-                timestamp: new Date(Date.now() - 259200000).toISOString()
-              }
-            ];
-            
-            setLogs(demoLogs);
-            
-            // Save demo data for future sessions
-            if (!guestLogs) {
-              localStorage.setItem(`guestLogs_${user.uid}`, JSON.stringify(demoLogs));
+            // Guest sessions must start with real user data only. Earlier builds
+            // seeded three fake delivery logs, which could pollute earnings and
+            // product-validation metrics. Migrate demo-only guest data to empty.
+            const parsedGuestLogs = guestLogs ? JSON.parse(guestLogs) : [];
+            const onlyLegacyDemoLogs =
+              parsedGuestLogs.length > 0 &&
+              parsedGuestLogs.every((log) => String(log?.id || "").startsWith("demo_"));
+            const cleanGuestLogs = onlyLegacyDemoLogs ? [] : parsedGuestLogs;
+
+            setLogs(cleanGuestLogs);
+
+            if (!guestLogs || onlyLegacyDemoLogs) {
+              localStorage.setItem(`guestLogs_${user.uid}`, JSON.stringify(cleanGuestLogs));
             }
             setPaymentConfig(normalizePayStructure(guestConfig ? JSON.parse(guestConfig) : null));
             setIsNewUser(true); // Guest users are always "new" for demo purposes
