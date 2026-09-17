@@ -4,6 +4,7 @@ import { Check, ArrowRight, Package } from "lucide-react";
 import PayStructureAISetup from "./PayStructureAISetup";
 import { useAuth } from "../contexts/AuthContext";
 import { describePayStructure } from "../features/payperiod/payStructure";
+import { trackEvent } from "../services/productAnalytics";
 
 // Completion beat shown after the user confirms their pay setup: a spring-in
 // check-mark, then a staggered welcome + pay summary + "Start tracking".
@@ -82,10 +83,24 @@ const PayOnboarding = ({ onComplete }) => {
   const firstName = user?.displayName?.split(" ")[0] || "there";
   const [confirmed, setConfirmed] = useState(null); // the config once confirmed
 
+  React.useEffect(() => {
+    trackEvent("pay_setup_started", { surface: "onboarding" });
+  }, []);
+
   return (
     <div className="min-h-[100dvh] bg-gradient-to-br from-gray-50 via-blue-50/20 to-teal-50/30 dark:from-gray-900 dark:via-blue-900/10 dark:to-teal-900/20 flex flex-col items-center justify-center px-4 py-10 pt-safe">
       {confirmed ? (
-        <WelcomeStep firstName={firstName} config={confirmed} onStart={() => onComplete(confirmed)} />
+        <WelcomeStep
+          firstName={firstName}
+          config={confirmed}
+          onStart={() => {
+            trackEvent("pay_setup_completed", {
+              surface: "onboarding",
+              pay_model: confirmed?.model || "unknown",
+            });
+            onComplete(confirmed);
+          }}
+        />
       ) : (
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -101,7 +116,15 @@ const PayOnboarding = ({ onComplete }) => {
           </div>
 
           <div className="rounded-[18px] border border-border bg-card p-5 shadow-sm">
-            <PayStructureAISetup onConfirm={(config) => setConfirmed(config)} />
+            <PayStructureAISetup
+              onConfirm={(config) => {
+                trackEvent("pay_setup_interpreted", {
+                  surface: "onboarding",
+                  pay_model: config?.model || "unknown",
+                });
+                setConfirmed(config);
+              }}
+            />
           </div>
 
           <p className="text-center text-xs text-muted-foreground px-6">
