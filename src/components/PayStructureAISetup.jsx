@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from "./ui/alert";
 import { Sparkles, Paperclip, Loader, CheckCircle2, AlertCircle, RotateCcw } from "lucide-react";
 import { interpretPayStructure } from "../services/interpretPayStructure";
 import { calculateDayEarnings, PAY_MODELS } from "../features/payperiod/payStructure";
+import { trackEvent } from "../services/productAnalytics";
 
 // Describe-or-upload panel. Sends the description / rate sheet to the Cloud
 // Function, then shows a worked-example confirmation computed by OUR calculator
@@ -18,11 +19,16 @@ const PayStructureAISetup = ({ onConfirm }) => {
   const fileRef = useRef(null);
 
   const run = async () => {
+    trackEvent("ai_pay_setup_started", { input_type: file ? "file" : "text" });
     setLoading(true);
     setError(null);
     try {
       const data = await interpretPayStructure({ text, file });
       setResult(data);
+      trackEvent("ai_pay_setup_interpreted", {
+        input_type: file ? "file" : "text",
+        pay_model: data?.config?.model || "unknown",
+      });
     } catch (err) {
       console.error("interpretPayStructure failed:", err);
       setError(err?.message || "Couldn't interpret that. Try rewording or a clearer photo.");
@@ -64,11 +70,17 @@ const PayStructureAISetup = ({ onConfirm }) => {
         </p>
 
         <div className="flex gap-3">
-          <Button onClick={() => onConfirm(cfg)} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+          <Button onClick={() => {
+            trackEvent("ai_pay_setup_confirmed", { pay_model: cfg?.model || "unknown" });
+            onConfirm(cfg);
+          }} className="bg-primary hover:bg-primary/90 text-primary-foreground">
             <CheckCircle2 className="w-4 h-4 mr-2" />
             Looks right
           </Button>
-          <Button onClick={reword} variant="outline">
+          <Button onClick={() => {
+            trackEvent("ai_pay_setup_rejected", { pay_model: cfg?.model || "unknown" });
+            reword();
+          }} variant="outline">
             <RotateCcw className="w-4 h-4 mr-2" />
             Not quite
           </Button>
