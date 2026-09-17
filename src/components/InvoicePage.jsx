@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
+import { useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import InvoiceCreate from "./InvoiceCreate";
 import InvoiceHistory from "./InvoiceHistory";
@@ -9,11 +10,15 @@ import { FileText, CheckCircle2, History } from "lucide-react";
 import { trackEvent } from "../services/productAnalytics";
 
 const InvoicePage = () => {
-  const [activeTab, setActiveTab] = useState("create");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get("tab");
+  const initialTab = ["create", "history", "verify"].includes(requestedTab) ? requestedTab : "create";
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [prefillInvoice, setPrefillInvoice] = useState(null);
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
+    setSearchParams(tab === "create" ? {} : { tab }, { replace: true });
     trackEvent("invoice_tab_viewed", { tab });
     if (tab === "verify") trackEvent("invoice_check_started", { surface: "invoice" });
   };
