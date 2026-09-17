@@ -12,6 +12,7 @@ import PayOnboarding from './PayOnboarding';
 import { useData } from '../contexts/DataContext';
 import { calculateDayEarnings } from '../features/payperiod/payStructure';
 import { trackEvent, trackPageView, setAnalyticsUserProperties } from '../services/productAnalytics';
+import AnalyticsConsent from './AnalyticsConsent';
 
 // Bottom-nav tab order, swiping left/right steps through these.
 const TAB_ORDER = [
@@ -145,6 +146,7 @@ const Layout = () => {
         </div>
       </main>
 
+      <AnalyticsConsent />
       <SwipeHint />
       <AppNavigation className="flex-shrink-0 pb-safe" />
 
