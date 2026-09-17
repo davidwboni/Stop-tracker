@@ -12,6 +12,7 @@ import {
 } from "../services/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { trackEvent } from "../services/productAnalytics";
 
 const AuthContext = createContext();
 
@@ -88,6 +89,7 @@ export function AuthProvider({ children }) {
       if (result.error) {
         throw result.error;
       }
+      trackEvent("signup_completed", { method: "email" });
       return true;
     } catch (err) {
       setError(err.message || "Failed to create account");
@@ -103,6 +105,7 @@ export function AuthProvider({ children }) {
       if (result.error) {
         throw result.error;
       }
+      trackEvent("login_completed", { method: "email" });
       return true;
     } catch (err) {
       setError(err.message || "Failed to login");
@@ -120,8 +123,10 @@ export function AuthProvider({ children }) {
       }
       // If pending (redirect flow on mobile), return true
       if (result.pending) {
+        trackEvent("login_started", { method: "google_redirect" });
         return true;
       }
+      trackEvent("login_completed", { method: "google" });
       return true;
     } catch (err) {
       setError(err.message || "Failed to login with Google");
@@ -137,6 +142,7 @@ export function AuthProvider({ children }) {
       if (result.error) {
         throw result.error;
       }
+      trackEvent("guest_started", { method: "anonymous" });
       return true;
     } catch (err) {
       setError(err.message || "Failed to login as guest");
