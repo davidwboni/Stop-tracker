@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -154,7 +154,7 @@ const SimpleDashboard = () => {
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.22, type: "spring", stiffness: 300, damping: 18 }}
-                className={`rounded-full p-3 ${todayAlreadyLogged ? "bg-emerald-500/12 text-emerald-500" : "bg-primary/10 text-primary"}`}
+                className={`rounded-full p-3 ${todayAlreadyLogged ? "bg-emerald-500/10 text-emerald-500" : "bg-primary/10 text-primary"}`}
               >
                 {todayAlreadyLogged ? <CircleCheckBig className="w-6 h-6" /> : <DollarSign className="w-6 h-6" />}
               </motion.div>
