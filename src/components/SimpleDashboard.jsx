@@ -7,13 +7,15 @@ import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import StopEntryForm from "./StopEntryForm";
 import DashboardTutorial from "./DashboardTutorial";
-import { Calendar, Package, TrendingUp, FileText, ArrowRight, DollarSign } from "lucide-react";
+import { Calendar, Package, TrendingUp, FileText, ArrowRight, DollarSign, CircleCheckBig } from "lucide-react";
 import { Money } from "./ui/money";
+import { PAY_MODELS } from "../features/payperiod/payStructure";
 
 const SimpleDashboard = () => {
   const { user } = useAuth();
   const { logs, updateLogs, loading, paymentConfig } = useData();
   const navigate = useNavigate();
+  const payMeta = PAY_MODELS.find((m) => m.id === paymentConfig?.model) || PAY_MODELS[0];
 
   // Check if today is already logged
   const todayAlreadyLogged = React.useMemo(() => {
@@ -118,42 +120,53 @@ const SimpleDashboard = () => {
         </p>
       </motion.div>
 
-      {/* Today's Quick Summary */}
+      {/* Today's earnings is the primary answer the dashboard should give. */}
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
+        initial={{ opacity: 0, y: 12, scale: 0.985 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ delay: 0.08, type: "spring", stiffness: 260, damping: 24 }}
       >
-        <div className="grid grid-cols-2 gap-3">
-          <Card
-            onClick={() => navigate('/app/entries')}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/app/entries'); }}
-            aria-label="View your recent entries"
-            className="bg-card border-border/50 overflow-hidden min-w-0 cursor-pointer hover:border-primary/30 active:scale-[0.98] transition-all touch-manipulation"
-          >
-            <CardContent className="p-4">
-              <div className="text-sm text-muted-foreground mb-1">Today's Stops</div>
-              <div className="text-2xl sm:text-3xl font-bold">{todayData.stops}</div>
-              <div className="text-xs text-muted-foreground mt-1">stops</div>
-            </CardContent>
-          </Card>
-          <Card
-            onClick={() => navigate('/app/stats')}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/app/stats'); }}
-            aria-label="View your earnings stats"
-            className="bg-card border-border/50 overflow-hidden min-w-0 cursor-pointer hover:border-primary/30 active:scale-[0.98] transition-all touch-manipulation"
-          >
-            <CardContent className="p-4">
-              <div className="text-sm text-muted-foreground mb-1">Today's Earnings</div>
-              <div className="text-2xl sm:text-3xl font-bold text-primary"><Money amount={todayData.earnings} /></div>
-              <div className="text-xs text-muted-foreground mt-1">earned</div>
-            </CardContent>
-          </Card>
-        </div>
+        <Card
+          onClick={() => navigate(todayAlreadyLogged ? '/app/entries' : '/app/dashboard')}
+          role="button"
+          tabIndex={0}
+          className="brand-surface brand-glow overflow-hidden cursor-pointer pressable"
+        >
+          <CardContent className="p-5 sm:p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-sm font-medium text-muted-foreground">Today's earnings</div>
+                <motion.div
+                  key={todayData.earnings}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-1 text-4xl sm:text-5xl font-extrabold tracking-[-0.04em] text-foreground"
+                >
+                  <Money amount={todayData.earnings} />
+                </motion.div>
+                <div className="mt-2 text-sm text-muted-foreground">
+                  {todayAlreadyLogged
+                    ? `${todayData.stops} ${payMeta?.primary?.unit || "units"} logged today`
+                    : "Nothing logged yet today"}
+                </div>
+              </div>
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.22, type: "spring", stiffness: 300, damping: 18 }}
+                className={`rounded-full p-3 ${todayAlreadyLogged ? "bg-emerald-500/12 text-emerald-500" : "bg-primary/10 text-primary"}`}
+              >
+                {todayAlreadyLogged ? <CircleCheckBig className="w-6 h-6" /> : <DollarSign className="w-6 h-6" />}
+              </motion.div>
+            </div>
+            <div className="mt-5 flex items-center justify-between border-t border-primary/15 pt-3 text-sm">
+              <span className="font-medium">
+                {todayAlreadyLogged ? "View today's record" : "Log your shift below"}
+              </span>
+              <ArrowRight className="w-4 h-4 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
       </motion.div>
 
       {/* Weekly Summary */}
