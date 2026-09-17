@@ -32,6 +32,7 @@ const PayStructureAISetup = ({ onConfirm }) => {
     } catch (err) {
       console.error("interpretPayStructure failed:", err);
       setError(err?.message || "Couldn't interpret that. Try rewording or a clearer photo.");
+      trackEvent("ai_pay_setup_failed", { input_type: file ? "file" : "text" });
     } finally {
       setLoading(false);
     }
