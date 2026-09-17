@@ -389,6 +389,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
         offline: !isOnline,
         has_extra: extra > 0,
         has_notes: Boolean(entry.notes?.trim()),
+        is_first_entry: safetyLogs.length === 0,
       });
       
       // Add successful save haptic feedback
