@@ -89,3 +89,5 @@ After a 20-30 driver beta across at least one full pay period, review:
 - qualitative feedback from drivers who did and did not retain
 
 Feature development should follow observed drop-offs and repeated usage, not feature-request volume alone.
+
+<!-- preview refresh: beta foundation review -->
