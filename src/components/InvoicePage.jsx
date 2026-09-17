@@ -6,10 +6,17 @@ import InvoiceHistory from "./InvoiceHistory";
 import PayPeriodList from "../features/payperiod/PayPeriodList";
 import TabCoach from "./TabCoach";
 import { FileText, CheckCircle2, History } from "lucide-react";
+import { trackEvent } from "../services/productAnalytics";
 
 const InvoicePage = () => {
   const [activeTab, setActiveTab] = useState("create");
   const [prefillInvoice, setPrefillInvoice] = useState(null);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    trackEvent("invoice_tab_viewed", { tab });
+    if (tab === "verify") trackEvent("invoice_check_started", { surface: "invoice" });
+  };
 
   const handleGenerateInvoice = (prefill) => {
     setPrefillInvoice(prefill);
@@ -37,7 +44,7 @@ const InvoicePage = () => {
         <p className="text-muted-foreground text-sm">Create invoices and check you've been paid right</p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-3 bg-muted h-auto rounded-[16px] p-1 gap-1">
           <TabsTrigger value="create" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2.5 rounded-[12px]">
             <FileText className="h-4 w-4" />
