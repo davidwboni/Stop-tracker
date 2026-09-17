@@ -14,6 +14,8 @@ import {
 } from "firebase/auth";
 import { auth, signInWithGoogle } from "../services/firebase";
 import { Loader2, Mail, Phone, AlertCircle } from "lucide-react";
+
+const PHONE_SIGN_IN_ENABLED = false;
 import Logo from "./Logo";
 import { trackEvent } from "../services/productAnalytics";
 
@@ -136,7 +138,7 @@ const Auth = ({ onBack }) => {
           )}
         </AnimatePresence>
 
-        <div className="grid grid-cols-2 gap-3 mb-8">
+        <div className={`grid ${PHONE_SIGN_IN_ENABLED ? "grid-cols-2" : "grid-cols-1"} gap-3 mb-8`}>
           <Button
             onClick={() => setMethod("email")}
             className={`relative py-4 rounded-2xl font-semibold transition-all duration-300 transform hover:scale-105 ${
@@ -148,17 +150,19 @@ const Auth = ({ onBack }) => {
             <Mail className="mr-2 w-5 h-5" />
             Email
           </Button>
-          <Button
-            onClick={() => setMethod("phone")}
-            className={`relative py-4 rounded-2xl font-semibold transition-all duration-300 transform hover:scale-105 ${
-              method === "phone" 
-                ? "bg-primary text-primary-foreground shadow-sm" 
-                : "bg-muted text-foreground hover:bg-primary/10"
-            }`}
-          >
-            <Phone className="mr-2 w-5 h-5" />
-            Phone
-          </Button>
+          {PHONE_SIGN_IN_ENABLED && (
+            <Button
+              onClick={() => setMethod("phone")}
+              className={`relative py-4 rounded-2xl font-semibold transition-all duration-300 transform hover:scale-105 ${
+                method === "phone"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-muted text-foreground hover:bg-primary/10"
+              }`}
+            >
+              <Phone className="mr-2 w-5 h-5" />
+              Phone
+            </Button>
+          )}
         </div>
 
         {method === "email" && (
@@ -208,7 +212,7 @@ const Auth = ({ onBack }) => {
           </form>
         )}
 
-        {method === "phone" && (
+        {PHONE_SIGN_IN_ENABLED && method === "phone" && (
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -235,7 +239,7 @@ const Auth = ({ onBack }) => {
                 className="bg-input text-foreground"
               />
             )}
-            <Button type="submit" className="w-full bg-[var(--primary)] hover:bg-[var(--secondary)]" disabled={loading}>
+            <Button type="submit" className="w-full bg-primary text-primary-foreground hover:opacity-90" disabled={loading}>
               {loading ? (
                 <>
                   <Loader2 className="mr-2 w-4 h-4 animate-spin" />
@@ -269,7 +273,7 @@ const Auth = ({ onBack }) => {
           <Button
             onClick={() => handleAuth("anonymous")}
             variant="outline"
-            className="w-full border-[var(--primary)] text-[var(--primary)]"
+            className="w-full border-primary/40 text-primary hover:bg-primary/5"
             disabled={loading}
           >
             Continue as Guest
