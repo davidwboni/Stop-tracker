@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import ErrorBoundary from './ErrorBoundary';
 import { motion } from 'framer-motion';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
