@@ -30,9 +30,14 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const touchStart = useRef(null);
+  const previousPath = useRef(location.pathname);
+  const previousTabIndex = TAB_ORDER.findIndex((p) => previousPath.current.startsWith(p));
+  const currentTabIndex = TAB_ORDER.findIndex((p) => location.pathname.startsWith(p));
+  const pageDirection = previousTabIndex >= 0 && currentTabIndex >= 0 && currentTabIndex < previousTabIndex ? -1 : 1;
 
   useEffect(() => {
     trackPageView(location.pathname);
+    previousPath.current = location.pathname;
   }, [location.pathname]);
 
   useEffect(() => {
@@ -140,9 +145,9 @@ const Layout = () => {
           <ErrorBoundary>
             <motion.div
               key={location.pathname}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, ease: 'easeOut' }}
+              initial={{ opacity: 0, x: pageDirection * 14, y: 3 }}
+              animate={{ opacity: 1, x: 0, y: 0 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             >
               <Outlet />
             </motion.div>
