@@ -17,6 +17,7 @@ import {
 import { useData } from "../contexts/DataContext";
 import { calculateDayEarnings, PAY_MODELS } from "../features/payperiod/payStructure";
 import { Money } from "./ui/money";
+import { trackEvent } from "../services/productAnalytics";
 
 const DEFAULT_CONFIG = {
   model: "tiered_stops",
@@ -382,6 +383,13 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
       
       setSuccess(true);
       setShowUndo(true);
+      trackEvent("daily_entry_created", {
+        entry_method: "full_form",
+        pay_model: model,
+        offline: !isOnline,
+        has_extra: extra > 0,
+        has_notes: Boolean(entry.notes?.trim()),
+      });
       
       // Add successful save haptic feedback
       if (navigator.vibrate) {
@@ -418,6 +426,10 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
       setShowUndo(false);
       setLastSavedEntry(null);
       setSuccess(false);
+      trackEvent("daily_entry_undone", {
+        entry_method: "full_form",
+        pay_model: model,
+      });
       
     } catch (error) {
       console.error('Error undoing entry:', error);
