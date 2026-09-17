@@ -64,6 +64,28 @@ exports.interpretPayStructure = onCall(
       throw new HttpsError("invalid-argument", "Provide a description or a file.");
     }
 
+    if (fileBase64) {
+      const supportedMimeTypes = [
+        "application/pdf",
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/gif",
+      ];
+      if (!supportedMimeTypes.includes(mimeType)) {
+        throw new HttpsError("invalid-argument", "Unsupported rate-sheet file type.");
+      }
+
+      // Base64 is ~4/3 the source file size. Keep callable payloads comfortably
+      // below platform request limits and fail with a useful message.
+      if (fileBase64.length > 11 * 1024 * 1024) {
+        throw new HttpsError(
+          "invalid-argument",
+          "That rate sheet is too large. Use a smaller PDF or a clear screenshot."
+        );
+      }
+    }
+
     const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY.value() });
 
     const content = [];
@@ -141,6 +163,52 @@ exports.interpretPayStructure = onCall(
     const VALID = ["tiered_stops", "flat_stops", "per_mile", "hourly", "per_day", "sliding_scale"];
     if (!parsed.config || !VALID.includes(parsed.config.model)) {
       throw new HttpsError("internal", "Could not determine a pay model. Please describe it differently.");
+    }
+
+    const cfg = parsed.config;
+    const finite = (v) => typeof v === "number" && Number.isFinite(v) && v >= 0;
+
+    if (cfg.model === "sliding_scale") {
+      const validBands =
+        Array.isArray(cfg.stopBands) &&
+        cfg.stopBands.length > 0 &&
+        cfg.stopBands.every(finite) &&
+        Array.isArray(cfg.mileBands) &&
+        cfg.mileBands.length > 0 &&
+        cfg.mileBands.every(finite);
+      const validMatrix =
+        Array.isArray(cfg.rateMatrix) &&
+        cfg.rateMatrix.length === cfg.stopBands?.length &&
+        cfg.rateMatrix.every(
+          (row) =>
+            Array.isArray(row) &&
+            row.length === cfg.mileBands?.length &&
+            row.every(finite)
+        );
+      if (!validBands || !validMatrix) {
+        throw new HttpsError(
+          "internal",
+          "The rate-sheet table could not be read reliably. Try a clearer screenshot or PDF."
+        );
+      }
+    }
+
+    if (cfg.model === "tiered_stops") {
+      const validThresholds =
+        Array.isArray(cfg.thresholds) &&
+        cfg.thresholds.length >= 1 &&
+        cfg.thresholds.every(
+          (tier) =>
+            tier &&
+            finite(tier.rate) &&
+            (tier.stopCount === undefined || finite(tier.stopCount))
+        );
+      if (!validThresholds) {
+        throw new HttpsError(
+          "internal",
+          "The stop-rate tiers could not be read reliably. Please reword them and try again."
+        );
+      }
     }
 
     return {
