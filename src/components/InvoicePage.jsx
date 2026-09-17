@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
@@ -19,9 +19,14 @@ const InvoicePage = () => {
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     setSearchParams(tab === "create" ? {} : { tab }, { replace: true });
-    trackEvent("invoice_tab_viewed", { tab });
-    if (tab === "verify") trackEvent("invoice_check_started", { surface: "invoice" });
   };
+
+  useEffect(() => {
+    trackEvent("invoice_tab_viewed", { tab: activeTab });
+    if (activeTab === "verify") {
+      trackEvent("invoice_check_started", { surface: "invoice" });
+    }
+  }, [activeTab]);
 
   const handleGenerateInvoice = (prefill) => {
     setPrefillInvoice(prefill);
