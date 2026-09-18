@@ -396,9 +396,19 @@ const Profile = ({ userId, user, onLogout }) => {
             </div>
           </div>
           {!isPro && (
-            <p className="mt-3 text-[11px] text-muted-foreground">
-              Manual work tracking and Check Pay stay free. Billing will be enabled before Pro launches.
-            </p>
+            <div className="mt-3">
+              <p className="text-[11px] text-muted-foreground mb-3">
+                Manual work tracking and Check Pay stay free. Pro adds protected paid-API features and removes ads.
+              </p>
+              <Button
+                type="button"
+                onClick={() => navigate("/app/upgrade")}
+                className="w-full h-10"
+              >
+                <Crown className="w-4 h-4 mr-2" />
+                Upgrade to Pro
+              </Button>
+            </div>
           )}
         </div>
       </div>
