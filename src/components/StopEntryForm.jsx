@@ -17,6 +17,7 @@ import {
 import { useData } from "../contexts/DataContext";
 import { calculateDayEarnings, PAY_MODELS } from "../features/payperiod/payStructure";
 import { Money } from "./ui/money";
+import { AnimatedMoney } from "./ui/animated-money";
 import { trackEvent } from "../services/productAnalytics";
 import { useSearchParams } from "react-router-dom";
 
@@ -482,8 +483,9 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
       // Restore the form data
       setEntry({
         date: lastSavedEntry.entry.date,
-        stops: lastSavedEntry.entry.stops.toString(),
-        extra: lastSavedEntry.entry.extra.toString(),
+        stops: lastSavedEntry.entry.stops?.toString?.() || "",
+        miles: lastSavedEntry.entry.miles?.toString?.() || "",
+        extra: lastSavedEntry.entry.extra?.toString?.() || "",
         notes: lastSavedEntry.entry.notes || ""
       });
       
@@ -669,8 +671,8 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                       <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                         Expected earnings
                       </div>
-                      <div className="mt-0.5 text-2xl font-extrabold tracking-[-0.03em] text-primary tabular-nums">
-                        <Money amount={estimatedEarnings} />
+                      <div className="mt-0.5 text-2xl font-extrabold tracking-[-0.03em] text-primary">
+                        <AnimatedMoney amount={estimatedEarnings} />
                       </div>
                     </motion.div>
                   )}
@@ -846,8 +848,8 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                       <div className="flex items-center">
                         <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
                         <div>
-                          <p className="text-xs font-medium text-amber-800">{lastSaveAction === "updated" ? "Entry updated successfully!" : "Entry saved successfully!"}</p>
-                          <p className="text-xs text-amber-600 mt-1">Tap undo if this was a mistake</p>
+                          <p className="text-xs font-medium text-amber-800 dark:text-amber-200">{lastSaveAction === "updated" ? "Entry updated successfully!" : "Entry saved successfully!"}</p>
+                          <p className="text-xs text-amber-600 dark:text-amber-300 mt-1">Tap undo if this was a mistake</p>
                         </div>
                       </div>
                       <Button
