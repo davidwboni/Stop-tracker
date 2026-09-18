@@ -38,6 +38,8 @@ import {
   searchAddresses
 } from "../services/addressSearch";
 import { useAddressMemory } from "../contexts/AddressMemoryContext";
+import { useAuth } from "../contexts/AuthContext";
+import { optimizeRouteGoogle } from "../services/googleRoutes";
 
 const RoutePlanner = () => {
   const [addresses, setAddresses] = useState([]);
@@ -53,6 +55,8 @@ const RoutePlanner = () => {
   const [savedRoutes, setSavedRoutes] = useState([]);
   const activeSearchControllerRef = useRef(null);
   const { frequentAddresses, recordAddressUse } = useAddressMemory();
+  const { user } = useAuth();
+  const isPro = user?.role === "pro";
   const [expandedAddressId, setExpandedAddressId] = useState(null);
 
   const hasValidCoordinates = (address) =>
@@ -405,8 +409,9 @@ const RoutePlanner = () => {
     setAddresses(optimized);
   };
 
-  // Beta route optimization is intentionally local/free. Paid road-network
-  // optimization will be restored behind a server-side Pro entitlement check.
+  // Pro users get paid road-network optimisation through Firebase Functions.
+  // Free/Guest users keep the local approximation during beta so the route
+  // workflow remains testable without exposing paid API quota.
   const optimizeRoute = async () => {
     const validAddresses = addresses.filter(hasValidCoordinates);
     if (validAddresses.length < 2) {
@@ -421,10 +426,30 @@ const RoutePlanner = () => {
     }
 
     setIsOptimizing(true);
-    window.setTimeout(() => {
+
+    try {
+      if (isPro) {
+        const result = await optimizeRouteGoogle(validAddresses);
+        if (result?.route?.length) {
+          setOptimizedRoute({
+            route: result.route,
+            totalDistance: result.totalDistanceKm.toFixed(2),
+            estimatedTime: result.totalDurationMin,
+            source: "google",
+          });
+          setAddresses(result.route);
+          showSuccess("Route optimised using live road data.");
+          return;
+        }
+      }
+
       optimizeRouteLocally();
+      if (!isPro) {
+        showSuccess("Beta route order created on-device. Road-aware optimisation is Pro.");
+      }
+    } finally {
       setIsOptimizing(false);
-    }, 250);
+    }
   };
 
   // Haversine formula
