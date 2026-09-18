@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Home, FileText, Calculator, User, TrendingUp, MapPin } from "lucide-react";
+import { Home, FileText, CircleCheckBig, User } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const AppNavigation = () => {
@@ -40,9 +40,7 @@ const AppNavigation = () => {
   const navItems = [
     { path: '/app/dashboard', icon: Home, label: 'Home' },
     { path: '/app/entries', icon: FileText, label: 'Entries' },
-    { path: '/app/routes', icon: MapPin, label: 'Routes' },
-    { path: '/app/invoice', icon: Calculator, label: 'Invoice' },
-    { path: '/app/stats', icon: TrendingUp, label: 'Stats' },
+    { path: '/app/invoice', search: '?tab=verify', icon: CircleCheckBig, label: 'Check Pay' },
     { path: '/app/profile', icon: User, label: 'Profile' },
   ];
   
@@ -73,7 +71,7 @@ const AppNavigation = () => {
                     navigate(item.path);
                   }
                 } else {
-                  navigate(item.path);
+                  navigate(`${item.path}${item.search || ''}`);
                 }
               }}
               className={`relative flex flex-col items-center p-2.5 rounded-2xl transition-all duration-200 transform active:scale-95 min-w-0 flex-1 touch-manipulation min-h-[64px] ${
