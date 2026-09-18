@@ -9,6 +9,7 @@ import StopEntryForm from "./StopEntryForm";
 import DashboardTutorial from "./DashboardTutorial";
 import { Calendar, Package, TrendingUp, FileText, ArrowRight, DollarSign, CircleCheckBig, MapPin } from "lucide-react";
 import { Money } from "./ui/money";
+import { AnimatedMoney } from "./ui/animated-money";
 import { PAY_MODELS } from "../features/payperiod/payStructure";
 
 const SimpleDashboard = () => {
@@ -142,7 +143,7 @@ const SimpleDashboard = () => {
                   animate={{ opacity: 1, y: 0 }}
                   className="mt-1 text-4xl sm:text-5xl font-extrabold tracking-[-0.04em] text-foreground"
                 >
-                  <Money amount={todayData.earnings} />
+                  <AnimatedMoney amount={todayData.earnings} duration={420} />
                 </motion.div>
                 <div className="mt-2 text-sm text-muted-foreground">
                   {todayAlreadyLogged
