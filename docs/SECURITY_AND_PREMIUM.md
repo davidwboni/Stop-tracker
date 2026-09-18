@@ -13,7 +13,7 @@ Stop Tracker's free core remains useful without paid APIs:
 Premium features are reserved for services with ongoing external API cost or materially higher operating cost:
 
 - Route optimisation using paid road-network APIs
-- AI statement/photo/PDF scanning
+- AI-assisted rate-sheet image reading (statement scanning remains a future Pro feature)
 - Future advanced automation/reporting where justified
 
 ## Server-side entitlement model
@@ -28,13 +28,13 @@ Premium access must never rely on a hidden React button.
 
 ## AI cost protection
 
-`interpretPayStructure` is server-side and the Anthropic key is a Firebase secret.
+`interpretPayStructure` is server-side, uses DeepSeek V4.1 Flash via its Anthropic-compatible endpoint, and keeps the DeepSeek key in Firebase Secret Manager.
 
 Daily server-side quotas currently protect beta usage:
 
-- Guest: 3 text interpretations / 1 document interpretation
-- Free signed-in: 10 text / 3 document
-- Pro: 50 text / 20 document
+- Guest: 3 text interpretations / 1 image interpretation
+- Free signed-in: 10 text / 3 image
+- Pro: 50 text / 20 image
 
 These are beta safety limits and can be tuned from real usage data.
 
@@ -74,7 +74,7 @@ The GitHub security workflow runs:
 - `websocket-driver` is pinned to patched version 0.7.5 to address the 2026 critical WebSocket advisory.
 - `jsPDF` is updated to the patched 4.2.1 line.
 - `lodash` is updated to the patched 4.18.1 line.
-- Firebase Functions runtime is refreshed to `firebase-admin` 14.4.0, `firebase-functions` 7.4.0 and Anthropic SDK 0.126.0; resolved gRPC/XML dependencies are on current patched lines.
+- Firebase Functions runtime is refreshed to `firebase-admin` 14.4.0 and `firebase-functions` 7.4.0. The Anthropic SDK remains only as the transport client for DeepSeek's Anthropic-compatible API; the model/provider is DeepSeek.
 - `jsonwebtoken` is constrained to patched `jws` 3.2.3 for its compatible 3.x dependency, while Google packages retain their separate current 4.x `jws` line.
 - Remaining moderate dependency advisories are tracked separately and must not be mistaken for a clean bill of health; React Router's current advisory requires a deliberate v7 migration rather than a forced breaking update.
 
@@ -82,10 +82,10 @@ The GitHub security workflow runs:
 
 Still required:
 
-1. Choose and integrate billing appropriate to the distribution channel (Google Play Billing for Android digital features; web billing separately if offered).
-2. Have the billing backend grant/revoke the server-owned Pro entitlement.
-3. Enable Firebase App Check for production clients and callable Functions.
-4. Configure the paid route provider as a backend secret.
-5. Add server-side route usage limits/cost controls.
-6. Add AI statement scanning behind the same server entitlement.
-7. If ads are enabled, add the appropriate consent/CMP flow and keep ads out of logging and pay-result interactions.
+1. Configure Stripe web billing secrets, price ID, production base URL and webhook endpoint; test purchase, renewal, cancellation and failed-payment states.
+2. Add verified Google Play / App Store billing before enabling native purchases.
+3. Enable Firebase App Check for production clients and paid callable Functions.
+4. Confirm the server Routes key is API-restricted and billing quotas/alerts are configured.
+5. Add AI statement scanning behind the same server entitlement if/when that feature ships.
+6. Configure a Google-certified CMP before enabling ads for UK/EEA traffic.
+7. Keep the repository visibility and any public privacy-policy contact details intentional; do not publish private operational information by accident.
