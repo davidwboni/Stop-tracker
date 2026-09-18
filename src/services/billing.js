@@ -17,3 +17,13 @@ export async function startProCheckout() {
   window.location.assign(data.url);
   return { redirected: true };
 }
+
+export async function openBillingPortal() {
+  const callable = httpsCallable(functions, "createBillingPortalSession");
+  const result = await callable({});
+  const url = result?.data?.url;
+  if (!url || !/^https:\/\//.test(url)) {
+    throw new Error("Billing portal did not return a valid link.");
+  }
+  window.location.assign(url);
+}
