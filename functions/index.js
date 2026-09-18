@@ -7,6 +7,7 @@ const Anthropic = require("@anthropic-ai/sdk");
 admin.initializeApp();
 
 const ANTHROPIC_API_KEY = defineSecret("ANTHROPIC_API_KEY");
+const GOOGLE_ROUTES_API_KEY = defineSecret("GOOGLE_ROUTES_API_KEY");
 
 const firestore = admin.firestore();
 
@@ -51,7 +52,7 @@ async function enforceDailyQuota(request, feature, limits) {
     if (count >= limit) {
       throw new HttpsError(
         "resource-exhausted",
-        "Daily AI usage limit reached. Please try again tomorrow."
+        "Daily usage limit reached. Please try again tomorrow."
       );
     }
 
@@ -83,6 +84,108 @@ exports.getEntitlements = onCall({ cors: true, invoker: "public" }, async (reque
     },
   };
 });
+
+exports.optimizeRoutePro = onCall(
+  {
+    secrets: [GOOGLE_ROUTES_API_KEY],
+    cors: true,
+    invoker: "public",
+    timeoutSeconds: 30,
+  },
+  async (request) => {
+    const entitlement = await getServerEntitlement(request);
+    if (!entitlement.isPro) {
+      throw new HttpsError(
+        "permission-denied",
+        "Road-aware route optimisation is a Stop Tracker Pro feature."
+      );
+    }
+
+    await enforceDailyQuota(request, "route_optimization", {
+      guest: 0,
+      free: 0,
+      pro: 200,
+    });
+
+    const addresses = request.data?.addresses;
+    if (!Array.isArray(addresses) || addresses.length < 2 || addresses.length > 25) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Provide between 2 and 25 stops with valid coordinates."
+      );
+    }
+
+    const validCoordinate = (value, min, max) =>
+      typeof value === "number" && Number.isFinite(value) && value >= min && value <= max;
+
+    const sanitized = addresses.map((item, index) => {
+      const latitude = Number(item?.latitude);
+      const longitude = Number(item?.longitude);
+      if (!validCoordinate(latitude, -90, 90) || !validCoordinate(longitude, -180, 180)) {
+        throw new HttpsError(
+          "invalid-argument",
+          `Stop ${index + 1} has invalid coordinates.`
+        );
+      }
+      return { latitude, longitude };
+    });
+
+    const origin = sanitized[0];
+    const destination = sanitized[sanitized.length - 1];
+    const intermediates = sanitized.slice(1, -1);
+
+    const response = await fetch(
+      "https://routes.googleapis.com/directions/v2:computeRoutes",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": GOOGLE_ROUTES_API_KEY.value(),
+          "X-Goog-FieldMask": [
+            "routes.optimizedIntermediateWaypointIndex",
+            "routes.distanceMeters",
+            "routes.duration",
+          ].join(","),
+        },
+        body: JSON.stringify({
+          origin: { location: { latLng: origin } },
+          destination: { location: { latLng: destination } },
+          intermediates: intermediates.map((item) => ({
+            location: { latLng: item },
+          })),
+          travelMode: "DRIVE",
+          optimizeWaypointOrder: true,
+          routingPreference: "TRAFFIC_AWARE",
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      console.error("Google Routes API error:", response.status);
+      throw new HttpsError(
+        "unavailable",
+        "Route optimisation is temporarily unavailable."
+      );
+    }
+
+    const data = await response.json();
+    const route = data.routes?.[0];
+    if (!route) {
+      throw new HttpsError("not-found", "No drivable route was found.");
+    }
+
+    const durationSeconds =
+      parseInt(String(route.duration || "0").replace("s", ""), 10) || 0;
+
+    return {
+      optimizedIntermediateWaypointIndex:
+        route.optimizedIntermediateWaypointIndex ||
+        intermediates.map((_, index) => index),
+      totalDistanceKm: Number(route.distanceMeters || 0) / 1000,
+      totalDurationMin: Math.ceil(durationSeconds / 60),
+    };
+  }
+);
 
 // System prompt: describe the six pay models + the exact JSON we want back.
 // The AI ONLY transcribes/interprets into structured config — it never computes
