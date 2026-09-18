@@ -19,7 +19,9 @@ async function getServerEntitlement(request) {
   const provider = request.auth.token?.firebase?.sign_in_provider;
   const snap = await firestore.doc(`users/${uid}`).get();
   const storedRole = snap.exists ? snap.data()?.role : null;
-  const role = storedRole || (provider === "anonymous" ? "guest" : "free");
+  // Auth provider is authoritative for anonymous sessions, including legacy
+  // guest profiles that may have been accidentally written as "free".
+  const role = provider === "anonymous" ? "guest" : (storedRole || "free");
 
   return {
     uid,
@@ -313,13 +315,19 @@ exports.interpretPayStructure = onCall(
 
 exports.assignRoleOnSignup = functions.auth.user().onCreate(async (user) => {
   try {
+    const isAnonymous = !user.email && (!user.providerData || user.providerData.length === 0);
+    const role = isAnonymous ? "guest" : "free";
     const userRef = admin.firestore().collection("users").doc(user.uid);
+
+    // Merge so the auth trigger never wipes profile fields written by the app.
     await userRef.set({
-      email: user.email || "No email provided",
-      name: user.displayName || "Anonymous",
-      role: "free", // Default role
-    });
-    console.log(`User ${user.uid} assigned default role: free`);
+      email: user.email || (isAnonymous ? "guest@stoptracker.com" : "No email provided"),
+      name: user.displayName || (isAnonymous ? "Guest User" : "Anonymous"),
+      role,
+      isGuest: isAnonymous,
+    }, { merge: true });
+
+    console.log(`User ${user.uid} assigned default role: ${role}`);
   } catch (error) {
     console.error(`Error assigning role for user ${user.uid}:`, error);
   }
