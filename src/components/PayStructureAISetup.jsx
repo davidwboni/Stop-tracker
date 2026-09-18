@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { Button } from "./ui/button";
 import { Alert, AlertDescription } from "./ui/alert";
@@ -14,9 +14,27 @@ const PayStructureAISetup = ({ onConfirm }) => {
   const [text, setText] = useState("");
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null); // { config, summary, sample }
   const fileRef = useRef(null);
+
+  const loadingMessages = file
+    ? ["Reading rate sheet…", "Identifying rates…", "Building calculation…"]
+    : ["Understanding your pay…", "Identifying the pay model…", "Building calculation…"];
+
+  useEffect(() => {
+    if (!loading) {
+      setLoadingStep(0);
+      return undefined;
+    }
+
+    const timer = setInterval(() => {
+      setLoadingStep((step) => Math.min(step + 1, loadingMessages.length - 1));
+    }, 850);
+
+    return () => clearInterval(timer);
+  }, [loading, file]);
 
   const run = async () => {
     trackEvent("ai_pay_setup_started", { input_type: file ? "file" : "text" });
@@ -143,7 +161,14 @@ const PayStructureAISetup = ({ onConfirm }) => {
         {loading ? (
           <>
             <Loader className="w-4 h-4 mr-2 animate-spin" />
-            {file ? "Reading rate sheet…" : "Understanding your pay…"}
+            <motion.span
+              key={loadingMessages[loadingStep]}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="inline-block"
+            >
+              {loadingMessages[loadingStep]}
+            </motion.span>
           </>
         ) : (
           <>
