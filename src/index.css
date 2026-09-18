@@ -9,7 +9,7 @@
   :root {
     color-scheme: light;
     /* Stop Tracker brand system */
-    --background: #F8FAFC;
+    --background: #F2F7F8;
     --foreground: #081F2B;
 
     --card: #FFFFFF;
@@ -21,7 +21,7 @@
     --secondary: #14D9D1;
     --secondary-foreground: #05232D;
 
-    --muted: #EEF4F6;
+    --muted: #E8F0F2;
     --muted-foreground: #667982;
 
     --accent: #D9FBF6;
@@ -30,8 +30,8 @@
     --destructive: #EF4444;
     --destructive-foreground: #FFFFFF;
 
-    --border: #DDE7EB;
-    --input: #EAF1F3;
+    --border: #D4E1E5;
+    --input: #E6EEF1;
     --ring: #06B6C4;
 
     --brand-navy: #081F2B;
@@ -109,7 +109,7 @@
   }
 
   .shadow-apple-card {
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 8px 28px rgba(8, 31, 43, 0.07), 0 1px 3px rgba(8, 31, 43, 0.05);
   }
 
   .shadow-apple-card-hover {
