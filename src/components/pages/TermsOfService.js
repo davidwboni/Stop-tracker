@@ -37,7 +37,7 @@ const TermsOfService = ({ onBack }) => {
                 <p className="text-indigo-100 text-lg font-medium">Legal terms and conditions for using Stop Tracker</p>
               </div>
             </div>
-            <p className="relative z-10 text-indigo-200 text-sm bg-indigo-800/30 px-4 py-2 rounded-xl inline-block">Last Updated: March 22, 2025</p>
+            <p className="relative z-10 text-indigo-200 text-sm bg-indigo-800/30 px-4 py-2 rounded-xl inline-block">Last Updated: September 18, 2026</p>
           </CardHeader>
           <CardContent className="p-6 sm:p-8 lg:p-10 bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50">
             <div className="prose dark:prose-invert max-w-none prose-headings:text-gray-900 dark:prose-headings:text-white prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-li:text-gray-700 dark:prose-li:text-gray-300">
@@ -148,11 +148,11 @@ const TermsOfService = ({ onBack }) => {
             </div>
             <div className="bg-emerald-50 dark:bg-emerald-900/20 p-6 rounded-2xl border-2 border-emerald-100 dark:border-emerald-800">
               <h3 className="text-lg font-semibold mb-3 text-emerald-900 dark:text-emerald-100">6.2 Subscription Terms</h3>
-              <p className="text-emerald-700 dark:text-emerald-300">Payment will be charged to your selected payment method at confirmation of purchase and at the beginning of each subscription period.</p>
+              <p className="text-emerald-700 dark:text-emerald-300">For web subscriptions, payment is processed by Stripe and renews at the beginning of each billing period until cancelled. Native-app purchases, when enabled, are handled under the applicable app-store billing terms.</p>
             </div>
             <div className="bg-emerald-50 dark:bg-emerald-900/20 p-6 rounded-2xl border-2 border-emerald-100 dark:border-emerald-800">
               <h3 className="text-lg font-semibold mb-3 text-emerald-900 dark:text-emerald-100">6.3 Cancellation</h3>
-              <p className="text-emerald-700 dark:text-emerald-300">You may cancel your subscription at any time through your account settings. Cancellations take effect at the end of the current billing period.</p>
+              <p className="text-emerald-700 dark:text-emerald-300">You may manage or cancel an active web subscription through the secure billing portal linked from your account. Unless otherwise stated at checkout, cancellation stops future renewals and access remains until the end of the paid billing period.</p>
             </div>
           </div>
           
