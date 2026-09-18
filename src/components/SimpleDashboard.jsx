@@ -1,5 +1,5 @@
 import React from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useData } from "../contexts/DataContext";
@@ -7,7 +7,7 @@ import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import StopEntryForm from "./StopEntryForm";
 import DashboardTutorial from "./DashboardTutorial";
-import { Calendar, Package, TrendingUp, FileText, ArrowRight, DollarSign, CheckCircle2, MapPin } from "lucide-react";
+import { Calendar, Package, TrendingUp, FileText, ArrowRight, DollarSign, CheckCircle2, MapPin, ChevronDown, Crown } from "lucide-react";
 import { Money } from "./ui/money";
 import { AnimatedMoney } from "./ui/animated-money";
 import { PAY_MODELS } from "../features/payperiod/payStructure";
@@ -22,6 +22,7 @@ const SimpleDashboard = () => {
   const { logs, updateLogs, loading, paymentConfig } = useData();
   const navigate = useNavigate();
   const payMeta = PAY_MODELS.find((m) => m.id === paymentConfig?.model) || PAY_MODELS[0];
+  const [showManualEntry, setShowManualEntry] = React.useState(false);
 
   // Check if today is already logged
   const todayAlreadyLogged = React.useMemo(() => {
@@ -133,7 +134,10 @@ const SimpleDashboard = () => {
         transition={{ delay: 0.08, type: "spring", stiffness: 260, damping: 24 }}
       >
         <Card
-          onClick={() => navigate(todayAlreadyLogged ? '/app/entries' : '/app/dashboard')}
+          onClick={() => {
+            if (todayAlreadyLogged) navigate('/app/entries');
+            else setShowManualEntry(true);
+          }}
           role="button"
           tabIndex={0}
           className="brand-surface brand-glow overflow-hidden cursor-pointer pressable"
@@ -167,12 +171,56 @@ const SimpleDashboard = () => {
             </div>
             <div className="mt-5 flex items-center justify-between border-t border-primary/15 pt-3 text-sm">
               <span className="font-medium">
-                {todayAlreadyLogged ? "View today's record" : "Log your shift below"}
+                {todayAlreadyLogged ? "View today's record" : "Log your shift"}
               </span>
               <ArrowRight className="w-4 h-4 text-primary" />
             </div>
           </CardContent>
         </Card>
+      </motion.div>
+
+      {/* Quick Action Buttons */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2"
+      >
+        <Button
+          onClick={() => navigate('/app/stats')}
+          variant="outline"
+          className="flex-col h-auto py-4 gap-2 rounded-[14px] active:scale-95 touch-manipulation"
+        >
+          <TrendingUp className="w-6 h-6 text-secondary" />
+          <span className="font-medium text-xs">Stats</span>
+        </Button>
+        <Button
+          onClick={() => navigate('/app/routes')}
+          variant="outline"
+          className="relative flex-col h-auto py-4 gap-2 rounded-[14px] active:scale-95 touch-manipulation"
+        >
+          <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold text-primary">
+            <Crown className="h-2.5 w-2.5" /> PRO
+          </span>
+          <MapPin className="w-6 h-6 text-primary" />
+          <span className="font-medium text-xs">Routes</span>
+        </Button>
+        <Button
+          onClick={() => navigate('/app/invoice?tab=verify')}
+          variant="outline"
+          className="flex-col h-auto py-4 gap-2 rounded-[14px] active:scale-95 touch-manipulation"
+        >
+          <FileText className="w-6 h-6 text-primary" />
+          <span className="font-medium text-xs">Check Pay</span>
+        </Button>
+        <Button
+          onClick={() => navigate('/app/settings')}
+          variant="outline"
+          className="flex-col h-auto py-4 gap-2 rounded-[14px] active:scale-95 touch-manipulation"
+        >
+          <DollarSign className="w-6 h-6 text-secondary" />
+          <span className="font-medium text-xs">Pay Structure</span>
+        </Button>
       </motion.div>
 
       {/* Weekly Summary */}
@@ -217,28 +265,51 @@ const SimpleDashboard = () => {
         </motion.div>
       )}
 
-      {/* Main Entry Form */}
+      {/* Manual entry stays out of the way until the driver needs it. */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        <Card className="bg-card border-border/50 overflow-hidden">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Package className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <h2 className="font-semibold text-lg">Log or update work</h2>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Today is selected by default — choose another date if you missed a day.
-                </p>
-              </div>
-            </div>
-            <StopEntryForm logs={logs} updateLogs={updateLogs} />
-          </CardContent>
-        </Card>
+        <button
+          type="button"
+          onClick={() => setShowManualEntry((open) => !open)}
+          className="w-full flex items-center justify-between rounded-[16px] border border-border bg-card px-4 py-4 text-left pressable"
+          aria-expanded={showManualEntry}
+        >
+          <span className="flex items-center gap-3">
+            <span className="rounded-[12px] bg-primary/10 p-2 text-primary">
+              <Package className="w-5 h-5" />
+            </span>
+            <span>
+              <span className="block font-semibold">Log your shift</span>
+              <span className="block text-xs text-muted-foreground mt-0.5">
+                Today, yesterday, or another missed day
+              </span>
+            </span>
+          </span>
+          <motion.span animate={{ rotate: showManualEntry ? 180 : 0 }}>
+            <ChevronDown className="w-5 h-5 text-primary" />
+          </motion.span>
+        </button>
+
+        <AnimatePresence initial={false}>
+          {showManualEntry && (
+            <motion.div
+              initial={{ opacity: 0, height: 0, y: -6 }}
+              animate={{ opacity: 1, height: "auto", y: 0 }}
+              exit={{ opacity: 0, height: 0, y: -6 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              className="overflow-hidden"
+            >
+              <Card className="mt-2 bg-card border-border/60 overflow-hidden">
+                <CardContent className="p-6">
+                  <StopEntryForm logs={logs} updateLogs={updateLogs} />
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
 
       {/* Recent Activity */}
@@ -290,46 +361,7 @@ const SimpleDashboard = () => {
         </motion.div>
       )}
 
-      {/* Quick Action Buttons */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2"
-      >
-        <Button
-          onClick={() => navigate('/app/stats')}
-          variant="outline"
-          className="flex-col h-auto py-4 gap-2 rounded-[14px] active:scale-95 touch-manipulation"
-        >
-          <TrendingUp className="w-6 h-6 text-secondary" />
-          <span className="font-medium text-xs">Stats</span>
-        </Button>
-        <Button
-          onClick={() => navigate('/app/routes')}
-          variant="outline"
-          className="flex-col h-auto py-4 gap-2 rounded-[14px] active:scale-95 touch-manipulation"
-        >
-          <MapPin className="w-6 h-6 text-primary" />
-          <span className="font-medium text-xs">Routes</span>
-        </Button>
-        <Button
-          onClick={() => navigate('/app/invoice?tab=verify')}
-          variant="outline"
-          className="flex-col h-auto py-4 gap-2 rounded-[14px] active:scale-95 touch-manipulation"
-        >
-          <FileText className="w-6 h-6 text-primary" />
-          <span className="font-medium text-xs">Check Pay</span>
-        </Button>
-        <Button
-          onClick={() => navigate('/app/settings')}
-          variant="outline"
-          className="flex-col h-auto py-4 gap-2 rounded-[14px] active:scale-95 touch-manipulation"
-        >
-          <DollarSign className="w-6 h-6 text-secondary" />
-          <span className="font-medium text-xs">Pay Structure</span>
-        </Button>
-      </motion.div>
+
     </div>
   );
 };
