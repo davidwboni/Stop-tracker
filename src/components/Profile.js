@@ -101,14 +101,14 @@ const Profile = ({ userId, user, onLogout }) => {
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) return setError("Please select an image file");
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) return setError("Please select a JPG, PNG or WEBP image");
     if (file.size > 2 * 1024 * 1024) return setError("Image size must be less than 2MB");
 
     setUpdating(true);
     setError(null);
     try {
       const timestamp = Date.now();
-      const storageRef = ref(storage, `users/${userId}/profile_${timestamp}`);
+      const storageRef = ref(storage, `users/${userId}/profile`);
       await uploadBytes(storageRef, file);
       const downloadURL = await getDownloadURL(storageRef);
       await updateDoc(doc(db, "users", userId), { photoURL: downloadURL, photoUpdatedAt: timestamp });
