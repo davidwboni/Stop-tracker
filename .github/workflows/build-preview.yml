@@ -1,0 +1,45 @@
+name: Build Stop Tracker Preview
+
+on:
+  push:
+    branches:
+      - feat/product-analytics-motion
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build app
+        run: npm run build
+        env:
+          CI: false
+
+      - name: Publish preview build branch
+        shell: bash
+        run: |
+          cp -R build /tmp/stop-tracker-build
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan preview-build
+          git rm -rf .
+          cp -R /tmp/stop-tracker-build/. .
+          touch .nojekyll
+          git add -A
+          git commit -m "chore: publish Stop Tracker preview build"
+          git push origin HEAD:preview-build --force
