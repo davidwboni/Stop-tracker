@@ -5,9 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Trash2,
   Pencil,
-  ArrowUpDown,
-  ChevronDown,
-  ChevronUp,
   Zap,
   Package,
   MapPin
@@ -29,26 +26,13 @@ const formatDate = (inputDate) => {
 
 const EntriesList = ({ logs, onDeleteEntry }) => {
   const navigate = useNavigate();
-  const [sortBy, setSortBy] = useState("date");
-  const [sortOrder, setSortOrder] = useState("desc");
   const [page, setPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [viewDetails, setViewDetails] = useState(false);
 
-  const handleSort = (field) => {
-    if (sortBy === field) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortBy(field);
-      setSortOrder("desc");
-    }
-    // Add haptic feedback
-    if (navigator.vibrate) navigator.vibrate(5);
-  };
-
   const sortedLogs = useMemo(
-    () => _.orderBy(logs, [sortBy], [sortOrder]),
-    [logs, sortBy, sortOrder]
+    () => _.orderBy(logs, ["date"], ["desc"]),
+    [logs]
   );
 
   const totalPages = Math.ceil(logs.length / itemsPerPage);
@@ -57,46 +41,21 @@ const EntriesList = ({ logs, onDeleteEntry }) => {
     page * itemsPerPage
   );
 
-  const SortButton = ({ field, label, icon: Icon }) => (
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={() => handleSort(field)}
-      className="flex items-center gap-2 h-10 rounded-[14px] transition-all duration-200 hover:bg-primary/5 touch-manipulation min-h-[44px]"
-    >
-      {Icon && <Icon className="w-4 h-4" />}
-      <span className="font-medium">{label}</span>
-      {sortBy === field ? (
-        sortOrder === "asc" ? (
-          <ChevronUp className="w-4 h-4 text-primary" />
-        ) : (
-          <ChevronDown className="w-4 h-4 text-primary" />
-        )
-      ) : (
-        <ArrowUpDown className="w-4 h-4 opacity-30" />
-      )}
-    </Button>
-  );
 
   return (
     <div className="space-y-6">
       {/* Main Entries Card */}
       <Card className="border-border/60 shadow-sm rounded-[18px] overflow-hidden">
-        <CardHeader className="border-b border-border">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <CardTitle className="text-xl font-bold flex items-center">
-              <Zap className="w-6 h-6 text-primary mr-2" />
-              All Deliveries
-              <span className="ml-2 text-sm font-normal text-muted-foreground">
-                ({logs.length} total)
-              </span>
-            </CardTitle>
-            <div className="flex flex-wrap gap-2">
-              <SortButton field="date" label="Date" />
-              <SortButton field="stops" label="Stops" />
-              <SortButton field="total" label="Amount" />
-            </div>
-          </div>
+        <CardHeader className="border-b border-border py-4">
+          <CardTitle className="text-base font-semibold flex items-center justify-between">
+            <span className="flex items-center">
+              <Zap className="w-5 h-5 text-primary mr-2" />
+              Work diary
+            </span>
+            <span className="text-xs font-normal text-muted-foreground">
+              {logs.length} {logs.length === 1 ? "day" : "days"}
+            </span>
+          </CardTitle>
         </CardHeader>
 
         <CardContent className="p-4 sm:p-6">
