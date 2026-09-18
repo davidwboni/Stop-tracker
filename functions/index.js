@@ -1,13 +1,18 @@
+const crypto = require("crypto");
 const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const { defineSecret } = require("firebase-functions/params");
+const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
+const { defineSecret, defineString } = require("firebase-functions/params");
 const Anthropic = require("@anthropic-ai/sdk");
 
 admin.initializeApp();
 
-const ANTHROPIC_API_KEY = defineSecret("ANTHROPIC_API_KEY");
+const DEEPSEEK_API_KEY = defineSecret("DEEPSEEK_API_KEY");
 const GOOGLE_ROUTES_API_KEY = defineSecret("GOOGLE_ROUTES_API_KEY");
+const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
+const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
+const STRIPE_PRO_PRICE_ID = defineString("STRIPE_PRO_PRICE_ID");
+const APP_BASE_URL = defineString("APP_BASE_URL");
 
 const firestore = admin.firestore();
 
@@ -187,6 +192,194 @@ exports.optimizeRoutePro = onCall(
   }
 );
 
+
+async function stripePost(path, params = {}) {
+  const body = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      body.append(key, String(value));
+    }
+  });
+
+  const response = await fetch(`https://api.stripe.com/v1/${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${STRIPE_SECRET_KEY.value()}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body,
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    console.error("Stripe API error:", response.status, payload?.error?.type || "unknown");
+    throw new HttpsError("unavailable", "Billing is temporarily unavailable.");
+  }
+  return payload;
+}
+
+exports.createProCheckoutSession = onCall(
+  {
+    secrets: [STRIPE_SECRET_KEY],
+    cors: true,
+    invoker: "public",
+    timeoutSeconds: 30,
+  },
+  async (request) => {
+    const entitlement = await getServerEntitlement(request);
+    if (entitlement.isGuest) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Create a free account before upgrading to Pro."
+      );
+    }
+    if (entitlement.isPro) {
+      return { alreadyPro: true };
+    }
+
+    const priceId = STRIPE_PRO_PRICE_ID.value();
+    const appBaseUrl = APP_BASE_URL.value().replace(/\/$/, "");
+    if (!priceId || !/^price_/.test(priceId) || !/^https:\/\//.test(appBaseUrl)) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Billing is not configured yet."
+      );
+    }
+
+    const userRef = firestore.doc(`users/${entitlement.uid}`);
+    const userSnap = await userRef.get();
+    const userData = userSnap.exists ? userSnap.data() : {};
+    let customerId = userData?.stripeCustomerId;
+
+    if (!customerId) {
+      const customer = await stripePost("customers", {
+        email: request.auth.token?.email || userData?.email || undefined,
+        "metadata[firebaseUid]": entitlement.uid,
+      });
+      customerId = customer.id;
+      await userRef.set(
+        {
+          stripeCustomerId: customerId,
+          billingUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    }
+
+    const session = await stripePost("checkout/sessions", {
+      mode: "subscription",
+      customer: customerId,
+      "line_items[0][price]": priceId,
+      "line_items[0][quantity]": 1,
+      client_reference_id: entitlement.uid,
+      "metadata[firebaseUid]": entitlement.uid,
+      "subscription_data[metadata][firebaseUid]": entitlement.uid,
+      success_url: `${appBaseUrl}/app/profile?upgrade=success`,
+      cancel_url: `${appBaseUrl}/app/upgrade?upgrade=cancelled`,
+      allow_promotion_codes: "true",
+    });
+
+    if (!session?.url) {
+      throw new HttpsError("internal", "Could not start checkout.");
+    }
+    return { url: session.url };
+  }
+);
+
+function verifyStripeWebhook(rawBody, signatureHeader) {
+  if (!rawBody || !signatureHeader) return false;
+
+  const parts = String(signatureHeader).split(",");
+  const timestampPart = parts.find((part) => part.startsWith("t="));
+  const signatures = parts
+    .filter((part) => part.startsWith("v1="))
+    .map((part) => part.slice(3));
+  const timestamp = Number(timestampPart?.slice(2));
+  if (!timestamp || signatures.length === 0) return false;
+
+  // Stripe recommends a five-minute tolerance for replay protection.
+  if (Math.abs(Date.now() / 1000 - timestamp) > 300) return false;
+
+  const body = Buffer.isBuffer(rawBody) ? rawBody.toString("utf8") : String(rawBody);
+  const expected = crypto
+    .createHmac("sha256", STRIPE_WEBHOOK_SECRET.value())
+    .update(`${timestamp}.${body}`, "utf8")
+    .digest("hex");
+
+  return signatures.some((signature) => {
+    const a = Buffer.from(expected, "utf8");
+    const b = Buffer.from(signature, "utf8");
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  });
+}
+
+exports.stripeWebhook = onRequest(
+  {
+    secrets: [STRIPE_WEBHOOK_SECRET],
+    cors: false,
+    timeoutSeconds: 30,
+  },
+  async (request, response) => {
+    if (request.method !== "POST") {
+      response.status(405).send("Method not allowed");
+      return;
+    }
+
+    if (!verifyStripeWebhook(request.rawBody, request.headers["stripe-signature"])) {
+      response.status(400).send("Invalid signature");
+      return;
+    }
+
+    const event = request.body || {};
+    const object = event?.data?.object || {};
+
+    try {
+      if (event.type === "checkout.session.completed") {
+        const uid = object?.metadata?.firebaseUid || object?.client_reference_id;
+        if (uid) {
+          await firestore.doc(`users/${uid}`).set(
+            {
+              role: "pro",
+              stripeCustomerId: object.customer || null,
+              stripeSubscriptionId: object.subscription || null,
+              billingStatus: "active",
+              billingUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            },
+            { merge: true }
+          );
+        }
+      }
+
+      if (
+        event.type === "customer.subscription.created" ||
+        event.type === "customer.subscription.updated" ||
+        event.type === "customer.subscription.deleted"
+      ) {
+        const uid = object?.metadata?.firebaseUid;
+        if (uid) {
+          const active =
+            event.type !== "customer.subscription.deleted" &&
+            ["active", "trialing"].includes(object.status);
+          await firestore.doc(`users/${uid}`).set(
+            {
+              role: active ? "pro" : "free",
+              stripeSubscriptionId: object.id || null,
+              billingStatus: object.status || (active ? "active" : "inactive"),
+              billingUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            },
+            { merge: true }
+          );
+        }
+      }
+
+      response.status(200).json({ received: true });
+    } catch (error) {
+      console.error("Stripe webhook handler failed:", error);
+      response.status(500).send("Webhook handler failed");
+    }
+  }
+);
+
 // System prompt: describe the six pay models + the exact JSON we want back.
 // The AI ONLY transcribes/interprets into structured config — it never computes
 // daily pay. The client recomputes the worked example with tested code.
@@ -231,8 +424,8 @@ Rules:
 
 exports.interpretPayStructure = onCall(
   // invoker:"public" lets the Firebase callable protocol reach the function;
-  // auth is still enforced below via request.auth (no anonymous access).
-  { secrets: [ANTHROPIC_API_KEY], cors: true, invoker: "public", memory: "512MiB", timeoutSeconds: 120 },
+  // auth, entitlement and quota checks still happen below.
+  { secrets: [DEEPSEEK_API_KEY], cors: true, invoker: "public", memory: "512MiB", timeoutSeconds: 120 },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "You must be signed in.");
@@ -263,14 +456,16 @@ exports.interpretPayStructure = onCall(
 
     if (fileBase64) {
       const supportedMimeTypes = [
-        "application/pdf",
         "image/jpeg",
         "image/png",
         "image/webp",
         "image/gif",
       ];
       if (!supportedMimeTypes.includes(mimeType)) {
-        throw new HttpsError("invalid-argument", "Unsupported rate-sheet file type.");
+        throw new HttpsError(
+          "invalid-argument",
+          "DeepSeek currently accepts rate-sheet images only. Use a JPG, PNG, WEBP or GIF screenshot/photo."
+        );
       }
 
       // Base64 is ~4/3 the source file size. Keep callable payloads comfortably
@@ -278,37 +473,35 @@ exports.interpretPayStructure = onCall(
       if (fileBase64.length > 11 * 1024 * 1024) {
         throw new HttpsError(
           "invalid-argument",
-          "That rate sheet is too large. Use a smaller PDF or a clear screenshot."
+          "That rate sheet is too large. Use a smaller or clearer screenshot/photo."
         );
       }
     }
 
-    const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY.value() });
+    // DeepSeek exposes an Anthropic-compatible endpoint, so we keep the mature
+    // SDK transport while the credential and model are both DeepSeek.
+    const client = new Anthropic({
+      apiKey: DEEPSEEK_API_KEY.value(),
+      baseURL: "https://api.deepseek.com/anthropic",
+    });
 
     const content = [];
     if (fileBase64 && mimeType) {
-      if (mimeType === "application/pdf") {
-        content.push({
-          type: "document",
-          source: { type: "base64", media_type: "application/pdf", data: fileBase64 },
-        });
-      } else {
-        content.push({
-          type: "image",
-          source: { type: "base64", media_type: mimeType, data: fileBase64 },
-        });
-      }
+      content.push({
+        type: "image",
+        source: { type: "base64", media_type: mimeType, data: fileBase64 },
+      });
     }
     content.push({
       type: "text",
       text: text
         ? `Here is how I get paid:\n\n${text}`
-        : "Here is my pay-rate sheet. Interpret it into the JSON config.",
+        : "Here is a screenshot/photo of my pay-rate sheet. Interpret it into the JSON config.",
     });
 
-    // Tier the model to the input: a dense rate-sheet grid is vision-critical
-    // (Sonnet 5), while a plain text description is simple extraction (Haiku).
-    const model = fileBase64 ? "claude-sonnet-5" : "claude-haiku-4-5";
+    // V4.1 Flash is DeepSeek's current low-cost multimodal model. This task is
+    // structured extraction, so thinking mode is deliberately disabled below.
+    const model = "deepseek-flash";
 
     let message;
     try {
@@ -318,13 +511,12 @@ exports.interpretPayStructure = onCall(
         system: PAY_SYSTEM_PROMPT,
         messages: [{ role: "user", content }],
       };
-      // Sonnet 5 turns on adaptive thinking by default, which would consume the
-      // token budget and truncate a large rate-grid transcription mid-JSON.
-      // Disable it — this is deterministic extraction, not reasoning.
-      if (fileBase64) createParams.thinking = { type: "disabled" };
+      // DeepSeek thinking is enabled by default. Disable it for deterministic,
+      // lower-cost transcription where our own calculator verifies the result.
+      createParams.thinking = { type: "disabled" };
       message = await client.messages.create(createParams);
     } catch (err) {
-      console.error("Anthropic call failed:", err);
+      console.error("DeepSeek call failed:", err);
       throw new HttpsError("internal", "Could not interpret the pay structure. Please try again.");
     }
 
@@ -332,7 +524,7 @@ exports.interpretPayStructure = onCall(
       console.error("Output truncated (max_tokens) for model", model);
       throw new HttpsError(
         "internal",
-        "That rate sheet is very large to read in one go. Try a clearer single-page image, or type your key rates instead."
+        "That rate sheet is very large to read in one go. Try a clearer single screenshot, or type your key rates instead."
       );
     }
 
