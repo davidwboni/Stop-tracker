@@ -2,11 +2,13 @@ import React, { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Crown, Route, ScanLine, X } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 
 const PremiumFeatureGate = ({ featureName = "this feature", children }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
   const isPro = user?.role === "pro";
 
@@ -27,7 +29,7 @@ const PremiumFeatureGate = ({ featureName = "this feature", children }) => {
               </div>
               <h3 className="font-semibold">Stop Tracker Pro</h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                {featureName} is planned as a Pro feature.
+                {featureName} is available with Verso Pro.
               </p>
               <Button
                 type="button"
@@ -35,7 +37,7 @@ const PremiumFeatureGate = ({ featureName = "this feature", children }) => {
                 onClick={() => setShowModal(true)}
                 className="mt-4 w-full"
               >
-                See what Pro includes
+                See Pro options
               </Button>
             </CardContent>
           </Card>
@@ -65,7 +67,7 @@ const PremiumFeatureGate = ({ featureName = "this feature", children }) => {
                     <h2 className="text-lg font-bold">Stop Tracker Pro</h2>
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Billing is not enabled yet. We will only switch this on once checkout and server-side entitlements are fully connected.
+                    Pro keeps paid API usage protected behind server-side entitlements while the core tracking experience stays free.
                   </p>
                 </div>
                 <button
@@ -93,7 +95,7 @@ const PremiumFeatureGate = ({ featureName = "this feature", children }) => {
                   <div>
                     <div className="text-sm font-semibold">AI statement scanning</div>
                     <div className="text-xs text-muted-foreground">
-                      Upload a statement or rate sheet and let Stop Tracker extract the figures for you.
+                      Use AI-assisted image reading for supported rate sheets and premium automation.
                     </div>
                   </div>
                 </div>
@@ -103,13 +105,24 @@ const PremiumFeatureGate = ({ featureName = "this feature", children }) => {
                 Manual work tracking and manual Check Pay remain free.
               </p>
 
-              <Button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="mt-5 w-full"
-              >
-                Got it
-              </Button>
+              <div className="mt-5 grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowModal(false)}
+                >
+                  Not now
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setShowModal(false);
+                    navigate("/app/upgrade");
+                  }}
+                >
+                  Upgrade to Pro
+                </Button>
+              </div>
             </motion.div>
           </motion.div>
         )}
