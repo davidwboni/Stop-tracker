@@ -446,9 +446,9 @@ exports.interpretPayStructure = onCall(
     // Paid model calls are quota-controlled on the server. Anonymous accounts
     // receive a deliberately small allowance to stop bot-created guest accounts
     // from burning AI credits; signed-in users get more room during beta.
-    await enforceDailyQuota(
+    const entitlement = await enforceDailyQuota(
       request,
-      fileBase64 ? "pay_structure_document_ai" : "pay_structure_text_ai",
+      fileBase64 ? "pay_structure_image_ai" : "pay_structure_text_ai",
       fileBase64
         ? { guest: 1, free: 3, pro: 20 }
         : { guest: 3, free: 10, pro: 50 }
@@ -510,6 +510,10 @@ exports.interpretPayStructure = onCall(
         max_tokens: 16000,
         system: PAY_SYSTEM_PROMPT,
         messages: [{ role: "user", content }],
+        // Pseudonymous isolation only: never send an email, name or raw Firebase UID.
+        metadata: {
+          user_id: crypto.createHash("sha256").update(entitlement.uid).digest("hex"),
+        },
       };
       // DeepSeek thinking is enabled by default. Disable it for deterministic,
       // lower-cost transcription where our own calculator verifies the result.
