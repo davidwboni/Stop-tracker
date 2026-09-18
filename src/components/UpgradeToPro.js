@@ -38,7 +38,7 @@ const UpgradeToPro = () => {
     }
 
     if (isNative) {
-      setError("Mobile in-app purchasing is not enabled yet. Use the Verso web app to manage Pro for now.");
+      setError("Mobile in-app purchasing is not enabled yet. Use the Stop Tracker web app to manage Pro for now.");
       return;
     }
 
