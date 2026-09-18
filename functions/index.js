@@ -460,7 +460,7 @@ exports.stripeWebhook = onRequest(
 // System prompt: describe the six pay models + the exact JSON we want back.
 // The AI ONLY transcribes/interprets into structured config — it never computes
 // daily pay. The client recomputes the worked example with tested code.
-const PAY_SYSTEM_PROMPT = `You convert a delivery driver's description of how they are paid into a structured JSON pay configuration. The description may be in ANY language, or may be an uploaded image/PDF of a pay-rate sheet.
+const PAY_SYSTEM_PROMPT = `You convert a delivery driver's description of how they are paid into a structured JSON pay configuration. The description may be in ANY language, or may be an uploaded screenshot/photo of a pay-rate sheet.
 
 Return ONLY a JSON object (no prose, no markdown fences) with this shape:
 {
@@ -495,7 +495,7 @@ The six models (pick exactly one) and the config keys each uses:
 
 Rules:
 - Amounts are numbers in pounds (e.g. 1.7 not "£1.70"; 90p is 0.9).
-- If a rate sheet image/PDF is provided, transcribe every cell precisely — accuracy of the whole grid matters.
+- If a rate sheet image is provided, transcribe every cell precisely — accuracy of the whole grid matters.
 - If something is genuinely ambiguous, choose the most standard interpretation; the user will confirm a worked example afterwards.
 - Output valid JSON only.`;
 
@@ -665,7 +665,7 @@ exports.interpretPayStructure = onCall(
       if (!validBands || !validMatrix) {
         throw new HttpsError(
           "internal",
-          "The rate-sheet table could not be read reliably. Try a clearer screenshot or PDF."
+          "The rate-sheet table could not be read reliably. Try a clearer screenshot/photo."
         );
       }
     }
