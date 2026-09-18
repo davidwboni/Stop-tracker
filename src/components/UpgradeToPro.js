@@ -5,7 +5,7 @@ import { Capacitor } from "@capacitor/core";
 import { CheckCircle2, Crown, Loader2, MapPin, ScanLine, ShieldCheck, Sparkles } from "lucide-react";
 import { Button } from "./ui/button";
 import { useAuth } from "../contexts/AuthContext";
-import { startProCheckout } from "../services/billing";
+import { openBillingPortal, startProCheckout } from "../services/billing";
 
 const UpgradeToPro = () => {
   const { user } = useAuth();
@@ -16,6 +16,18 @@ const UpgradeToPro = () => {
   const isPro = user?.role === "pro";
   const isNative = Capacitor.isNativePlatform();
   const cancelled = searchParams.get("upgrade") === "cancelled";
+
+  const manageBilling = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      await openBillingPortal();
+    } catch (err) {
+      console.error("Billing portal failed:", err);
+      setError("Could not open subscription management. Please try again.");
+      setLoading(false);
+    }
+  };
 
   const upgrade = async () => {
     setError("");
@@ -54,7 +66,7 @@ const UpgradeToPro = () => {
       <div className="rounded-[22px] border border-primary/20 bg-primary/5 p-5 sm:p-7">
         <div className="flex items-center gap-2 text-primary">
           <Crown className="h-5 w-5" />
-          <span className="text-xs font-bold uppercase tracking-[0.16em]">Verso Pro</span>
+          <span className="text-xs font-bold uppercase tracking-[0.16em]">Stop Tracker Pro</span>
         </div>
         <h1 className="mt-3 text-3xl font-bold tracking-tight">
           {isPro ? "Your Pro plan is active" : "Unlock the tools that cost us to run"}
@@ -74,7 +86,7 @@ const UpgradeToPro = () => {
             [MapPin, "Road-aware route optimisation", "Protected Google Routes calls with real road distance and traffic-aware ordering."],
             [ScanLine, "AI rate-sheet photo reading", "DeepSeek reads screenshots or photos and turns the rates into your pay setup."],
             [Sparkles, "Higher AI allowance", "More AI setup requests while keeping normal earnings calculations instant and deterministic."],
-            [ShieldCheck, "Ad-free Verso", "No ad placements while your Pro subscription is active."],
+            [ShieldCheck, "Ad-free experience", "No ad placements while your Pro subscription is active."],
           ].map(([Icon, title, body]) => (
             <div key={title} className="flex gap-3 rounded-[14px] border border-border bg-card p-3">
               <div className="mt-0.5 rounded-[10px] bg-primary/10 p-2 text-primary">
@@ -101,9 +113,9 @@ const UpgradeToPro = () => {
         )}
 
         {isPro ? (
-          <Button className="mt-6 w-full h-12" onClick={() => navigate("/app/profile")}>
-            <CheckCircle2 className="mr-2 h-5 w-5" />
-            Pro active
+          <Button className="mt-6 w-full h-12" onClick={manageBilling} disabled={loading}>
+            {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CheckCircle2 className="mr-2 h-5 w-5" />}
+            Manage subscription
           </Button>
         ) : (
           <Button className="mt-6 w-full h-12" onClick={upgrade} disabled={loading}>
