@@ -1,18 +1,16 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    match /users/{userId}/{fileName} {
+    match /users/{userId}/profile {
       function isOwner() {
         return request.auth != null && request.auth.uid == userId;
       }
 
       allow read: if isOwner();
 
-      // Current Storage usage is profile photos only. Validate content server-side
-      // too so a modified client cannot upload arbitrary files into the bucket.
       allow create, update: if isOwner()
         && request.resource.size < 2 * 1024 * 1024
-        && request.resource.contentType.matches('image/.*');
+        && request.resource.contentType.matches('image/(jpeg|png|webp)');
 
       allow delete: if isOwner();
     }
