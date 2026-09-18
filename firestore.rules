@@ -18,13 +18,25 @@ service cloud.firestore {
       // are the only code allowed to grant Pro later.
       allow create: if signedInAs(userId)
         && request.resource.data.role ==
-          (isAnonymousAuth() ? 'guest' : 'free');
+          (isAnonymousAuth() ? 'guest' : 'free')
+        && !request.resource.data.keys().hasAny([
+          'stripeCustomerId',
+          'stripeSubscriptionId',
+          'billingStatus',
+          'billingUpdatedAt'
+        ]);
 
-      // Profile edits are allowed, but entitlement/security fields are immutable
-      // from the client. This prevents users promoting themselves to "pro".
+      // Profile edits are allowed, but entitlement and billing fields are
+      // server-owned. Billing webhooks/Admin SDK are the only writers.
       allow update: if signedInAs(userId)
-        && request.resource.data.role == resource.data.role
-        && request.resource.data.get('isGuest', false) == resource.data.get('isGuest', false);
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'role',
+          'isGuest',
+          'stripeCustomerId',
+          'stripeSubscriptionId',
+          'billingStatus',
+          'billingUpdatedAt'
+        ]);
 
       allow delete: if signedInAs(userId);
 
