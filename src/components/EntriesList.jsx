@@ -4,6 +4,7 @@ import { Button } from "./ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Trash2,
+  Pencil,
   ArrowUpDown,
   ChevronDown,
   ChevronUp,
@@ -16,6 +17,7 @@ import {
 } from "lucide-react";
 import _ from "lodash";
 import { Money } from "./ui/money";
+import { useNavigate } from "react-router-dom";
 
 const formatDate = (inputDate) => {
   const date = new Date(inputDate);
@@ -29,6 +31,7 @@ const formatDate = (inputDate) => {
 };
 
 const EntriesList = ({ logs, onDeleteEntry }) => {
+  const navigate = useNavigate();
   const [sortBy, setSortBy] = useState("date");
   const [sortOrder, setSortOrder] = useState("desc");
   const [page, setPage] = useState(1);
@@ -230,8 +233,8 @@ const EntriesList = ({ logs, onDeleteEntry }) => {
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-4 flex-shrink-0">
-                      <div className="text-right">
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="text-right mr-1">
                         <div className="text-2xl font-bold text-foreground">
                           <Money amount={log.total || 0} />
                         </div>
@@ -239,13 +242,28 @@ const EntriesList = ({ logs, onDeleteEntry }) => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => {
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          if (navigator.vibrate) navigator.vibrate(8);
+                          navigate(`/app/dashboard?date=${encodeURIComponent(log.date)}`);
+                        }}
+                        aria-label={`Edit entry for ${formatDate(log.date)}`}
+                        className="hover:bg-primary/10 hover:text-primary rounded-[14px] min-h-[44px] min-w-[44px] touch-manipulation"
+                      >
+                        <Pencil className="w-4.5 h-4.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(event) => {
+                          event.stopPropagation();
                           if (navigator.vibrate) navigator.vibrate([10, 50, 10]);
                           onDeleteEntry(log.id);
                         }}
-                        className="opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive rounded-[14px] transition-all duration-200 min-h-[44px] min-w-[44px] touch-manipulation"
+                        aria-label={`Delete entry for ${formatDate(log.date)}`}
+                        className="opacity-70 hover:opacity-100 hover:bg-destructive/10 hover:text-destructive rounded-[14px] transition-all duration-200 min-h-[44px] min-w-[44px] touch-manipulation"
                       >
-                        <Trash2 className="w-5 h-5" />
+                        <Trash2 className="w-4.5 h-4.5" />
                       </Button>
                     </div>
                   </div>
