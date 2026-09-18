@@ -117,7 +117,7 @@ const PayStructureAISetup = ({ onConfirm }) => {
         <h3 className="font-semibold text-lg">Describe how you get paid</h3>
       </div>
       <p className="text-sm text-muted-foreground">
-        In your own words, any language. e.g. "£1.70 per stop until 150, then 90p", or attach your rate sheet.
+        In your own words, any language. e.g. "£1.70 per stop until 150, then 90p", or attach a screenshot/photo of your rate sheet.
       </p>
 
       <textarea
@@ -132,18 +132,18 @@ const PayStructureAISetup = ({ onConfirm }) => {
         <input
           ref={fileRef}
           type="file"
-          accept="application/pdf,image/*"
+          accept="image/jpeg,image/png,image/webp,image/gif"
           className="hidden"
           onChange={(e) => setFile(e.target.files?.[0] || null)}
         />
         <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
           <Paperclip className="w-4 h-4 mr-2" />
-          {file ? "Change file" : "Attach PDF / photo"}
+          {file ? "Change image" : "Attach screenshot / photo"}
         </Button>
         {file && <span className="text-xs text-muted-foreground truncate max-w-[180px]">{file.name}</span>}
       </div>
       <p className="text-xs text-muted-foreground -mt-1">
-        For a rate table, a PDF or screenshot reads most accurately. Maximum file size 8 MB.
+        For a rate table, use a clear screenshot or photo (JPG, PNG, WEBP or GIF). Maximum file size 8 MB.
       </p>
 
       {error && (
