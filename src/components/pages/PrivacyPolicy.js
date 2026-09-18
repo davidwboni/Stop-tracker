@@ -37,7 +37,7 @@ const PrivacyPolicy = ({ onBack }) => {
                 <p className="text-blue-100 text-lg font-medium">Your privacy and data protection matter to us</p>
               </div>
             </div>
-            <p className="relative z-10 text-blue-200 text-sm bg-blue-800/30 px-4 py-2 rounded-xl inline-block">Last Updated: September 17, 2026</p>
+            <p className="relative z-10 text-blue-200 text-sm bg-blue-800/30 px-4 py-2 rounded-xl inline-block">Last Updated: September 18, 2026</p>
           </CardHeader>
           <CardContent className="p-6 sm:p-8 lg:p-10 bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50">
             <div className="prose dark:prose-invert max-w-none prose-headings:text-gray-900 dark:prose-headings:text-white prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-li:text-gray-700 dark:prose-li:text-gray-300">
@@ -109,6 +109,29 @@ const PrivacyPolicy = ({ onBack }) => {
             <li>Detect, prevent, and address technical issues</li>
           </ul>
           
+          <h2>AI-Assisted Features</h2>
+          <p>
+            When you choose an AI-assisted setup feature, the description or rate-sheet image you submit is sent
+            through our protected Firebase backend to DeepSeek for interpretation. The DeepSeek API key is never
+            included in the browser or app. Normal earnings, stop, mileage and pay calculations do not require AI;
+            they are calculated by Verso's deterministic calculation code.
+          </p>
+          <p>
+            We send a pseudonymous technical identifier for request isolation rather than your name or email. Do not
+            upload information that is not needed for the feature.
+          </p>
+
+          <h2>Payments and Advertising</h2>
+          <p>
+            Web Pro subscriptions are processed by Stripe. Stripe receives the information needed to complete and
+            manage the payment; Verso stores only billing identifiers and subscription status needed to determine
+            whether Pro is active.
+          </p>
+          <p>
+            The free web plan may show Google advertising when advertising is enabled. Pro is ad-free. Advertising
+            is kept out of the daily shift-save flow, and ad services are not loaded for Pro users.
+          </p>
+
           <h2>Data Storage and Security</h2>
           <p>
             Your data is stored securely on Google Firebase servers. We implement appropriate technical and
