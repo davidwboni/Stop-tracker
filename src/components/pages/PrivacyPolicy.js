@@ -114,7 +114,7 @@ const PrivacyPolicy = ({ onBack }) => {
             When you choose an AI-assisted setup feature, the description or rate-sheet image you submit is sent
             through our protected Firebase backend to DeepSeek for interpretation. The DeepSeek API key is never
             included in the browser or app. Normal earnings, stop, mileage and pay calculations do not require AI;
-            they are calculated by Verso's deterministic calculation code.
+            they are calculated by Stop Tracker's deterministic calculation code.
           </p>
           <p>
             We send a pseudonymous technical identifier for request isolation rather than your name or email. Do not
