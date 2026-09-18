@@ -130,5 +130,8 @@
     "@testing-library/user-event": "^13.5.0",
     "react-scripts": "5.0.1",
     "tailwindcss": "^3.3.3"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }
