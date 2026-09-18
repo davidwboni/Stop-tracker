@@ -392,7 +392,7 @@ function verifyStripeWebhook(rawBody, signatureHeader) {
 
 exports.stripeWebhook = onRequest(
   {
-    secrets: [STRIPE_WEBHOOK_SECRET],
+    secrets: [STRIPE_WEBHOOK_SECRET, STRIPE_SECRET_KEY],
     cors: false,
     timeoutSeconds: 30,
   },
@@ -414,12 +414,13 @@ exports.stripeWebhook = onRequest(
       if (event.type === "checkout.session.completed") {
         const uid = object?.metadata?.firebaseUid || object?.client_reference_id;
         if (uid) {
+          // Completing Checkout is not, by itself, the entitlement boundary.
+          // Subscription status below decides Pro. Store identifiers only.
           await firestore.doc(`users/${uid}`).set(
             {
-              role: "pro",
               stripeCustomerId: object.customer || null,
               stripeSubscriptionId: object.subscription || null,
-              billingStatus: "active",
+              billingStatus: "checkout_complete",
               billingUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
             },
             { merge: true }
@@ -432,21 +433,36 @@ exports.stripeWebhook = onRequest(
         event.type === "customer.subscription.updated" ||
         event.type === "customer.subscription.deleted"
       ) {
-        const uid = object?.metadata?.firebaseUid;
-        if (uid) {
-          const active =
-            event.type !== "customer.subscription.deleted" &&
-            ["active", "trialing"].includes(object.status);
-          await firestore.doc(`users/${uid}`).set(
-            {
-              role: active ? "pro" : "free",
-              stripeSubscriptionId: object.id || null,
-              billingStatus: object.status || (active ? "active" : "inactive"),
-              billingUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            },
-            { merge: true }
-          );
+        if (!object?.id) {
+          throw new Error("Subscription webhook missing subscription id.");
         }
+
+        // Stripe does not guarantee webhook delivery order. Fetch the current
+        // subscription so an older delayed event cannot re-enable a cancelled plan.
+        const currentSubscription = await stripeGet(
+          `subscriptions/${encodeURIComponent(object.id)}`
+        );
+        const uid =
+          currentSubscription?.metadata?.firebaseUid ||
+          object?.metadata?.firebaseUid;
+
+        if (!uid) {
+          throw new Error("Subscription webhook missing Firebase user metadata.");
+        }
+
+        const status = currentSubscription?.status || object?.status || "inactive";
+        const active = ["active", "trialing"].includes(status);
+
+        await firestore.doc(`users/${uid}`).set(
+          {
+            role: active ? "pro" : "free",
+            stripeCustomerId: currentSubscription?.customer || object?.customer || null,
+            stripeSubscriptionId: currentSubscription?.id || object.id,
+            billingStatus: status,
+            billingUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
       }
 
       response.status(200).json({ received: true });
