@@ -16,7 +16,7 @@ import {
   Save,
   Award,
   Crown,
-  Route,
+  MapPin,
   ScanLine,
   LogOut,
   AlertCircle,
@@ -387,7 +387,7 @@ const Profile = ({ userId, user, onLogout }) => {
           </div>
           <div className="space-y-2 text-xs text-muted-foreground">
             <div className="flex items-center gap-2">
-              <Route className="w-4 h-4 text-primary" />
+              <MapPin className="w-4 h-4 text-primary" />
               Route optimisation
             </div>
             <div className="flex items-center gap-2">
