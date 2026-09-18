@@ -11,6 +11,7 @@ import { Calendar, Package, TrendingUp, FileText, ArrowRight, DollarSign, CheckC
 import { Money } from "./ui/money";
 import { AnimatedMoney } from "./ui/animated-money";
 import { PAY_MODELS } from "../features/payperiod/payStructure";
+import AdBanner from "./AdBanner";
 
 const toLocalDateString = (date = new Date()) => {
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
@@ -332,6 +333,8 @@ const SimpleDashboard = () => {
         </motion.div>
       )}
 
+      {/* Free-plan ads stay below the useful content and never interrupt saving a shift. */}
+      <AdBanner />
 
     </div>
   );
