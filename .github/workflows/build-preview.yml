@@ -26,9 +26,12 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Build app
-        run: npm run build
-        env:
-          CI: false
+        shell: bash
+        run: |
+          rm -rf build
+          npm run build
+          test -f build/index.html
+          test -d build/static/js
 
       - name: Publish preview build branch
         shell: bash
@@ -38,6 +41,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout --orphan preview-build
           git rm -rf .
+          git clean -fdx
           cp -R /tmp/stop-tracker-build/. .
           touch .nojekyll
           git add -A
