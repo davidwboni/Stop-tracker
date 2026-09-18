@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Home, FileText, CircleCheckBig, User } from "lucide-react";
+import { Home, FileText, CheckCircle2, User } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const AppNavigation = () => {
@@ -40,7 +40,7 @@ const AppNavigation = () => {
   const navItems = [
     { path: '/app/dashboard', icon: Home, label: 'Home' },
     { path: '/app/entries', icon: FileText, label: 'Entries' },
-    { path: '/app/invoice', search: '?tab=verify', icon: CircleCheckBig, label: 'Check Pay' },
+    { path: '/app/invoice', search: '?tab=verify', icon: CheckCircle2, label: 'Check Pay' },
     { path: '/app/profile', icon: User, label: 'Profile' },
   ];
   
