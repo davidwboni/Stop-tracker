@@ -132,21 +132,21 @@ const SimpleDashboard = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.06 }}
       >
+        <div className="flex items-center gap-3 mb-2 px-1">
+          <div className="rounded-[12px] bg-primary/10 p-2 text-primary">
+            <Package className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-lg">
+              {todayAlreadyLogged ? "Update today's work" : "Log today's work"}
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Enter your shift and Verso calculates the expected pay instantly.
+            </p>
+          </div>
+        </div>
         <Card className="bg-card border-primary/20 overflow-hidden">
-          <CardContent className="p-5 sm:p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="rounded-[12px] bg-primary/10 p-2 text-primary">
-                <Package className="w-5 h-5" />
-              </div>
-              <div>
-                <h2 className="font-semibold text-lg">
-                  {todayAlreadyLogged ? "Update today's work" : "Log today's work"}
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  Enter your shift and Verso calculates the expected pay instantly.
-                </p>
-              </div>
-            </div>
+          <CardContent className="p-6">
             <StopEntryForm logs={logs} updateLogs={updateLogs} />
           </CardContent>
         </Card>
