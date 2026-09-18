@@ -18,9 +18,7 @@ import AnalyticsConsent from './AnalyticsConsent';
 const TAB_ORDER = [
   '/app/dashboard',
   '/app/entries',
-  '/app/routes',
   '/app/invoice',
-  '/app/stats',
   '/app/profile',
 ];
 
