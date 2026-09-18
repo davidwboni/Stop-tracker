@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import RoutePlanner from './RoutePlanner';
 import TabCoach from './TabCoach';
+import PremiumFeatureGate from './PremiumFeatureGate';
 
 const RoutePlannerWrapper = () => {
   const { user, loading } = useAuth();
@@ -28,7 +29,9 @@ const RoutePlannerWrapper = () => {
         title="Plan your round"
         body="Add your stops by address or postcode and we'll map them in order. Handy for working out the quickest way round your route."
       />
-      <RoutePlanner />
+      <PremiumFeatureGate featureName="Route planning and road-aware optimisation">
+        <RoutePlanner />
+      </PremiumFeatureGate>
     </>
   );
 };
