@@ -142,7 +142,7 @@ const SimpleDashboard = () => {
               {todayAlreadyLogged ? "Update today's work" : "Log today's work"}
             </h2>
             <p className="text-xs text-muted-foreground">
-              Enter your shift and Verso calculates the expected pay instantly.
+              Enter your shift and Stop Tracker calculates the expected pay instantly.
             </p>
           </div>
         </div>
