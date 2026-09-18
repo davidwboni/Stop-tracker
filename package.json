@@ -92,7 +92,8 @@
       "resolve-url-loader": {
         "postcss": "^8.4.31"
       }
-    }
+    },
+    "websocket-driver": "^0.7.5"
   },
   "devDependencies": {
     "@babel/core": "^7.22.9",
