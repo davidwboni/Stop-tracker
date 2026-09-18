@@ -7,7 +7,7 @@ import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import StopEntryForm from "./StopEntryForm";
 import DashboardTutorial from "./DashboardTutorial";
-import { Calendar, Package, TrendingUp, FileText, ArrowRight, DollarSign, CircleCheckBig } from "lucide-react";
+import { Calendar, Package, TrendingUp, FileText, ArrowRight, DollarSign, CircleCheckBig, MapPin } from "lucide-react";
 import { Money } from "./ui/money";
 import { PAY_MODELS } from "../features/payperiod/payStructure";
 
@@ -284,7 +284,7 @@ const SimpleDashboard = () => {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="grid grid-cols-3 gap-3 pt-2"
+        className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2"
       >
         <Button
           onClick={() => navigate('/app/stats')}
@@ -293,6 +293,14 @@ const SimpleDashboard = () => {
         >
           <TrendingUp className="w-6 h-6 text-secondary" />
           <span className="font-medium text-xs">Stats</span>
+        </Button>
+        <Button
+          onClick={() => navigate('/app/routes')}
+          variant="outline"
+          className="flex-col h-auto py-4 gap-2 rounded-[14px] active:scale-95 touch-manipulation"
+        >
+          <MapPin className="w-6 h-6 text-primary" />
+          <span className="font-medium text-xs">Routes</span>
         </Button>
         <Button
           onClick={() => navigate('/app/invoice?tab=verify')}
