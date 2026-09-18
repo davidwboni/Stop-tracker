@@ -52,7 +52,8 @@
     "postinstall": "npm run security-patch && npm dedupe && node package-audit-fix.js",
     "dedupe": "npm dedupe",
     "force-patch": "node force-patch.js",
-    "audit-fix": "node package-audit-fix.js"
+    "audit-fix": "node package-audit-fix.js",
+    "security:runtime": "npm audit --omit=dev --audit-level=high"
   },
   "eslintConfig": {
     "extends": [
