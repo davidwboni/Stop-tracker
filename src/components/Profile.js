@@ -15,6 +15,9 @@ import {
   Camera,
   Save,
   Award,
+  Crown,
+  Route,
+  ScanLine,
   LogOut,
   AlertCircle,
   Loader2,
@@ -24,9 +27,6 @@ import {
   DollarSign,
   ChevronRight,
   Trash2,
-  Trophy,
-  Flame,
-  Star,
   BarChart3,
 } from "lucide-react";
 
@@ -176,12 +176,6 @@ const Profile = ({ userId, user, onLogout }) => {
 
   const isPro = userData?.role === "pro";
   const initial = (userData?.displayName || "U").charAt(0).toUpperCase();
-  const achievements = [
-    { name: "Delivery Expert", icon: <Trophy className="w-5 h-5" /> },
-    { name: "Perfect Week", icon: <Flame className="w-5 h-5" /> },
-    { name: "Top Performer", icon: <Star className="w-5 h-5" /> },
-  ];
-
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -381,18 +375,31 @@ const Profile = ({ userId, user, onLogout }) => {
         </div>
       </div>
 
-      {/* Achievements, de-emphasised */}
-      <div className="opacity-60">
+      {/* Monetisation preview - no fake checkout until billing is connected. */}
+      <div>
         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-          Achievements
+          Stop Tracker Pro
         </div>
-        <div className="grid grid-cols-3 gap-2">
-          {achievements.map((a) => (
-            <div key={a.name} className="border border-border rounded-[12px] p-3 flex flex-col items-center gap-1.5">
-              <span className="text-muted-foreground">{a.icon}</span>
-              <span className="text-[10px] text-muted-foreground text-center leading-tight">{a.name}</span>
+        <div className="rounded-[14px] border border-primary/20 bg-primary/5 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Crown className="w-5 h-5 text-primary" />
+            <span className="font-semibold text-sm">{isPro ? "Pro plan active" : "Premium features"}</span>
+          </div>
+          <div className="space-y-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Route className="w-4 h-4 text-primary" />
+              Route optimisation
             </div>
-          ))}
+            <div className="flex items-center gap-2">
+              <ScanLine className="w-4 h-4 text-primary" />
+              AI statement scanning
+            </div>
+          </div>
+          {!isPro && (
+            <p className="mt-3 text-[11px] text-muted-foreground">
+              Manual work tracking and Check Pay stay free. Billing will be enabled before Pro launches.
+            </p>
+          )}
         </div>
       </div>
 
