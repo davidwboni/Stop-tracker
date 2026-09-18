@@ -69,6 +69,13 @@ The GitHub security workflow runs:
 - Functions runtime dependency audit
 - full dependency audit as an informational report
 
+### Dependency hardening completed in this beta
+
+- `websocket-driver` is pinned to patched version 0.7.5 to address the 2026 critical WebSocket advisory.
+- `jsPDF` is updated to the patched 4.2.1 line.
+- `lodash` is updated to the patched 4.18.1 line.
+- Remaining moderate dependency advisories are tracked separately and must not be mistaken for a clean bill of health; React Router's current advisory requires a deliberate v7 migration rather than a forced breaking update.
+
 ## Before production Pro launch
 
 Still required:
