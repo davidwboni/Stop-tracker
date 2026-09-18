@@ -286,6 +286,38 @@ exports.createProCheckoutSession = onCall(
   }
 );
 
+exports.createBillingPortalSession = onCall(
+  {
+    secrets: [STRIPE_SECRET_KEY],
+    cors: true,
+    invoker: "public",
+    timeoutSeconds: 30,
+  },
+  async (request) => {
+    const entitlement = await getServerEntitlement(request);
+    if (entitlement.isGuest) {
+      throw new HttpsError("failed-precondition", "Sign in to manage billing.");
+    }
+
+    const appBaseUrl = APP_BASE_URL.value().replace(/\/$/, "");
+    const userSnap = await firestore.doc(`users/${entitlement.uid}`).get();
+    const customerId = userSnap.exists ? userSnap.data()?.stripeCustomerId : null;
+    if (!customerId || !/^https:\/\//.test(appBaseUrl)) {
+      throw new HttpsError("failed-precondition", "Billing is not configured for this account.");
+    }
+
+    const session = await stripePost("billing_portal/sessions", {
+      customer: customerId,
+      return_url: `${appBaseUrl}/app/profile`,
+    });
+
+    if (!session?.url) {
+      throw new HttpsError("internal", "Could not open billing management.");
+    }
+    return { url: session.url };
+  }
+);
+
 function verifyStripeWebhook(rawBody, signatureHeader) {
   if (!rawBody || !signatureHeader) return false;
 
