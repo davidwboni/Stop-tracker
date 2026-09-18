@@ -8,9 +8,6 @@ import {
   ArrowUpDown,
   ChevronDown,
   ChevronUp,
-  BarChart2,
-  TrendingUp,
-  DollarSign,
   Zap,
   Package,
   MapPin
@@ -60,24 +57,6 @@ const EntriesList = ({ logs, onDeleteEntry }) => {
     page * itemsPerPage
   );
 
-  const calculateSummary = (days) => {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
-    return logs
-      .filter((log) => new Date(log.date) >= cutoffDate)
-      .reduce(
-        (acc, log) => ({
-          stops: acc.stops + log.stops,
-          total: acc.total + (log.total || 0),
-        }),
-        { stops: 0, total: 0 }
-      );
-  };
-
-  const last7Days = calculateSummary(7);
-  const last4Weeks = calculateSummary(28);
-  const lastMonth = calculateSummary(30);
-
   const SortButton = ({ field, label, icon: Icon }) => (
     <Button
       variant="ghost"
@@ -101,78 +80,8 @@ const EntriesList = ({ logs, onDeleteEntry }) => {
 
   return (
     <div className="space-y-6">
-      {/* Stats Summary */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Last 7 Days */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          whileHover={{ scale: 1.02 }}
-          transition={{ duration: 0.2 }}
-        >
-          <Card className="border-border/50 touch-manipulation">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <TrendingUp className="w-8 h-8 text-primary" />
-                <span className="text-xs font-medium bg-muted text-muted-foreground px-2 py-1 rounded-full">7 Days</span>
-              </div>
-              <div className="text-3xl font-bold mb-1 tabular-nums">{last7Days.stops}</div>
-              <div className="text-muted-foreground text-sm mb-3">Stops Delivered</div>
-              <div className="flex items-baseline">
-                <span className="text-2xl font-bold text-primary"><Money amount={last7Days.total} /></span>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Last 4 Weeks */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.1 }}
-          whileHover={{ scale: 1.02 }}
-        >
-          <Card className="border-border/50 touch-manipulation">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <Package className="w-8 h-8 text-primary" />
-                <span className="text-xs font-medium bg-muted text-muted-foreground px-2 py-1 rounded-full">28 Days</span>
-              </div>
-              <div className="text-3xl font-bold mb-1 tabular-nums">{last4Weeks.stops}</div>
-              <div className="text-muted-foreground text-sm mb-3">Stops Delivered</div>
-              <div className="flex items-baseline">
-                <span className="text-2xl font-bold text-primary"><Money amount={last4Weeks.total} /></span>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Last Month */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
-          whileHover={{ scale: 1.02 }}
-          className="sm:col-span-2 lg:col-span-1"
-        >
-          <Card className="border-border/50 touch-manipulation h-full">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <DollarSign className="w-8 h-8 text-primary" />
-                <span className="text-xs font-medium bg-muted text-muted-foreground px-2 py-1 rounded-full">30 Days</span>
-              </div>
-              <div className="text-3xl font-bold mb-1 tabular-nums">{lastMonth.stops}</div>
-              <div className="text-muted-foreground text-sm mb-3">Stops Delivered</div>
-              <div className="flex items-baseline">
-                <span className="text-2xl font-bold text-primary"><Money amount={lastMonth.total} /></span>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-
       {/* Main Entries Card */}
-      <Card className="border-border/50 shadow-sm rounded-[18px] overflow-hidden">
+      <Card className="border-border/60 shadow-sm rounded-[18px] overflow-hidden">
         <CardHeader className="border-b border-border">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <CardTitle className="text-xl font-bold flex items-center">
@@ -203,7 +112,7 @@ const EntriesList = ({ logs, onDeleteEntry }) => {
                   whileHover={{ scale: 1.01 }}
                   className="group"
                 >
-                  <div className="flex justify-between items-center p-4 sm:p-5 rounded-[14px] bg-card hover:bg-primary/5 border border-border/50 hover:border-primary/30 transition-all duration-300 shadow-sm hover:shadow-md touch-manipulation">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 p-4 sm:p-5 rounded-[14px] bg-card hover:bg-primary/5 border border-border/50 hover:border-primary/30 transition-all duration-300 shadow-sm hover:shadow-md touch-manipulation">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-2">
                         <div className="font-bold text-foreground text-lg">
@@ -233,7 +142,7 @@ const EntriesList = ({ logs, onDeleteEntry }) => {
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto flex-shrink-0">
                       <div className="text-right mr-1">
                         <div className="text-2xl font-bold text-foreground">
                           <Money amount={log.total || 0} />
