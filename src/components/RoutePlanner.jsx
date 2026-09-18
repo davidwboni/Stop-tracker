@@ -5,12 +5,8 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Alert, AlertDescription } from "./ui/alert";
 import RouteMap from "./RouteMap";
-import GoogleRouteMap from "./GoogleRouteMap";
 import AddressMiniMap from "./AddressMiniMap";
 
-// One Maps key drives Places, Routes and the map tiles. Without it we fall back
-// to the free Leaflet/OpenStreetMap map so the planner still works.
-const HAS_GOOGLE_MAPS = Boolean(process.env.REACT_APP_GOOGLE_MAPS_API_KEY);
 import {
   MapPin,
   Navigation,
@@ -41,8 +37,6 @@ import {
   resolvePostcode,
   searchAddresses
 } from "../services/addressSearch";
-import { resolvePlace } from "../services/googlePlaces";
-import { optimizeRouteGoogle, isGoogleRoutesConfigured } from "../services/googleRoutes";
 import { useAddressMemory } from "../contexts/AddressMemoryContext";
 
 const RoutePlanner = () => {
@@ -60,6 +54,24 @@ const RoutePlanner = () => {
   const activeSearchControllerRef = useRef(null);
   const { frequentAddresses, recordAddressUse } = useAddressMemory();
   const [expandedAddressId, setExpandedAddressId] = useState(null);
+
+  const hasValidCoordinates = (address) =>
+    address &&
+    Number.isFinite(Number(address.latitude)) &&
+    Number.isFinite(Number(address.longitude)) &&
+    Number(address.latitude) >= -90 &&
+    Number(address.latitude) <= 90 &&
+    Number(address.longitude) >= -180 &&
+    Number(address.longitude) <= 180;
+
+  const appendAddress = (address) => {
+    if (!hasValidCoordinates(address)) {
+      showError("That stop has no valid map location. Try another result.");
+      return false;
+    }
+    setAddresses((current) => [...current, address]);
+    return true;
+  };
 
   // Load saved routes on mount
   useEffect(() => {
@@ -181,7 +193,7 @@ const RoutePlanner = () => {
         id: Date.now()
       };
 
-      setAddresses([currentLocationAddress, ...addresses]);
+      setAddresses((current) => [currentLocationAddress, ...current]);
       showSuccess('Current location added!');
     } catch (error) {
       console.error('Geolocation error:', error);
@@ -204,32 +216,6 @@ const RoutePlanner = () => {
   }, [currentAddress]);
 
   const addAddress = async (address) => {
-    // Google Places predictions arrive without coordinates (one billed Details
-    // call is spent here, on commit, rather than on every keystroke).
-    if (address.needsResolve && address.placeId) {
-      try {
-        const resolved = await resolvePlace(address.placeId, new AbortController().signal);
-        const newAddress = {
-          address: resolved.address || address.address,
-          postcode: resolved.postcode,
-          latitude: resolved.latitude,
-          longitude: resolved.longitude,
-          type: 'place',
-          id: Date.now()
-        };
-        setAddresses([...addresses, newAddress]);
-        recordAddressUse(newAddress).catch(() => {});
-      } catch (error) {
-        if (error.name === 'AbortError') return;
-        console.error('Place resolve error:', error);
-        showError('Unable to look up that address. Please try again.');
-        return;
-      }
-      setCurrentAddress("");
-      setAddressSuggestions([]);
-      return;
-    }
-
     if (address.isPostcodeSuggestion) {
       try {
         const resolved = await resolvePostcode(address.postcode, new AbortController().signal);
@@ -241,8 +227,9 @@ const RoutePlanner = () => {
           type: 'postcode',
           id: Date.now()
         };
-        setAddresses([...addresses, newAddress]);
-        recordAddressUse(newAddress).catch(() => {});
+        if (appendAddress(newAddress)) {
+          recordAddressUse(newAddress).catch(() => {});
+        }
       } catch (error) {
         if (error.name === 'AbortError') {
           return;
@@ -253,8 +240,9 @@ const RoutePlanner = () => {
       }
     } else {
       const newAddress = { ...address, id: Date.now() };
-      setAddresses([...addresses, newAddress]);
-      recordAddressUse(newAddress).catch(() => {});
+      if (appendAddress(newAddress)) {
+        recordAddressUse(newAddress).catch(() => {});
+      }
     }
 
     setCurrentAddress("");
@@ -417,42 +405,26 @@ const RoutePlanner = () => {
     setAddresses(optimized);
   };
 
-  // Route optimization entry point, tries Google's Routes API first
-  // (real road distances/times + true waypoint optimization) and falls
-  // back to the local straight-line nearest-neighbor algorithm if no API
-  // key is configured or the request fails for any reason.
+  // Beta route optimization is intentionally local/free. Paid road-network
+  // optimization will be restored behind a server-side Pro entitlement check.
   const optimizeRoute = async () => {
-    if (addresses.length < 2) {
-      showError("Please add at least 2 addresses to optimize");
+    const validAddresses = addresses.filter(hasValidCoordinates);
+    if (validAddresses.length < 2) {
+      showError("Please add at least 2 valid stops to optimize");
+      return;
+    }
+
+    if (validAddresses.length !== addresses.length) {
+      setAddresses(validAddresses);
+      showError("Some stops without valid map coordinates were removed.");
       return;
     }
 
     setIsOptimizing(true);
-
-    if (isGoogleRoutesConfigured()) {
-      try {
-        const result = await optimizeRouteGoogle(addresses);
-        if (result) {
-          setOptimizedRoute({
-            route: result.route,
-            totalDistance: (result.totalDistanceKm * 0.621371).toFixed(2), // km -> miles to match existing units
-            estimatedTime: result.totalDurationMin,
-            source: 'google'
-          });
-          setAddresses(result.route);
-          setIsOptimizing(false);
-          return;
-        }
-      } catch (err) {
-        console.error('Google route optimization failed, falling back to local algorithm:', err);
-      }
-    }
-
-    // Fallback path, small delay retained so the loading state doesn't flash
-    setTimeout(() => {
+    window.setTimeout(() => {
       optimizeRouteLocally();
       setIsOptimizing(false);
-    }, 400);
+    }, 250);
   };
 
   // Haversine formula
@@ -585,11 +557,7 @@ const RoutePlanner = () => {
             </CardHeader>
             <CardContent className="p-4">
               <div className="h-64 sm:h-80 lg:h-[600px]">
-                {HAS_GOOGLE_MAPS ? (
-                  <GoogleRouteMap addresses={addresses} />
-                ) : (
-                  <RouteMap addresses={addresses} />
-                )}
+                <RouteMap addresses={addresses.filter(hasValidCoordinates)} />
               </div>
 
               {/* Navigation Buttons */}
