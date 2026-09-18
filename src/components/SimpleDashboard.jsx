@@ -7,7 +7,7 @@ import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import StopEntryForm from "./StopEntryForm";
 import DashboardTutorial from "./DashboardTutorial";
-import { Calendar, Package, TrendingUp, FileText, ArrowRight, DollarSign, CircleCheckBig, MapPin } from "lucide-react";
+import { Calendar, Package, TrendingUp, FileText, ArrowRight, DollarSign, CheckCircle2, MapPin } from "lucide-react";
 import { Money } from "./ui/money";
 import { AnimatedMoney } from "./ui/animated-money";
 import { PAY_MODELS } from "../features/payperiod/payStructure";
@@ -162,7 +162,7 @@ const SimpleDashboard = () => {
                 transition={{ delay: 0.22, type: "spring", stiffness: 300, damping: 18 }}
                 className={`rounded-full p-3 ${todayAlreadyLogged ? "bg-emerald-500/10 text-emerald-500" : "bg-primary/10 text-primary"}`}
               >
-                {todayAlreadyLogged ? <CircleCheckBig className="w-6 h-6" /> : <DollarSign className="w-6 h-6" />}
+                {todayAlreadyLogged ? <CheckCircle2 className="w-6 h-6" /> : <DollarSign className="w-6 h-6" />}
               </motion.div>
             </div>
             <div className="mt-5 flex items-center justify-between border-t border-primary/15 pt-3 text-sm">
