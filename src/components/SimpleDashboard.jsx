@@ -12,6 +12,11 @@ import { Money } from "./ui/money";
 import { AnimatedMoney } from "./ui/animated-money";
 import { PAY_MODELS } from "../features/payperiod/payStructure";
 
+const toLocalDateString = (date = new Date()) => {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+};
+
 const SimpleDashboard = () => {
   const { user } = useAuth();
   const { logs, updateLogs, loading, paymentConfig } = useData();
@@ -20,13 +25,13 @@ const SimpleDashboard = () => {
 
   // Check if today is already logged
   const todayAlreadyLogged = React.useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateString();
     return logs?.some(log => log.date === today) || false;
   }, [logs]);
 
   // Today's earnings
   const todayData = React.useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateString();
     const todayLog = logs?.find(log => log.date === today);
     return todayLog ? { stops: todayLog.stops, earnings: todayLog.total || 0 } : { stops: 0, earnings: 0 };
   }, [logs]);
@@ -37,7 +42,7 @@ const SimpleDashboard = () => {
     const today = new Date();
     const weekStart = new Date(today);
     weekStart.setDate(today.getDate() - today.getDay());
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = toLocalDateString(today);
 
     const thisWeekLogs = safetyLogs.filter(log => {
       const logDate = new Date(log.date);
@@ -60,7 +65,7 @@ const SimpleDashboard = () => {
   // Most recent activity ordered by actual date (newest first), excluding any
   // future-dated entries that would otherwise surface here by mistake.
   const recentActivity = React.useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateString();
     return [...(logs || [])]
       .filter(log => log.date <= today)
       .sort((a, b) => (a.date < b.date ? 1 : -1))
@@ -224,9 +229,12 @@ const SimpleDashboard = () => {
               <div className="p-2 rounded-lg bg-primary/10">
                 <Package className="w-5 h-5 text-primary" />
               </div>
-              <h2 className="font-semibold text-lg">
-                {todayAlreadyLogged ? "Update Today's Entry" : "Log Today's Deliveries"}
-              </h2>
+              <div>
+                <h2 className="font-semibold text-lg">Log or update work</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Today is selected by default — choose another date if you missed a day.
+                </p>
+              </div>
             </div>
             <StopEntryForm logs={logs} updateLogs={updateLogs} />
           </CardContent>
@@ -251,11 +259,13 @@ const SimpleDashboard = () => {
           </div>
           <div className="space-y-2">
             {recentActivity.map((log) => (
-              <motion.div
+              <motion.button
+                type="button"
                 key={log.id}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="bg-card rounded-[14px] p-4 border border-border/50 hover:border-primary/30 transition-colors"
+                onClick={() => navigate(`/app/dashboard?date=${encodeURIComponent(log.date)}`)}
+                className="w-full text-left bg-card rounded-[14px] p-4 border border-border/50 hover:border-primary/30 transition-colors pressable"
               >
                 <div className="flex items-center justify-between">
                   <div>
@@ -274,7 +284,7 @@ const SimpleDashboard = () => {
                     <Money amount={log.total || 0} />
                   </div>
                 </div>
-              </motion.div>
+              </motion.button>
             ))}
           </div>
         </motion.div>
