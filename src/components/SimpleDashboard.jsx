@@ -1,5 +1,5 @@
 import React from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useData } from "../contexts/DataContext";
@@ -7,7 +7,7 @@ import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import StopEntryForm from "./StopEntryForm";
 import DashboardTutorial from "./DashboardTutorial";
-import { Calendar, Package, TrendingUp, FileText, ArrowRight, DollarSign, CheckCircle2, MapPin, ChevronDown, Crown } from "lucide-react";
+import { Calendar, Package, TrendingUp, FileText, ArrowRight, DollarSign, CheckCircle2, MapPin, Crown } from "lucide-react";
 import { Money } from "./ui/money";
 import { AnimatedMoney } from "./ui/animated-money";
 import { PAY_MODELS } from "../features/payperiod/payStructure";
@@ -22,7 +22,6 @@ const SimpleDashboard = () => {
   const { logs, updateLogs, loading, paymentConfig } = useData();
   const navigate = useNavigate();
   const payMeta = PAY_MODELS.find((m) => m.id === paymentConfig?.model) || PAY_MODELS[0];
-  const [showManualEntry, setShowManualEntry] = React.useState(false);
 
   // Check if today is already logged
   const todayAlreadyLogged = React.useMemo(() => {
@@ -127,21 +126,39 @@ const SimpleDashboard = () => {
         </p>
       </motion.div>
 
-      {/* Today's earnings is the primary answer the dashboard should give. */}
+      {/* Logging today's work is the dashboard's primary job. */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.06 }}
+      >
+        <Card className="bg-card border-primary/20 overflow-hidden">
+          <CardContent className="p-5 sm:p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="rounded-[12px] bg-primary/10 p-2 text-primary">
+                <Package className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="font-semibold text-lg">
+                  {todayAlreadyLogged ? "Update today's work" : "Log today's work"}
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Enter your shift and Verso calculates the expected pay instantly.
+                </p>
+              </div>
+            </div>
+            <StopEntryForm logs={logs} updateLogs={updateLogs} />
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Today's earnings becomes a clear result, not another navigation step. */}
       <motion.div
         initial={{ opacity: 0, y: 12, scale: 0.985 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ delay: 0.08, type: "spring", stiffness: 260, damping: 24 }}
+        transition={{ delay: 0.1, type: "spring", stiffness: 260, damping: 24 }}
       >
-        <Card
-          onClick={() => {
-            if (todayAlreadyLogged) navigate('/app/entries');
-            else setShowManualEntry(true);
-          }}
-          role="button"
-          tabIndex={0}
-          className="brand-surface brand-glow overflow-hidden cursor-pointer pressable"
-        >
+        <Card className="brand-surface brand-glow overflow-hidden">
           <CardContent className="p-5 sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -157,23 +174,24 @@ const SimpleDashboard = () => {
                 <div className="mt-2 text-sm text-muted-foreground">
                   {todayAlreadyLogged
                     ? `${todayData.stops} ${payMeta?.primary?.unit || "units"} logged today`
-                    : "Nothing logged yet today"}
+                    : "Save today's work above to see your total"}
                 </div>
               </div>
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.22, type: "spring", stiffness: 300, damping: 18 }}
-                className={`rounded-full p-3 ${todayAlreadyLogged ? "bg-emerald-500/10 text-emerald-500" : "bg-primary/10 text-primary"}`}
-              >
+              <div className={`rounded-full p-3 ${todayAlreadyLogged ? "bg-emerald-500/10 text-emerald-500" : "bg-primary/10 text-primary"}`}>
                 {todayAlreadyLogged ? <CheckCircle2 className="w-6 h-6" /> : <DollarSign className="w-6 h-6" />}
-              </motion.div>
+              </div>
             </div>
-            <div className="mt-5 flex items-center justify-between border-t border-primary/15 pt-3 text-sm">
-              <span className="font-medium">
-                {todayAlreadyLogged ? "View today's record" : "Log your shift"}
+            <div className="mt-5 flex items-center justify-between border-t border-primary/15 pt-3">
+              <span className="text-xs text-muted-foreground">
+                {todayAlreadyLogged ? "Today's work is saved" : "Nothing logged yet today"}
               </span>
-              <ArrowRight className="w-4 h-4 text-primary" />
+              <button
+                type="button"
+                onClick={() => navigate("/app/entries")}
+                className="inline-flex items-center gap-1 text-sm font-medium text-primary"
+              >
+                Entries <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
           </CardContent>
         </Card>
@@ -264,53 +282,6 @@ const SimpleDashboard = () => {
           </Card>
         </motion.div>
       )}
-
-      {/* Manual entry stays out of the way until the driver needs it. */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
-        <button
-          type="button"
-          onClick={() => setShowManualEntry((open) => !open)}
-          className="w-full flex items-center justify-between rounded-[16px] border border-border bg-card px-4 py-4 text-left pressable"
-          aria-expanded={showManualEntry}
-        >
-          <span className="flex items-center gap-3">
-            <span className="rounded-[12px] bg-primary/10 p-2 text-primary">
-              <Package className="w-5 h-5" />
-            </span>
-            <span>
-              <span className="block font-semibold">Log your shift</span>
-              <span className="block text-xs text-muted-foreground mt-0.5">
-                Today, yesterday, or another missed day
-              </span>
-            </span>
-          </span>
-          <motion.span animate={{ rotate: showManualEntry ? 180 : 0 }}>
-            <ChevronDown className="w-5 h-5 text-primary" />
-          </motion.span>
-        </button>
-
-        <AnimatePresence initial={false}>
-          {showManualEntry && (
-            <motion.div
-              initial={{ opacity: 0, height: 0, y: -6 }}
-              animate={{ opacity: 1, height: "auto", y: 0 }}
-              exit={{ opacity: 0, height: 0, y: -6 }}
-              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-              className="overflow-hidden"
-            >
-              <Card className="mt-2 bg-card border-border/60 overflow-hidden">
-                <CardContent className="p-6">
-                  <StopEntryForm logs={logs} updateLogs={updateLogs} />
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
 
       {/* Recent Activity */}
       {recentActivity.length > 0 && (
