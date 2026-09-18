@@ -8,6 +8,80 @@ admin.initializeApp();
 
 const ANTHROPIC_API_KEY = defineSecret("ANTHROPIC_API_KEY");
 
+const firestore = admin.firestore();
+
+async function getServerEntitlement(request) {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "You must be signed in.");
+  }
+
+  const uid = request.auth.uid;
+  const provider = request.auth.token?.firebase?.sign_in_provider;
+  const snap = await firestore.doc(`users/${uid}`).get();
+  const storedRole = snap.exists ? snap.data()?.role : null;
+  const role = storedRole || (provider === "anonymous" ? "guest" : "free");
+
+  return {
+    uid,
+    role,
+    isPro: role === "pro",
+    isGuest: role === "guest" || provider === "anonymous",
+  };
+}
+
+async function enforceDailyQuota(request, feature, limits) {
+  const entitlement = await getServerEntitlement(request);
+  const limit = entitlement.isPro
+    ? limits.pro
+    : entitlement.isGuest
+      ? limits.guest
+      : limits.free;
+
+  const day = new Date().toISOString().slice(0, 10);
+  const usageRef = firestore.doc(
+    `internalUsage/${entitlement.uid}/daily/${day}_${feature}`
+  );
+
+  await firestore.runTransaction(async (tx) => {
+    const usageSnap = await tx.get(usageRef);
+    const count = usageSnap.exists ? Number(usageSnap.data()?.count || 0) : 0;
+
+    if (count >= limit) {
+      throw new HttpsError(
+        "resource-exhausted",
+        "Daily AI usage limit reached. Please try again tomorrow."
+      );
+    }
+
+    tx.set(
+      usageRef,
+      {
+        count: count + 1,
+        feature,
+        day,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  });
+
+  return entitlement;
+}
+
+exports.getEntitlements = onCall({ cors: true, invoker: "public" }, async (request) => {
+  const entitlement = await getServerEntitlement(request);
+  return {
+    plan: entitlement.isPro ? "pro" : "free",
+    isGuest: entitlement.isGuest,
+    features: {
+      manualTracking: true,
+      manualCheckPay: true,
+      routeOptimization: entitlement.isPro,
+      aiStatementScan: entitlement.isPro,
+    },
+  };
+});
+
 // System prompt: describe the six pay models + the exact JSON we want back.
 // The AI ONLY transcribes/interprets into structured config — it never computes
 // daily pay. The client recomputes the worked example with tested code.
@@ -63,6 +137,24 @@ exports.interpretPayStructure = onCall(
     if (!text && !fileBase64) {
       throw new HttpsError("invalid-argument", "Provide a description or a file.");
     }
+
+    if (typeof text === "string" && text.length > 12000) {
+      throw new HttpsError(
+        "invalid-argument",
+        "That description is too long. Please shorten it and try again."
+      );
+    }
+
+    // Paid model calls are quota-controlled on the server. Anonymous accounts
+    // receive a deliberately small allowance to stop bot-created guest accounts
+    // from burning AI credits; signed-in users get more room during beta.
+    await enforceDailyQuota(
+      request,
+      fileBase64 ? "pay_structure_document_ai" : "pay_structure_text_ai",
+      fileBase64
+        ? { guest: 1, free: 3, pro: 20 }
+        : { guest: 3, free: 10, pro: 50 }
+    );
 
     if (fileBase64) {
       const supportedMimeTypes = [
