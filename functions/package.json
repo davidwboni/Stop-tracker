@@ -13,10 +13,9 @@
   },
   "main": "index.js",
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.68.0",
-    "@headlessui/react": "^2.2.0",
-    "firebase-admin": "^11.0.1",
-    "firebase-functions": "^4.9.0"
+    "@anthropic-ai/sdk": "^0.126.0",
+    "firebase-admin": "^14.4.0",
+    "firebase-functions": "^7.4.0"
   },
   "private": true
 }
