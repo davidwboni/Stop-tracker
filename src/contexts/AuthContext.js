@@ -42,8 +42,8 @@ export function AuthProvider({ children }) {
               email: firebaseUser.email,
               displayName: firebaseUser.displayName || userData.displayName || "User",
               photoURL: firebaseUser.photoURL || userData.photoURL,
-              role: userData.role || "free",
-              isGuest: userData.isGuest || false,
+              role: firebaseUser.isAnonymous ? "guest" : (userData.role || "free"),
+              isGuest: firebaseUser.isAnonymous || userData.isGuest || false,
               createdAt: userData.createdAt,
             });
 
@@ -57,7 +57,8 @@ export function AuthProvider({ children }) {
               email: firebaseUser.email,
               displayName: firebaseUser.displayName || "User",
               photoURL: firebaseUser.photoURL || null,
-              role: "free",
+              role: firebaseUser.isAnonymous ? "guest" : "free",
+              isGuest: firebaseUser.isAnonymous,
               createdAt: serverTimestamp(),
               lastLogin: serverTimestamp()
             };
