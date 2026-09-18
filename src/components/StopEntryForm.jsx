@@ -9,7 +9,6 @@ import {
   DollarSign,
   FileText,
   CloudOff,
-  Cloud,
   Loader,
   CheckCircle,
   Undo
@@ -547,12 +546,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
           </div>
         );
       case "synced":
-        return (
-          <div className="flex items-center text-green-500 text-sm">
-            <Cloud className="w-3 h-3 mr-1" />
-            <span>All changes saved</span>
-          </div>
-        );
+        return null;
       case "offline":
         return (
           <div className="flex items-center text-amber-500 text-sm">
@@ -568,12 +562,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
           </div>
         );
       default:
-        return (
-          <div className="flex items-center text-green-500 text-sm">
-            <Cloud className="w-3 h-3 mr-1" />
-            <span>Ready</span>
-          </div>
-        );
+        return null;
     }
   };
 
@@ -722,13 +711,9 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                       className="h-12 rounded-[14px] focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm touch-manipulation"
                     />
                     {existingForDate && (
-                      <motion.p
-                        initial={{ opacity: 0, y: -3 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="mt-2 text-[11px] font-medium text-amber-600 dark:text-amber-400"
-                      >
-                        Existing entry loaded — saving will update this day.
-                      </motion.p>
+                      <p className="mt-2 text-[11px] text-muted-foreground">
+                        Editing saved entry
+                      </p>
                     )}
                   </div>
                   <div>
