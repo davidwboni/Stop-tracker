@@ -6,7 +6,7 @@ This document records the security boundary for the beta and future Pro launch.
 
 - Firestore user data is isolated by authenticated `uid`.
 - Firebase Storage profile uploads are restricted to `users/{uid}/...`, images only, under 2 MB.
-- Anthropic credentials are Firebase secrets and never shipped to the browser.
+- DeepSeek credentials are Firebase secrets and never shipped to the browser.
 - AI interpretation has authenticated server-side daily quotas, with deliberately small guest limits.
 - Anonymous Firebase sessions are treated as `guest` on the server even if an old profile document says `free`.
 - Pro entitlements are read from Firestore by server functions; paid server actions do not trust a client-side button or role flag.
@@ -28,7 +28,15 @@ Then deploy Functions and rules:
 firebase deploy --only functions,firestore:rules,storage
 ```
 
-The existing `ANTHROPIC_API_KEY` secret must remain configured.
+Set the AI and billing secrets/config before turning those features on:
+
+```
+firebase functions:secrets:set DEEPSEEK_API_KEY
+firebase functions:secrets:set STRIPE_SECRET_KEY
+firebase functions:secrets:set STRIPE_WEBHOOK_SECRET
+```
+
+Set `STRIPE_PRO_PRICE_ID` and `APP_BASE_URL` as Firebase Functions parameters during deployment. Configure the Stripe webhook endpoint to send checkout/session and customer/subscription events to `stripeWebhook`.
 
 ## Google Cloud key restrictions
 
@@ -54,14 +62,14 @@ Do not turn on `enforceAppCheck: true` until the production clients are register
 
 Do not let the client write its own `role: "pro"` value.
 
-When billing is connected, the trusted billing webhook / Google Play verification backend should update the user's server-side entitlement. Client UI may display the resulting plan, but server Functions must remain authoritative for paid API access.
+Web Stripe checkout now grants/revokes Pro only through the signed `stripeWebhook`. Client UI may display the resulting plan, but server Functions remain authoritative for paid API access. Native store billing still needs a separate verified Google Play / App Store implementation before native purchases are enabled.
 
 ## Ads / consent
 
 If ads are introduced on the free plan:
 
 - Keep ads out of shift save/update and discrepancy-result interactions.
-- Use a consent-management flow appropriate to the user's region before personalized advertising or non-essential tracking.
+- Keep `REACT_APP_ENABLE_ADS` disabled until a Google-certified CMP is configured for UK/EEA traffic and the AdSense slot is ready.
 - Keep the Pro plan ad-free.
 - Update Privacy Policy / store disclosures before release.
 
