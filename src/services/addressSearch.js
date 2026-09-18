@@ -1,5 +1,3 @@
-import { isGooglePlacesEnabled, googleAutocomplete } from './googlePlaces';
-
 // UK postcode, full or partial, with or without a space:
 // outward code (1-2 letters, 1 digit, optional letter/digit) optionally
 // followed by inward code (1 digit + up to 2 letters).
@@ -88,19 +86,8 @@ export async function searchAddresses(query, biasCenter, signal) {
     return [];
   }
 
-  // Prefer Google Places when a key is configured, far better UK address
-  // coverage than Nominatim. Falls through to Nominatim if it's not set up or
-  // the call fails, so the planner keeps working with no key at all.
-  if (isGooglePlacesEnabled()) {
-    try {
-      const google = await googleAutocomplete(query, biasCenter, signal);
-      if (google.length > 0) return google;
-    } catch (err) {
-      if (err.name === 'AbortError') throw err;
-      console.warn('Google Places failed, falling back to Nominatim:', err);
-    }
-  }
-
+  // Beta/free path deliberately uses no paid browser API. Pro routing will
+  // later call paid providers through a protected server function.
   let url = `https://nominatim.openstreetmap.org/search?` +
     `q=${encodeURIComponent(query)}&` +
     `countrycodes=gb&` +
