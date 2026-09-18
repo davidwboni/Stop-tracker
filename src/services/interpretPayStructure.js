@@ -23,14 +23,12 @@ export async function interpretPayStructure({ text, file }) {
   const payload = {};
 
   if (file) {
-    const supported =
-      file.type === "application/pdf" ||
-      ["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type);
+    const supported = ["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type);
     if (!supported) {
-      throw new Error("Use a PDF, JPG, PNG, WEBP or GIF rate sheet.");
+      throw new Error("Use a JPG, PNG, WEBP or GIF screenshot/photo. PDF upload is not supported by DeepSeek vision yet.");
     }
     if (file.size > 8 * 1024 * 1024) {
-      throw new Error("That file is over 8 MB. Use a smaller PDF or a clear screenshot instead.");
+      throw new Error("That image is over 8 MB. Use a smaller or clearer screenshot instead.");
     }
   }
   if (text && text.trim()) payload.text = text.trim();
