@@ -218,6 +218,22 @@ async function stripePost(path, params = {}) {
   return payload;
 }
 
+async function stripeGet(path) {
+  const response = await fetch(`https://api.stripe.com/v1/${path}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${STRIPE_SECRET_KEY.value()}`,
+    },
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    console.error("Stripe API read error:", response.status, payload?.error?.type || "unknown");
+    throw new HttpsError("unavailable", "Billing is temporarily unavailable.");
+  }
+  return payload;
+}
+
 exports.createProCheckoutSession = onCall(
   {
     secrets: [STRIPE_SECRET_KEY],
@@ -237,6 +253,12 @@ exports.createProCheckoutSession = onCall(
       return { alreadyPro: true };
     }
 
+    await enforceDailyQuota(request, "billing_checkout", {
+      guest: 0,
+      free: 5,
+      pro: 5,
+    });
+
     const priceId = STRIPE_PRO_PRICE_ID.value();
     const appBaseUrl = APP_BASE_URL.value().replace(/\/$/, "");
     if (!priceId || !/^price_/.test(priceId) || !/^https:\/\//.test(appBaseUrl)) {
@@ -250,6 +272,18 @@ exports.createProCheckoutSession = onCall(
     const userSnap = await userRef.get();
     const userData = userSnap.exists ? userSnap.data() : {};
     let customerId = userData?.stripeCustomerId;
+
+    // Do not trust a legacy Firestore billing ID blindly. Verify Stripe metadata
+    // ties the customer to this Firebase user before using it.
+    if (customerId) {
+      const storedCustomer = await stripeGet(`customers/${encodeURIComponent(customerId)}`);
+      if (
+        storedCustomer?.deleted ||
+        storedCustomer?.metadata?.firebaseUid !== entitlement.uid
+      ) {
+        customerId = null;
+      }
+    }
 
     if (!customerId) {
       const customer = await stripePost("customers", {
@@ -299,11 +333,22 @@ exports.createBillingPortalSession = onCall(
       throw new HttpsError("failed-precondition", "Sign in to manage billing.");
     }
 
+    await enforceDailyQuota(request, "billing_portal", {
+      guest: 0,
+      free: 10,
+      pro: 20,
+    });
+
     const appBaseUrl = APP_BASE_URL.value().replace(/\/$/, "");
     const userSnap = await firestore.doc(`users/${entitlement.uid}`).get();
     const customerId = userSnap.exists ? userSnap.data()?.stripeCustomerId : null;
     if (!customerId || !/^https:\/\//.test(appBaseUrl)) {
       throw new HttpsError("failed-precondition", "Billing is not configured for this account.");
+    }
+
+    const customer = await stripeGet(`customers/${encodeURIComponent(customerId)}`);
+    if (customer?.deleted || customer?.metadata?.firebaseUid !== entitlement.uid) {
+      throw new HttpsError("permission-denied", "Billing account ownership could not be verified.");
     }
 
     const session = await stripePost("billing_portal/sessions", {
@@ -475,15 +520,22 @@ exports.interpretPayStructure = onCall(
       );
     }
 
-    // Paid model calls are quota-controlled on the server. Anonymous accounts
-    // receive a deliberately small allowance to stop bot-created guest accounts
-    // from burning AI credits; signed-in users get more room during beta.
+    // Anonymous Firebase accounts are trivial for bots to create, so AI is
+    // reserved for signed-in accounts. Free users still get a bounded allowance.
+    const initialEntitlement = await getServerEntitlement(request);
+    if (initialEntitlement.isGuest) {
+      throw new HttpsError(
+        "permission-denied",
+        "Sign in with a free account to use AI setup."
+      );
+    }
+
     const entitlement = await enforceDailyQuota(
       request,
       fileBase64 ? "pay_structure_image_ai" : "pay_structure_text_ai",
       fileBase64
-        ? { guest: 1, free: 3, pro: 20 }
-        : { guest: 3, free: 10, pro: 50 }
+        ? { guest: 0, free: 3, pro: 20 }
+        : { guest: 0, free: 10, pro: 50 }
     );
 
     if (fileBase64) {
