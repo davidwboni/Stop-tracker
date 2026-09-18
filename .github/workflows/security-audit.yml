@@ -1,0 +1,66 @@
+name: Security Audit
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - feat/product-analytics-motion
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  dependency-audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install app dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Audit app dependencies
+        run: npm audit --audit-level=high
+
+      - name: Install Functions dependencies
+        working-directory: functions
+        run: npm install --no-audit --no-fund
+
+      - name: Audit Functions dependencies
+        working-directory: functions
+        run: npm audit --audit-level=high
+
+      - name: Basic committed-secret scan
+        shell: bash
+        run: |
+          set -e
+          if git grep -nE '(sk-ant-[A-Za-z0-9_-]+|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|client_secret[[:space:]]*[:=][[:space:]]*["'\'''][^"'\'']+["'\''])' -- . ':!package-lock.json' ':!functions/package-lock.json'; then
+            echo "Potential committed secret detected."
+            exit 1
+          fi
+          echo "No obvious committed private secrets found."
+
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v3
