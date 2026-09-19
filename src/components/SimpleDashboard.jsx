@@ -76,7 +76,7 @@ const SimpleDashboard = () => {
       <section>
         <div className="mb-2 flex items-end justify-between">
           <div><p className="text-xs font-bold tracking-[0.18em] text-[#69758d]">CURRENT PAY PERIOD</p><p className="mt-1 text-xs text-[#8e9ab2]">{startLabel} — {endLabel}</p></div>
-          <button onClick={() => navigate("/app/entries")} className="flex items-center gap-1 text-xs font-semibold text-[#8f83ff]">View ledger <ArrowRight className="h-3.5 w-3.5"/></button>
+          <button onClick={() => navigate("/app/periods")} className="flex items-center gap-1 text-xs font-semibold text-[#8f83ff]">View periods <ArrowRight className="h-3.5 w-3.5"/></button>
         </div>
         <Card className="border-[#202a3d] bg-[#111827]">
           <CardContent className="p-5">
