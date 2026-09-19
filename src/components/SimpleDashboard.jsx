@@ -103,7 +103,7 @@ const SimpleDashboard = () => {
           {[
             ["Routes",MapPin,"/app/routes",true],
             ["Invoice",FileText,"/app/invoice",false],
-            ["Check Pay",ShieldCheck,"/app/invoice",false],
+            ["Check Pay",ShieldCheck,"/app/check-pay",false],
             ["Insights",BarChart3,"/app/stats",false],
           ].map(([label,Icon,path,pro]) => <button key={label} onClick={() => navigate(path)} className="relative min-h-[88px] rounded-2xl border border-[#202a3d] bg-[#111827] px-2 py-3 active:scale-95">
             {pro && <span className="absolute right-1.5 top-1.5 rounded-full bg-[#7567ff] px-1.5 py-0.5 text-[8px] font-bold">PRO</span>}
