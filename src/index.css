@@ -36,30 +36,30 @@
 
   .dark {
     /* Dark mode color theme */
-    --background: #111113;
+    --background: #080C14;
     --foreground: #FFFFFF;
 
-    --card: #1C1C1F;
+    --card: #111827;
     --card-foreground: #FFFFFF;
 
-    --primary: #2DD4BF;
-    --primary-foreground: #0A0A0A;
+    --primary: #7567FF;
+    --primary-foreground: #FFFFFF;
 
-    --secondary: #22D3EE;
-    --secondary-foreground: #0A0A0A;
+    --secondary: #8B5CF6;
+    --secondary-foreground: #FFFFFF;
 
-    --muted: #2A2A2E;
-    --muted-foreground: #9CA3AF;
+    --muted: #172033;
+    --muted-foreground: #8E9AB2;
 
-    --accent: #2DD4BF;
-    --accent-foreground: #0A0A0A;
+    --accent: #7567FF;
+    --accent-foreground: #FFFFFF;
 
     --destructive: #FF453A;
     --destructive-foreground: #FFFFFF;
 
-    --border: #2A2A2E;
-    --input: #2A2A2E;
-    --ring: #2DD4BF;
+    --border: #202A3D;
+    --input: #202A3D;
+    --ring: #7567FF;
   }
 }
 

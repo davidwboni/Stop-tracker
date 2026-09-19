@@ -7,7 +7,7 @@ import { describePayStructure } from "../features/payperiod/payStructure";
 
 // Completion beat shown after the user confirms their pay setup: a spring-in
 // check-mark, then a staggered welcome + pay summary + "Start tracking".
-const WelcomeStep = ({ firstName, config, onStart }) => {
+const WelcomeStep = ({ firstName, config, payPeriodAnchor, setPayPeriodAnchor, onStart }) => {
   const rise = {
     hidden: { opacity: 0, y: 12 },
     show: (i) => ({ opacity: 1, y: 0, transition: { delay: 0.5 + i * 0.18, duration: 0.4 } }),
@@ -59,9 +59,11 @@ const WelcomeStep = ({ firstName, config, onStart }) => {
         <span className="text-sm font-medium text-primary">{describePayStructure(config)}</span>
       </motion.div>
 
+      <motion.div variants={rise} custom={3} initial="hidden" animate="show" className="w-full rounded-[16px] border border-[#302a5b] bg-[#111827] p-4 text-left"><label className="text-xs font-bold uppercase tracking-wider text-[#8f83ff]">Current 4-week period started</label><input type="date" value={payPeriodAnchor} onChange={(e)=>setPayPeriodAnchor(e.target.value)} className="mt-2 h-11 w-full rounded-xl border border-[#26314a] bg-[#090f1a] px-3 text-white"/><p className="mt-2 text-xs text-muted-foreground">Use the first day of your current invoice/pay cycle. Stop Tracker will keep future 28-day periods aligned automatically.</p></motion.div>
+
       <motion.button
         variants={rise}
-        custom={3}
+        custom={4}
         initial="hidden"
         animate="show"
         onClick={onStart}
@@ -81,11 +83,12 @@ const PayOnboarding = ({ onComplete }) => {
   const { user } = useAuth();
   const firstName = user?.displayName?.split(" ")[0] || "there";
   const [confirmed, setConfirmed] = useState(null); // the config once confirmed
+  const [payPeriodAnchor, setPayPeriodAnchor] = useState(() => new Date().toISOString().split("T")[0]);
 
   return (
-    <div className="min-h-[100dvh] bg-gradient-to-br from-gray-50 via-blue-50/20 to-teal-50/30 dark:from-gray-900 dark:via-blue-900/10 dark:to-teal-900/20 flex flex-col items-center justify-center px-4 py-10 pt-safe">
+    <div className="min-h-[100dvh] bg-[#080c14] text-[#f5f7fb] flex flex-col items-center justify-center px-4 py-10 pt-safe">
       {confirmed ? (
-        <WelcomeStep firstName={firstName} config={confirmed} onStart={() => onComplete(confirmed)} />
+        <WelcomeStep firstName={firstName} config={confirmed} payPeriodAnchor={payPeriodAnchor} setPayPeriodAnchor={setPayPeriodAnchor} onStart={() => onComplete(confirmed,{ payPeriodAnchor })} />
       ) : (
         <motion.div
           initial={{ opacity: 0, y: 16 }}

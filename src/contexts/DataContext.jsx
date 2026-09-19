@@ -14,7 +14,11 @@ const DataContext = createContext({
   paymentConfig: null,
   needsOnboarding: false,
   completeOnboarding: () => Promise.resolve(),
-  forceSync: () => Promise.resolve(false)
+  forceSync: () => Promise.resolve(false),
+  payPeriodAnchor: null,
+  updatePayPeriodAnchor: () => Promise.resolve(),
+  periodRecords: {},
+  updatePeriodRecord: () => Promise.resolve()
 });
 
 export const useData = () => useContext(DataContext);
@@ -27,6 +31,8 @@ export const DataProvider = ({ children }) => {
   const [isNewUser, setIsNewUser] = useState(false);
   const [paymentConfig, setPaymentConfig] = useState(normalizePayStructure(null));
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [payPeriodAnchor, setPayPeriodAnchor] = useState(null);
+  const [periodRecords, setPeriodRecords] = useState({});
 
   // Initial data load - with error handling and retry mechanism
   useEffect(() => {
@@ -45,6 +51,8 @@ export const DataProvider = ({ children }) => {
           try {
             const guestLogs = localStorage.getItem(`guestLogs_${user.uid}`);
             const guestConfig = localStorage.getItem(`guestConfig_${user.uid}`);
+            const guestAnchor = localStorage.getItem(`payPeriodAnchor_${user.uid}`);
+            const guestPeriods = localStorage.getItem(`periodRecords_${user.uid}`);
             
             // Create demo data if it doesn't exist
             const demoLogs = guestLogs ? JSON.parse(guestLogs) : [
@@ -84,6 +92,8 @@ export const DataProvider = ({ children }) => {
               localStorage.setItem(`guestLogs_${user.uid}`, JSON.stringify(demoLogs));
             }
             setPaymentConfig(normalizePayStructure(guestConfig ? JSON.parse(guestConfig) : null));
+            setPayPeriodAnchor(guestAnchor || new Date().toISOString().split('T')[0]);
+            setPeriodRecords(guestPeriods ? JSON.parse(guestPeriods) : {});
             setIsNewUser(true); // Guest users are always "new" for demo purposes
             // First-run pay setup for guests too, survives reload via localStorage.
             setNeedsOnboarding(!localStorage.getItem(`onboarded_${user.uid}`) && !guestConfig);
@@ -133,6 +143,8 @@ export const DataProvider = ({ children }) => {
           if (mainData.paymentConfig) {
             setPaymentConfig(normalizePayStructure(mainData.paymentConfig));
           }
+          setPayPeriodAnchor(mainData.payPeriodAnchor || new Date().toISOString().split('T')[0]);
+          setPeriodRecords(mainData.periodRecords || {});
 
           // First-run: prompt pay setup only for a genuinely new user who has no
           // logs, no saved pay config, and hasn't already completed onboarding.
@@ -193,22 +205,46 @@ export const DataProvider = ({ children }) => {
 
   // Complete first-run onboarding: optionally save the chosen pay config, mark
   // the account onboarded, and clear the gate. Guests persist locally.
-  const completeOnboarding = async (config) => {
+  const completeOnboarding = async (config, options = {}) => {
     if (config) setPaymentConfig(normalizePayStructure(config));
+    if (options.payPeriodAnchor) setPayPeriodAnchor(options.payPeriodAnchor);
     setNeedsOnboarding(false);
     if (!user?.uid) return;
     try {
       if (user.isGuest) {
         if (config) localStorage.setItem(`guestConfig_${user.uid}`, JSON.stringify(config));
+        if (options.payPeriodAnchor) localStorage.setItem(`payPeriodAnchor_${user.uid}`, options.payPeriodAnchor);
         localStorage.setItem(`onboarded_${user.uid}`, '1');
       } else {
         const payload = { onboarded: true, updatedAt: new Date().toISOString() };
         if (config) payload.paymentConfig = config;
+        if (options.payPeriodAnchor) payload.payPeriodAnchor = options.payPeriodAnchor;
         await setDoc(doc(db, 'users', user.uid), payload, { merge: true });
       }
     } catch (err) {
       console.warn("Could not persist onboarding:", err);
     }
+  };
+
+  const updatePayPeriodAnchor = async (date) => {
+    if (!date) return;
+    setPayPeriodAnchor(date);
+    if (!user?.uid) return;
+    try {
+      if (user.isGuest) localStorage.setItem(`payPeriodAnchor_${user.uid}`, date);
+      else await setDoc(doc(db, 'users', user.uid), { payPeriodAnchor: date, updatedAt: new Date().toISOString() }, { merge: true });
+    } catch (err) { console.warn('Could not save pay-period start:', err); }
+  };
+
+  const updatePeriodRecord = async (periodId, patch) => {
+    if (!periodId) return;
+    const next = { ...periodRecords, [periodId]: { ...(periodRecords[periodId] || {}), ...patch, updatedAt: new Date().toISOString() } };
+    setPeriodRecords(next);
+    if (!user?.uid) return;
+    try {
+      if (user.isGuest) localStorage.setItem(`periodRecords_${user.uid}`, JSON.stringify(next));
+      else await setDoc(doc(db, 'users', user.uid), { periodRecords: next, updatedAt: new Date().toISOString() }, { merge: true });
+    } catch (err) { console.warn('Could not save period record:', err); }
   };
 
   // Force sync all data
@@ -257,7 +293,11 @@ export const DataProvider = ({ children }) => {
     paymentConfig,
     needsOnboarding,
     completeOnboarding,
-    forceSync
+    forceSync,
+    payPeriodAnchor,
+    updatePayPeriodAnchor,
+    periodRecords,
+    updatePeriodRecord
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

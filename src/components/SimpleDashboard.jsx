@@ -1,305 +1,121 @@
-import React, { useState } from "react";
+import React, { useMemo } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useData } from "../contexts/DataContext";
 import { Card, CardContent } from "./ui/card";
-import { Button } from "./ui/button";
 import StopEntryForm from "./StopEntryForm";
-import DashboardTutorial from "./DashboardTutorial";
-import { Calendar, Package, TrendingUp, FileText, ArrowRight, DollarSign } from "lucide-react";
 import { Money } from "./ui/money";
+import { ArrowRight, BarChart3, FileText, MapPin, ShieldCheck, UserCircle } from "lucide-react";
+import { getPeriodForDate, summarizePeriod } from "../features/payperiod/periods";
+
+const dateKey = (d) => d.toISOString().split("T")[0];
+const startOfCurrentPeriod = () => {
+  const d = new Date();
+  d.setHours(0,0,0,0);
+  d.setDate(d.getDate() - 27);
+  return d;
+};
 
 const SimpleDashboard = () => {
   const { user } = useAuth();
-  const { logs, updateLogs, loading, paymentConfig } = useData();
+  const { logs = [], updateLogs, loading, payPeriodAnchor } = useData();
   const navigate = useNavigate();
+  const today = dateKey(new Date());
 
-  // Check if today is already logged
-  const todayAlreadyLogged = React.useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
-    return logs?.some(log => log.date === today) || false;
-  }, [logs]);
+  const todayLog = useMemo(() => logs.find((l) => l.date === today), [logs, today]);
+  const periodDef = useMemo(() => getPeriodForDate(payPeriodAnchor || today, new Date()), [payPeriodAnchor, today]);
+  const period = useMemo(() => summarizePeriod(logs, periodDef), [logs, periodDef]);
 
-  // Today's earnings
-  const todayData = React.useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
-    const todayLog = logs?.find(log => log.date === today);
-    return todayLog ? { stops: todayLog.stops, earnings: todayLog.total || 0 } : { stops: 0, earnings: 0 };
-  }, [logs]);
+  const recent = useMemo(() => [...logs].filter(l => l.date <= today).sort((a,b) => b.date.localeCompare(a.date)).slice(0,3), [logs, today]);
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const startLabel = new Date(period.start+"T12:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short"});
+  const endLabel = new Date(period.end+"T12:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short"});
 
-  // Simple stats for this week
-  const weekStats = React.useMemo(() => {
-    const safetyLogs = logs || [];
-    const today = new Date();
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - today.getDay());
-    const todayStr = today.toISOString().split('T')[0];
-
-    const thisWeekLogs = safetyLogs.filter(log => {
-      const logDate = new Date(log.date);
-      // Cap at today so mistakenly future-dated entries can't inflate the totals
-      return logDate >= weekStart && log.date <= todayStr;
-    });
-
-    const weeklyStops = thisWeekLogs.reduce((sum, log) => sum + log.stops, 0);
-    const weeklyEarnings = thisWeekLogs.reduce((sum, log) => sum + (log.total || 0), 0);
-    const avgPerDay = thisWeekLogs.length > 0 ? (weeklyEarnings / thisWeekLogs.length) : 0;
-
-    return {
-      stops: weeklyStops,
-      earnings: weeklyEarnings,
-      days: thisWeekLogs.length,
-      avgPerDay
-    };
-  }, [logs]);
-
-  // Most recent activity ordered by actual date (newest first), excluding any
-  // future-dated entries that would otherwise surface here by mistake.
-  const recentActivity = React.useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
-    return [...(logs || [])]
-      .filter(log => log.date <= today)
-      .sort((a, b) => (a.date < b.date ? 1 : -1))
-      .slice(0, 3);
-  }, [logs]);
-
-  const currentHour = new Date().getHours();
-  let greeting = "Good evening";
-  if (currentHour < 12) greeting = "Good morning";
-  else if (currentHour < 18) greeting = "Good afternoon";
-
-  // Rotating sub-messages, deterministic by day of month so the message
-  // changes day to day but stays stable across re-renders within a day.
-  const doneMessages = [
-    "Great job today! You're all set.",
-    "Another day in the books. Nice work!",
-    "All logged. Enjoy the rest of your day!",
-    "Solid shift, everything's tracked.",
-    "Done and dusted. See you tomorrow!",
-    "That's a wrap for today. Well earned!"
-  ];
-  const promptMessages = [
-    "Log today's deliveries to get started.",
-    "Ready when you are. Add today's stops.",
-    "How did today go? Log your deliveries.",
-    "Let's get today's stops on the board.",
-    "Track today's round to keep your streak.",
-    "A minute now saves guesswork on payday."
-  ];
-  const dayIndex = new Date().getDate();
-  const subMessage = todayAlreadyLogged
-    ? doneMessages[dayIndex % doneMessages.length]
-    : promptMessages[dayIndex % promptMessages.length];
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+  if (loading) return <div className="flex min-h-[60vh] items-center justify-center"><div className="h-10 w-10 animate-spin rounded-full border-2 border-[#7567ff] border-t-transparent"/></div>;
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-4 pb-24 space-y-4">
-      <DashboardTutorial />
-
-      {/* Greeting Header */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="pt-2"
-      >
-        <h1 className="text-4xl font-bold mb-2">
-          {greeting}, {user?.displayName?.split(' ')[0] || "Driver"}!
-        </h1>
-        <p className="text-muted-foreground">
-          {subMessage}
-        </p>
-      </motion.div>
-
-      {/* Today's Quick Summary */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
-        <div className="grid grid-cols-2 gap-3">
-          <Card
-            onClick={() => navigate('/app/entries')}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/app/entries'); }}
-            aria-label="View your recent entries"
-            className="bg-card border-border/50 overflow-hidden min-w-0 cursor-pointer hover:border-primary/30 active:scale-[0.98] transition-all touch-manipulation"
-          >
-            <CardContent className="p-4">
-              <div className="text-sm text-muted-foreground mb-1">Today's Stops</div>
-              <div className="text-2xl sm:text-3xl font-bold">{todayData.stops}</div>
-              <div className="text-xs text-muted-foreground mt-1">stops</div>
-            </CardContent>
-          </Card>
-          <Card
-            onClick={() => navigate('/app/stats')}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/app/stats'); }}
-            aria-label="View your earnings stats"
-            className="bg-card border-border/50 overflow-hidden min-w-0 cursor-pointer hover:border-primary/30 active:scale-[0.98] transition-all touch-manipulation"
-          >
-            <CardContent className="p-4">
-              <div className="text-sm text-muted-foreground mb-1">Today's Earnings</div>
-              <div className="text-2xl sm:text-3xl font-bold text-primary"><Money amount={todayData.earnings} /></div>
-              <div className="text-xs text-muted-foreground mt-1">earned</div>
-            </CardContent>
-          </Card>
+    <div className="mx-auto max-w-2xl space-y-5 pb-24">
+      <header className="flex items-start justify-between pt-2">
+        <div>
+          <p className="mb-1 text-sm text-[#8e9ab2]">{greeting}</p>
+          <h1 className="text-3xl font-bold tracking-tight">{user?.displayName?.split(" ")[0] || "Driver"}</h1>
         </div>
-      </motion.div>
+        <button onClick={() => navigate("/app/profile")} aria-label="Open profile" className="rounded-2xl border border-[#202a3d] bg-[#111827] p-3 text-[#9aa6bd] active:scale-95">
+          <UserCircle className="h-6 w-6"/>
+        </button>
+      </header>
 
-      {/* Weekly Summary */}
-      {logs && logs.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-        >
-          <Card
-            onClick={() => navigate('/app/stats')}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/app/stats'); }}
-            aria-label="View your weekly stats"
-            className="bg-primary/5 border-primary/20 cursor-pointer hover:border-primary/40 active:scale-[0.99] transition-all touch-manipulation"
-          >
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-semibold text-lg">This Week</h2>
-                <div className="flex items-center gap-1 text-primary opacity-60">
-                  <Calendar className="w-5 h-5" />
-                  <ArrowRight className="w-4 h-4" />
-                </div>
+      <section>
+        <p className="mb-2 text-xs font-bold tracking-[0.18em] text-[#69758d]">TODAY</p>
+        {todayLog ? (
+          <Card className="border-[#2a3450] bg-gradient-to-br from-[#151c2c] to-[#101624]">
+            <CardContent className="p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400">LOGGED ✓</span>
+                <button onClick={() => navigate("/app/entries")} className="text-xs font-semibold text-[#8f83ff]">Edit entry</button>
               </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="min-w-0">
-                  <div className="text-xl sm:text-2xl font-bold">{weekStats.stops}</div>
-                  <div className="text-xs text-muted-foreground mt-1">Total Stops</div>
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xl sm:text-2xl font-bold text-primary"><Money amount={weekStats.earnings} whole /></div>
-                  <div className="text-xs text-muted-foreground mt-1">Earned</div>
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xl sm:text-2xl font-bold"><Money amount={weekStats.avgPerDay} whole /></div>
-                  <div className="text-xs text-muted-foreground mt-1">Per Day</div>
-                </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><div className="text-3xl font-bold">{todayLog.stops || 0}</div><div className="mt-1 text-xs text-[#8e9ab2]">stops</div></div>
+                <div><div className="text-3xl font-bold text-[#8f83ff]"><Money amount={todayLog.total || 0}/></div><div className="mt-1 text-xs text-[#8e9ab2]">expected</div></div>
               </div>
             </CardContent>
           </Card>
-        </motion.div>
-      )}
+        ) : (
+          <Card className="overflow-hidden border-[#302a5b] bg-gradient-to-br from-[#18152d] via-[#12182a] to-[#101624]">
+            <CardContent className="p-5">
+              <h2 className="text-xl font-bold">Log today's work</h2>
+              <p className="mb-5 mt-1 text-sm text-[#929db2]">A few seconds now means no guesswork on payday.</p>
+              <StopEntryForm logs={logs} updateLogs={updateLogs}/>
+            </CardContent>
+          </Card>
+        )}
+      </section>
 
-      {/* Main Entry Form */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
-        <Card className="bg-card border-border/50 overflow-hidden">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Package className="w-5 h-5 text-primary" />
-              </div>
-              <h2 className="font-semibold text-lg">
-                {todayAlreadyLogged ? "Update Today's Entry" : "Log Today's Deliveries"}
-              </h2>
+      <section>
+        <div className="mb-2 flex items-end justify-between">
+          <div><p className="text-xs font-bold tracking-[0.18em] text-[#69758d]">CURRENT PAY PERIOD</p><p className="mt-1 text-xs text-[#8e9ab2]">{startLabel} — {endLabel}</p></div>
+          <button onClick={() => navigate("/app/periods")} className="flex items-center gap-1 text-xs font-semibold text-[#8f83ff]">View periods <ArrowRight className="h-3.5 w-3.5"/></button>
+        </div>
+        <Card className="border-[#202a3d] bg-[#111827]">
+          <CardContent className="p-5">
+            <div className="grid grid-cols-2 gap-5">
+              <div><div className="text-3xl font-bold">{period.stops.toLocaleString("en-GB")}</div><div className="mt-1 text-xs text-[#8e9ab2]">stops recorded</div></div>
+              <div><div className="text-3xl font-bold text-[#8f83ff]"><Money amount={period.expected}/></div><div className="mt-1 text-xs text-[#8e9ab2]">expected earnings</div></div>
             </div>
-            <StopEntryForm logs={logs} updateLogs={updateLogs} />
+            <div className="mt-5 border-t border-[#202a3d] pt-4 text-sm text-[#9aa6bd]">{period.daysLogged} work {period.daysLogged === 1 ? "day" : "days"} logged in this 4-week period</div>
           </CardContent>
         </Card>
-      </motion.div>
+      </section>
 
-      {/* Recent Activity */}
-      {recentActivity.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold">Recent Activity</h3>
-            <button
-              onClick={() => navigate('/app/entries')}
-              className="text-primary hover:opacity-80 transition-opacity text-sm flex items-center gap-1"
-            >
-              View all <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="space-y-2">
-            {recentActivity.map((log) => (
-              <motion.div
-                key={log.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="bg-card rounded-[14px] p-4 border border-border/50 hover:border-primary/30 transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-sm">
-                      {new Date(log.date).toLocaleDateString('en-GB', {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric'
-                      })}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {log.stops} stops {log.extra > 0 && `+ £${log.extra.toFixed(2)}`}
-                    </div>
-                  </div>
-                  <div className="text-lg font-bold text-primary">
-                    <Money amount={log.total || 0} />
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-      )}
+      <section>
+        <p className="mb-2 text-xs font-bold tracking-[0.18em] text-[#69758d]">QUICK TOOLS</p>
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            ["Routes",MapPin,"/app/routes",true],
+            ["Invoice",FileText,"/app/invoice",false],
+            ["Check Pay",ShieldCheck,"/app/check-pay",false],
+            ["Insights",BarChart3,"/app/stats",false],
+          ].map(([label,Icon,path,pro]) => <button key={label} onClick={() => navigate(path)} className="relative min-h-[88px] rounded-2xl border border-[#202a3d] bg-[#111827] px-2 py-3 active:scale-95">
+            {pro && <span className="absolute right-1.5 top-1.5 rounded-full bg-[#7567ff] px-1.5 py-0.5 text-[8px] font-bold">PRO</span>}
+            <Icon className="mx-auto mb-2 h-5 w-5 text-[#8f83ff]"/><span className="text-[11px] font-semibold">{label}</span>
+          </button>)}
+        </div>
+      </section>
 
-      {/* Quick Action Buttons */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="grid grid-cols-3 gap-3 pt-2"
-      >
-        <Button
-          onClick={() => navigate('/app/stats')}
-          variant="outline"
-          className="flex-col h-auto py-4 gap-2 rounded-[14px] active:scale-95 touch-manipulation"
-        >
-          <TrendingUp className="w-6 h-6 text-secondary" />
-          <span className="font-medium text-xs">Stats</span>
-        </Button>
-        <Button
-          onClick={() => navigate('/app/invoice')}
-          variant="outline"
-          className="flex-col h-auto py-4 gap-2 rounded-[14px] active:scale-95 touch-manipulation"
-        >
-          <FileText className="w-6 h-6 text-primary" />
-          <span className="font-medium text-xs">Invoices</span>
-        </Button>
-        <Button
-          onClick={() => navigate('/app/settings')}
-          variant="outline"
-          className="flex-col h-auto py-4 gap-2 rounded-[14px] active:scale-95 touch-manipulation"
-        >
-          <DollarSign className="w-6 h-6 text-secondary" />
-          <span className="font-medium text-xs">Pay Structure</span>
-        </Button>
-      </motion.div>
+      {recent.length > 0 && <section>
+        <div className="mb-2 flex items-center justify-between"><p className="text-xs font-bold tracking-[0.18em] text-[#69758d]">RECENT</p><button onClick={() => navigate("/app/entries")} className="text-xs font-semibold text-[#8f83ff]">View all</button></div>
+        <div className="overflow-hidden rounded-2xl border border-[#202a3d] bg-[#111827]">
+          {recent.map((log,i) => <button key={log.id || log.date} onClick={() => navigate("/app/entries")} className={`flex w-full items-center justify-between p-4 text-left active:bg-[#151d2d] ${i ? "border-t border-[#202a3d]" : ""}`}>
+            <div><div className="text-sm font-semibold">{new Date(log.date+"T12:00:00").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})}</div><div className="mt-1 text-xs text-[#8e9ab2]">{log.stops || 0} stops</div></div>
+            <div className="text-sm font-bold text-[#8f83ff]"><Money amount={log.total || 0}/></div>
+          </button>)}
+        </div>
+      </section>}
+
+      <p className="px-2 pt-2 text-center text-xs text-[#5f6a80]">Your work. Your records. Your pay.</p>
     </div>
   );
 };
-
 export default SimpleDashboard;

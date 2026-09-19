@@ -47,12 +47,8 @@ const EntriesPage = () => {
   const hasFilters = searchTerm || startDate || endDate;
 
   return (
-    <div className="max-w-3xl mx-auto px-4 pb-24 pt-4">
-      <TabCoach
-        id="entries"
-        title="Your entries"
-        body="Every day you log lands here, newest first. Tap a day to see the detail; search and date filters sit just below the list. Swipe left or right to hop between tabs."
-      />
+    <div className="max-w-2xl mx-auto pb-24 pt-2">
+      
 
       {/* Slim header */}
       <div className="flex items-center gap-3 mb-4">
@@ -60,8 +56,8 @@ const EntriesPage = () => {
           <FileText className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-xl font-bold">Entries</h1>
-          <p className="text-xs text-muted-foreground">{(logs || []).length} days tracked</p>
+          <h1 className="text-3xl font-bold tracking-tight">Entries</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Your independent day-by-day work ledger · {(logs || []).length} days tracked</p>
         </div>
       </div>
 
