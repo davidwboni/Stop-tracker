@@ -7,59 +7,67 @@
 
 @layer base {
   :root {
-    /* Light mode color theme */
-    --background: #FAFAFA;
-    --foreground: #000000;
+    color-scheme: light;
+    /* Stop Tracker brand system */
+    --background: #F2F7F8;
+    --foreground: #081F2B;
 
     --card: #FFFFFF;
-    --card-foreground: #000000;
+    --card-foreground: #081F2B;
 
-    --primary: #0D9488;
-    --primary-foreground: #FFFFFF;
+    --primary: #06B6C4;
+    --primary-foreground: #05232D;
 
-    --secondary: #0891B2;
-    --secondary-foreground: #FFFFFF;
+    --secondary: #14D9D1;
+    --secondary-foreground: #05232D;
 
-    --muted: #F3F4F6;
-    --muted-foreground: #6B7280;
+    --muted: #E8F0F2;
+    --muted-foreground: #667982;
 
-    --accent: #0D9488;
-    --accent-foreground: #FFFFFF;
+    --accent: #D9FBF6;
+    --accent-foreground: #075E68;
 
-    --destructive: #FF3B30;
+    --destructive: #EF4444;
     --destructive-foreground: #FFFFFF;
 
-    --border: #EEEEEE;
-    --input: #EEEEEE;
-    --ring: #0D9488;
+    --border: #D4E1E5;
+    --input: #E6EEF1;
+    --ring: #06B6C4;
+
+    --brand-navy: #081F2B;
+    --brand-teal: #06B6C4;
+    --brand-mint: #14D9D1;
+    --brand-success: #22C55E;
+    --brand-warning: #F59E0B;
   }
 
   .dark {
-    /* Dark mode color theme */
-    --background: #111113;
-    --foreground: #FFFFFF;
+    color-scheme: dark;
+    /* Dark mode keeps the same brand hue on a deep navy surface */
+    --background: #061923;
+    --foreground: #F8FAFC;
 
-    --card: #1C1C1F;
-    --card-foreground: #FFFFFF;
+    --card: #0C2632;
+    --card-foreground: #F8FAFC;
 
-    --primary: #2DD4BF;
-    --primary-foreground: #0A0A0A;
+    --primary: #21D3D5;
+    --primary-foreground: #041B24;
 
-    --secondary: #22D3EE;
-    --secondary-foreground: #0A0A0A;
+    --secondary: #4DE5CF;
+    --secondary-foreground: #041B24;
 
-    --muted: #2A2A2E;
-    --muted-foreground: #9CA3AF;
+    --muted: #12333F;
+    --muted-foreground: #9AB0B8;
 
-    --accent: #2DD4BF;
-    --accent-foreground: #0A0A0A;
+    --accent: #113B43;
+    --accent-foreground: #D7FFFA;
 
-    --destructive: #FF453A;
+    --destructive: #F87171;
     --destructive-foreground: #FFFFFF;
 
-    --border: #2A2A2E;
-    --input: #2A2A2E;
-    --ring: #2DD4BF;
+    --border: #1B3D49;
+    --input: #12333F;
+    --ring: #21D3D5;
   }
 }
 
@@ -72,6 +80,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    transition: background-color 180ms ease, color 180ms ease;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
     overflow-x: hidden;
@@ -100,7 +109,7 @@
   }
 
   .shadow-apple-card {
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 8px 28px rgba(8, 31, 43, 0.07), 0 1px 3px rgba(8, 31, 43, 0.05);
   }
 
   .shadow-apple-card-hover {
@@ -116,28 +125,28 @@
   }
   
   .gradient-apple {
-    background: linear-gradient(135deg, rgba(10, 132, 255, 0.1) 0%, rgba(52, 199, 89, 0.05) 100%);
+    background: linear-gradient(135deg, rgba(6, 182, 196, 0.10) 0%, rgba(20, 217, 209, 0.05) 100%);
     backdrop-filter: blur(20px);
-    border: 1px solid rgba(10, 132, 255, 0.2);
+    border: 1px solid rgba(6, 182, 196, 0.18);
   }
 
   .text-gradient {
-    background: linear-gradient(135deg, #0A84FF 0%, #30D158 100%);
+    background: linear-gradient(135deg, var(--brand-teal) 0%, var(--brand-mint) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
   .glassmorphism {
-    background: rgba(26, 31, 46, 0.5);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(42, 49, 66, 0.5);
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(6, 182, 196, 0.12);
   }
 
   .dark .glassmorphism {
-    background: rgba(26, 31, 46, 0.6);
-    backdrop-filter: blur(15px);
-    border: 1px solid rgba(42, 49, 66, 0.6);
+    background: rgba(12, 38, 50, 0.72);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(33, 211, 213, 0.12);
   }
   
   .hover-lift {
@@ -198,13 +207,13 @@
    Slow and low-contrast on purpose: it should feel alive, not distracting. */
 @layer utilities {
   .animated-gradient {
-    background: linear-gradient(125deg, #F0FDF9 0%, #ECFDF5 25%, #ECFEFF 50%, #F0FDFA 75%, #F0FDF9 100%);
+    background: linear-gradient(125deg, #F8FAFC 0%, #ECFEFF 26%, #E9FFF9 52%, #F3FBFC 76%, #F8FAFC 100%);
     background-size: 300% 300%;
     animation: gradient-drift 22s ease-in-out infinite;
   }
 
   .dark .animated-gradient {
-    background: linear-gradient(125deg, #0A0A0A 0%, #04211C 25%, #06282F 50%, #04211C 75%, #0A0A0A 100%);
+    background: linear-gradient(125deg, #061923 0%, #082A34 25%, #06363A 50%, #082A34 75%, #061923 100%);
     background-size: 300% 300%;
     animation: gradient-drift 22s ease-in-out infinite;
   }
@@ -240,5 +249,40 @@
   .dark .animated-gradient,
   .ambient-blob {
     animation: none;
+  }
+}
+
+
+/* Stop Tracker motion language: short, purposeful, and reduced-motion safe. */
+@layer utilities {
+  .brand-surface {
+    background: linear-gradient(145deg, rgba(6, 182, 196, 0.10), rgba(20, 217, 209, 0.04));
+    border: 1px solid rgba(6, 182, 196, 0.18);
+  }
+
+  .brand-glow {
+    box-shadow: 0 16px 48px rgba(6, 182, 196, 0.16);
+  }
+
+  .pressable {
+    transition: transform 160ms ease, box-shadow 200ms ease, border-color 200ms ease;
+  }
+
+  .pressable:active {
+    transform: scale(0.985);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .transition-apple,
+  .transition-spring,
+  .hover-lift,
+  .pressable {
+    transition-duration: 0.01ms !important;
+  }
+
+  .hover-lift:hover,
+  .pressable:active {
+    transform: none;
   }
 }

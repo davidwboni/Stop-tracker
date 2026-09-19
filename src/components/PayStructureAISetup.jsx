@@ -1,10 +1,11 @@
-import React, { useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { Button } from "./ui/button";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Sparkles, Paperclip, Loader, CheckCircle2, AlertCircle, RotateCcw } from "lucide-react";
 import { interpretPayStructure } from "../services/interpretPayStructure";
 import { calculateDayEarnings, PAY_MODELS } from "../features/payperiod/payStructure";
+import { trackEvent } from "../services/productAnalytics";
 
 // Describe-or-upload panel. Sends the description / rate sheet to the Cloud
 // Function, then shows a worked-example confirmation computed by OUR calculator
@@ -13,19 +14,43 @@ const PayStructureAISetup = ({ onConfirm }) => {
   const [text, setText] = useState("");
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null); // { config, summary, sample }
   const fileRef = useRef(null);
 
+  const loadingMessages = file
+    ? ["Reading rate sheet…", "Identifying rates…", "Building calculation…"]
+    : ["Understanding your pay…", "Identifying the pay model…", "Building calculation…"];
+
+  useEffect(() => {
+    if (!loading) {
+      setLoadingStep(0);
+      return undefined;
+    }
+
+    const timer = setInterval(() => {
+      setLoadingStep((step) => Math.min(step + 1, loadingMessages.length - 1));
+    }, 850);
+
+    return () => clearInterval(timer);
+  }, [loading, file]);
+
   const run = async () => {
+    trackEvent("ai_pay_setup_started", { input_type: file ? "file" : "text" });
     setLoading(true);
     setError(null);
     try {
       const data = await interpretPayStructure({ text, file });
       setResult(data);
+      trackEvent("ai_pay_setup_interpreted", {
+        input_type: file ? "file" : "text",
+        pay_model: data?.config?.model || "unknown",
+      });
     } catch (err) {
       console.error("interpretPayStructure failed:", err);
       setError(err?.message || "Couldn't interpret that. Try rewording or a clearer photo.");
+      trackEvent("ai_pay_setup_failed", { input_type: file ? "file" : "text" });
     } finally {
       setLoading(false);
     }
@@ -64,11 +89,17 @@ const PayStructureAISetup = ({ onConfirm }) => {
         </p>
 
         <div className="flex gap-3">
-          <Button onClick={() => onConfirm(cfg)} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+          <Button onClick={() => {
+            trackEvent("ai_pay_setup_confirmed", { pay_model: cfg?.model || "unknown" });
+            onConfirm(cfg);
+          }} className="bg-primary hover:bg-primary/90 text-primary-foreground">
             <CheckCircle2 className="w-4 h-4 mr-2" />
             Looks right
           </Button>
-          <Button onClick={reword} variant="outline">
+          <Button onClick={() => {
+            trackEvent("ai_pay_setup_rejected", { pay_model: cfg?.model || "unknown" });
+            reword();
+          }} variant="outline">
             <RotateCcw className="w-4 h-4 mr-2" />
             Not quite
           </Button>
@@ -86,7 +117,7 @@ const PayStructureAISetup = ({ onConfirm }) => {
         <h3 className="font-semibold text-lg">Describe how you get paid</h3>
       </div>
       <p className="text-sm text-muted-foreground">
-        In your own words, any language. e.g. "£1.70 per stop until 150, then 90p", or attach your rate sheet.
+        In your own words, any language. e.g. "£1.70 per stop until 150, then 90p", or attach a screenshot/photo of your rate sheet.
       </p>
 
       <textarea
@@ -101,18 +132,18 @@ const PayStructureAISetup = ({ onConfirm }) => {
         <input
           ref={fileRef}
           type="file"
-          accept="application/pdf,image/*"
+          accept="image/jpeg,image/png,image/webp,image/gif"
           className="hidden"
           onChange={(e) => setFile(e.target.files?.[0] || null)}
         />
         <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
           <Paperclip className="w-4 h-4 mr-2" />
-          {file ? "Change file" : "Attach PDF / photo"}
+          {file ? "Change image" : "Attach screenshot / photo"}
         </Button>
         {file && <span className="text-xs text-muted-foreground truncate max-w-[180px]">{file.name}</span>}
       </div>
       <p className="text-xs text-muted-foreground -mt-1">
-        For a rate table, a PDF or screenshot reads most accurately. A clear photo works too.
+        For a rate table, use a clear screenshot or photo (JPG, PNG, WEBP or GIF). Maximum file size 8 MB.
       </p>
 
       {error && (
@@ -130,7 +161,14 @@ const PayStructureAISetup = ({ onConfirm }) => {
         {loading ? (
           <>
             <Loader className="w-4 h-4 mr-2 animate-spin" />
-            Reading…
+            <motion.span
+              key={loadingMessages[loadingStep]}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="inline-block"
+            >
+              {loadingMessages[loadingStep]}
+            </motion.span>
           </>
         ) : (
           <>

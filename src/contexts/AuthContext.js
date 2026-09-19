@@ -12,6 +12,7 @@ import {
 } from "../services/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { trackEvent } from "../services/productAnalytics";
 
 const AuthContext = createContext();
 
@@ -41,8 +42,8 @@ export function AuthProvider({ children }) {
               email: firebaseUser.email,
               displayName: firebaseUser.displayName || userData.displayName || "User",
               photoURL: firebaseUser.photoURL || userData.photoURL,
-              role: userData.role || "free",
-              isGuest: userData.isGuest || false,
+              role: firebaseUser.isAnonymous ? "guest" : (userData.role || "free"),
+              isGuest: firebaseUser.isAnonymous || userData.isGuest || false,
               createdAt: userData.createdAt,
             });
 
@@ -56,7 +57,8 @@ export function AuthProvider({ children }) {
               email: firebaseUser.email,
               displayName: firebaseUser.displayName || "User",
               photoURL: firebaseUser.photoURL || null,
-              role: "free",
+              role: firebaseUser.isAnonymous ? "guest" : "free",
+              isGuest: firebaseUser.isAnonymous,
               createdAt: serverTimestamp(),
               lastLogin: serverTimestamp()
             };
@@ -88,6 +90,7 @@ export function AuthProvider({ children }) {
       if (result.error) {
         throw result.error;
       }
+      trackEvent("signup_completed", { method: "email" });
       return true;
     } catch (err) {
       setError(err.message || "Failed to create account");
@@ -103,6 +106,7 @@ export function AuthProvider({ children }) {
       if (result.error) {
         throw result.error;
       }
+      trackEvent("login_completed", { method: "email" });
       return true;
     } catch (err) {
       setError(err.message || "Failed to login");
@@ -120,8 +124,10 @@ export function AuthProvider({ children }) {
       }
       // If pending (redirect flow on mobile), return true
       if (result.pending) {
+        trackEvent("login_started", { method: "google_redirect" });
         return true;
       }
+      trackEvent("login_completed", { method: "google" });
       return true;
     } catch (err) {
       setError(err.message || "Failed to login with Google");
@@ -137,6 +143,7 @@ export function AuthProvider({ children }) {
       if (result.error) {
         throw result.error;
       }
+      trackEvent("guest_started", { method: "anonymous" });
       return true;
     } catch (err) {
       setError(err.message || "Failed to login as guest");
@@ -194,8 +201,8 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={value}>
       {!loading ? children : (
-        <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        <div className="flex items-center justify-center min-h-screen bg-background">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
         </div>
       )}
     </AuthContext.Provider>

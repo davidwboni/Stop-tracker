@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Check, ArrowRight, Package } from "lucide-react";
+import { ArrowRight, Package } from "lucide-react";
 import PayStructureAISetup from "./PayStructureAISetup";
 import { useAuth } from "../contexts/AuthContext";
 import { describePayStructure } from "../features/payperiod/payStructure";
+import { trackEvent } from "../services/productAnalytics";
+import Logo from "./Logo";
 
 // Completion beat shown after the user confirms their pay setup: a spring-in
 // check-mark, then a staggered welcome + pay summary + "Start tracking".
@@ -20,25 +22,12 @@ const WelcomeStep = ({ firstName, config, onStart }) => {
     >
       <div className="relative w-24 h-24 flex items-center justify-center">
         <motion.div
-          className="absolute w-24 h-24 rounded-full border-2 border-primary"
-          initial={{ scale: 0.7, opacity: 0.55 }}
-          animate={{ scale: 1.9, opacity: 0 }}
-          transition={{ duration: 1.1, delay: 0.15, ease: "easeOut" }}
+          className="absolute w-24 h-24 rounded-full border-2 border-primary/50"
+          initial={{ scale: 0.72, opacity: 0.5 }}
+          animate={{ scale: 1.75, opacity: 0 }}
+          transition={{ duration: 1.05, delay: 0.12, ease: "easeOut" }}
         />
-        <motion.div
-          className="w-20 h-20 rounded-full bg-primary flex items-center justify-center"
-          initial={{ scale: 0.3 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", stiffness: 260, damping: 14, delay: 0.1 }}
-        >
-          <motion.span
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.45, duration: 0.3 }}
-          >
-            <Check className="w-10 h-10 text-white" strokeWidth={3} />
-          </motion.span>
-        </motion.div>
+        <Logo variant="icon" className="w-20 h-20" />
       </div>
 
       <motion.h1 variants={rise} custom={0} initial="hidden" animate="show" className="text-3xl font-bold">
@@ -82,10 +71,24 @@ const PayOnboarding = ({ onComplete }) => {
   const firstName = user?.displayName?.split(" ")[0] || "there";
   const [confirmed, setConfirmed] = useState(null); // the config once confirmed
 
+  React.useEffect(() => {
+    trackEvent("pay_setup_started", { surface: "onboarding" });
+  }, []);
+
   return (
-    <div className="min-h-[100dvh] bg-gradient-to-br from-gray-50 via-blue-50/20 to-teal-50/30 dark:from-gray-900 dark:via-blue-900/10 dark:to-teal-900/20 flex flex-col items-center justify-center px-4 py-10 pt-safe">
+    <div className="min-h-[100dvh] animated-gradient flex flex-col items-center justify-center px-4 py-10 pt-safe">
       {confirmed ? (
-        <WelcomeStep firstName={firstName} config={confirmed} onStart={() => onComplete(confirmed)} />
+        <WelcomeStep
+          firstName={firstName}
+          config={confirmed}
+          onStart={() => {
+            trackEvent("pay_setup_completed", {
+              surface: "onboarding",
+              pay_model: confirmed?.model || "unknown",
+            });
+            onComplete(confirmed);
+          }}
+        />
       ) : (
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -93,6 +96,9 @@ const PayOnboarding = ({ onComplete }) => {
           transition={{ duration: 0.35 }}
           className="w-full max-w-md space-y-6"
         >
+          <div className="flex justify-center mb-2">
+            <Logo />
+          </div>
           <div className="text-center space-y-2">
             <h1 className="text-3xl font-bold">Welcome, {firstName} 👋</h1>
             <p className="text-muted-foreground">
@@ -101,7 +107,15 @@ const PayOnboarding = ({ onComplete }) => {
           </div>
 
           <div className="rounded-[18px] border border-border bg-card p-5 shadow-sm">
-            <PayStructureAISetup onConfirm={(config) => setConfirmed(config)} />
+            <PayStructureAISetup
+              onConfirm={(config) => {
+                trackEvent("pay_setup_interpreted", {
+                  surface: "onboarding",
+                  pay_model: config?.model || "unknown",
+                });
+                setConfirmed(config);
+              }}
+            />
           </div>
 
           <p className="text-center text-xs text-muted-foreground px-6">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Home, FileText, Calculator, User, TrendingUp, Settings, MapPin } from "lucide-react";
+import { motion } from "framer-motion";
+import { Home, FileText, CheckCircle2, User } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const AppNavigation = () => {
@@ -37,17 +38,15 @@ const AppNavigation = () => {
   }, [lastScrollY]);
 
   const navItems = [
-    { path: '/app/dashboard', icon: Home, label: 'Home', color: 'from-primary to-secondary' },
-    { path: '/app/entries', icon: FileText, label: 'Entries', color: 'from-orange-500 to-red-600' },
-    { path: '/app/routes', icon: MapPin, label: 'Routes', color: 'from-cyan-500 to-blue-600' },
-    { path: '/app/invoice', icon: Calculator, label: 'Invoice', color: 'from-rose-500 to-pink-600' },
-    { path: '/app/stats', icon: TrendingUp, label: 'Stats', color: 'from-teal-500 to-cyan-600' },
-    { path: '/app/profile', icon: User, label: 'Profile', color: 'from-emerald-500 to-teal-600' },
+    { path: '/app/dashboard', icon: Home, label: 'Home' },
+    { path: '/app/entries', icon: FileText, label: 'Entries' },
+    { path: '/app/invoice', search: '?tab=verify', icon: CheckCircle2, label: 'Check Pay' },
+    { path: '/app/profile', icon: User, label: 'Profile' },
   ];
   
   return (
-    <div className={`fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-t border-gray-200/50 dark:border-gray-700/50 shadow-sm z-50 safe-area-inset-bottom transition-transform duration-300 ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}>
-      <div className="absolute inset-0 bg-gradient-to-t from-gray-50/50 to-transparent dark:from-gray-900/50"></div>
+    <div className={`fixed bottom-0 left-0 right-0 bg-card/90 backdrop-blur-xl border-t border-border/80 shadow-[0_-10px_30px_rgba(8,31,43,0.06)] z-50 safe-area-inset-bottom transition-transform duration-300 ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}>
+      <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent"></div>
       
       <div className="relative flex justify-around items-center py-2 px-4">
         {navItems.map((item) => {
@@ -72,31 +71,33 @@ const AppNavigation = () => {
                     navigate(item.path);
                   }
                 } else {
-                  navigate(item.path);
+                  navigate(`${item.path}${item.search || ''}`);
                 }
               }}
               className={`relative flex flex-col items-center p-2.5 rounded-2xl transition-all duration-200 transform active:scale-95 min-w-0 flex-1 touch-manipulation min-h-[64px] ${
-                isActive 
-                  ? 'text-white shadow-lg' 
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                isActive
+                  ? 'text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               {isActive && (
-                <div className={`absolute inset-0 rounded-2xl bg-gradient-to-r ${item.color} shadow-lg`}></div>
+                <motion.div
+                  layoutId="active-nav-pill"
+                  className="absolute inset-1 rounded-[16px] bg-primary/10 border border-primary/20"
+                  transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                />
               )}
               
               <div className="relative z-10 flex flex-col items-center">
-                <IconComponent size={22} className={isActive ? 'text-white' : ''} />
+                <IconComponent size={22} className={isActive ? 'text-primary' : ''} />
                 <span className={`text-xs mt-1 font-medium truncate max-w-full ${
-                  isActive ? 'text-white' : ''
+                  isActive ? 'text-primary' : ''
                 }`}>
                   {item.label}
                 </span>
               </div>
               
-              {isActive && (
-                <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white rounded-full animate-pulse"></div>
-              )}
+
             </button>
           );
         })}

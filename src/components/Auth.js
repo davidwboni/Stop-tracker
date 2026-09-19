@@ -14,6 +14,10 @@ import {
 } from "firebase/auth";
 import { auth, signInWithGoogle } from "../services/firebase";
 import { Loader2, Mail, Phone, AlertCircle } from "lucide-react";
+import Logo from "./Logo";
+import { trackEvent } from "../services/productAnalytics";
+
+const PHONE_SIGN_IN_ENABLED = false;
 
 const Auth = ({ onBack }) => {
   const [method, setMethod] = useState("email"); // 'email', 'phone', 'google', 'anonymous'
@@ -46,8 +50,10 @@ const Auth = ({ onBack }) => {
         isLogin
           ? await signInWithEmailAndPassword(auth, formData.email, formData.password)
           : await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+        trackEvent(isLogin ? "login_completed" : "signup_completed", { method: "email" });
       } else if (type === "google") {
         await signInWithGoogle();
+        trackEvent("login_completed", { method: "google" });
       } else if (type === "phone") {
         if (!verificationId) {
           setupRecaptcha();
@@ -58,6 +64,7 @@ const Auth = ({ onBack }) => {
         }
       } else if (type === "anonymous") {
         await signInAnonymously(auth);
+        trackEvent("guest_started", { method: "anonymous" });
       }
     } catch (err) {
       setError(getErrorMessage(err));
@@ -83,11 +90,11 @@ const Auth = ({ onBack }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/40 dark:from-gray-900 dark:via-blue-900/10 dark:to-indigo-900/20 flex items-center justify-center p-4">
+    <div className="min-h-screen animated-gradient flex items-center justify-center p-4">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-4 -right-4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-6 -left-6 w-80 h-80 bg-purple-500/5 rounded-full blur-3xl"></div>
+        <div className="ambient-blob -top-4 -right-4 w-96 h-96 bg-primary/15"></div>
+        <div className="ambient-blob -bottom-6 -left-6 w-80 h-80 bg-secondary/10" style={{ animationDelay: "-8s" }}></div>
       </div>
       
       <motion.div
@@ -96,30 +103,26 @@ const Auth = ({ onBack }) => {
         transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
         className="relative z-10 w-full max-w-md"
       >
-        <Card className="overflow-hidden shadow-2xl border-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl">
-          <CardHeader className="relative bg-gradient-to-br from-blue-500 via-cyan-500 to-teal-600 text-white py-10 text-center">
-            <div className="absolute inset-0 bg-black/10"></div>
-            <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full"></div>
-            <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-white/5 rounded-full"></div>
+        <Card className="overflow-hidden brand-glow border border-border bg-card/95 backdrop-blur-xl">
+          <CardHeader className="relative brand-surface py-9 text-center">
+            <div className="absolute -top-4 -right-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl"></div>
+            <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-secondary/10 rounded-full blur-2xl"></div>
             
-            {/* App Icon */}
-            <div className="relative z-10 mb-4">
-              <div className="inline-flex p-4 bg-white/20 rounded-3xl backdrop-blur-sm">
-                <Mail className="w-8 h-8" />
-              </div>
+            <div className="relative z-10 mb-4 flex justify-center">
+              <Logo variant="icon" className="w-16 h-16" />
             </div>
             
             <CardTitle className="relative z-10 text-3xl font-bold mb-2">
               {method === "email" ? (isLogin ? "Welcome Back" : "Create Account") : "Sign In"}
             </CardTitle>
-            <p className="relative z-10 text-blue-100 font-medium">
+            <p className="relative z-10 text-muted-foreground font-medium">
               {method === "email" 
                 ? (isLogin ? "Sign in to your Stop Tracker account" : "Join Stop Tracker today")
                 : "Choose your sign-in method"
               }
             </p>
           </CardHeader>
-          <CardContent className="p-8 bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50">
+          <CardContent className="p-8 bg-card">
         <AnimatePresence>
           {error && (
             <motion.div
@@ -135,29 +138,31 @@ const Auth = ({ onBack }) => {
           )}
         </AnimatePresence>
 
-        <div className="grid grid-cols-2 gap-3 mb-8">
+        <div className={`grid ${PHONE_SIGN_IN_ENABLED ? "grid-cols-2" : "grid-cols-1"} gap-3 mb-8`}>
           <Button
             onClick={() => setMethod("email")}
             className={`relative py-4 rounded-2xl font-semibold transition-all duration-300 transform hover:scale-105 ${
               method === "email" 
-                ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg" 
-                : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                ? "bg-primary text-primary-foreground shadow-sm" 
+                : "bg-muted text-foreground hover:bg-primary/10"
             }`}
           >
             <Mail className="mr-2 w-5 h-5" />
             Email
           </Button>
-          <Button
-            onClick={() => setMethod("phone")}
-            className={`relative py-4 rounded-2xl font-semibold transition-all duration-300 transform hover:scale-105 ${
-              method === "phone" 
-                ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg" 
-                : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-            }`}
-          >
-            <Phone className="mr-2 w-5 h-5" />
-            Phone
-          </Button>
+          {PHONE_SIGN_IN_ENABLED && (
+            <Button
+              onClick={() => setMethod("phone")}
+              className={`relative py-4 rounded-2xl font-semibold transition-all duration-300 transform hover:scale-105 ${
+                method === "phone"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-muted text-foreground hover:bg-primary/10"
+              }`}
+            >
+              <Phone className="mr-2 w-5 h-5" />
+              Phone
+            </Button>
+          )}
         </div>
 
         {method === "email" && (
@@ -174,7 +179,7 @@ const Auth = ({ onBack }) => {
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               required
-              className="bg-[var(--background)] text-[var(--text)]"
+              className="bg-input text-foreground"
             />
             <Input
               type="password"
@@ -182,9 +187,9 @@ const Auth = ({ onBack }) => {
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               required
-              className="bg-[var(--background)] text-[var(--text)]"
+              className="bg-input text-foreground"
             />
-            <Button type="submit" className="w-full bg-[var(--primary)] hover:bg-[var(--secondary)]" disabled={loading}>
+            <Button type="submit" className="w-full bg-primary text-primary-foreground hover:opacity-90" disabled={loading}>
               {loading ? (
                 <>
                   <Loader2 className="mr-2 w-4 h-4 animate-spin" />
@@ -207,7 +212,7 @@ const Auth = ({ onBack }) => {
           </form>
         )}
 
-        {method === "phone" && (
+        {PHONE_SIGN_IN_ENABLED && method === "phone" && (
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -222,7 +227,7 @@ const Auth = ({ onBack }) => {
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 required
-                className="bg-[var(--background)] text-[var(--text)]"
+                className="bg-input text-foreground"
               />
             ) : (
               <Input
@@ -231,10 +236,10 @@ const Auth = ({ onBack }) => {
                 value={formData.code}
                 onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                 required
-                className="bg-[var(--background)] text-[var(--text)]"
+                className="bg-input text-foreground"
               />
             )}
-            <Button type="submit" className="w-full bg-[var(--primary)] hover:bg-[var(--secondary)]" disabled={loading}>
+            <Button type="submit" className="w-full bg-primary text-primary-foreground hover:opacity-90" disabled={loading}>
               {loading ? (
                 <>
                   <Loader2 className="mr-2 w-4 h-4 animate-spin" />
@@ -251,7 +256,7 @@ const Auth = ({ onBack }) => {
 
         <div className="relative py-4">
           <Separator />
-          <div className="relative flex justify-center text-sm text-[var(--text)]">
+          <div className="relative flex justify-center text-sm text-muted-foreground">
             Or continue with
           </div>
         </div>
@@ -260,7 +265,7 @@ const Auth = ({ onBack }) => {
           <Button
             onClick={() => handleAuth("google")}
             variant="outline"
-            className="w-full border-[var(--primary)] text-[var(--primary)]"
+            className="w-full border-primary/40 text-primary hover:bg-primary/5"
             disabled={loading}
           >
             Continue with Google
@@ -268,7 +273,7 @@ const Auth = ({ onBack }) => {
           <Button
             onClick={() => handleAuth("anonymous")}
             variant="outline"
-            className="w-full border-[var(--primary)] text-[var(--primary)]"
+            className="w-full border-primary/40 text-primary hover:bg-primary/5"
             disabled={loading}
           >
             Continue as Guest

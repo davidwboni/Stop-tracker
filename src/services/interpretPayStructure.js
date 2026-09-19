@@ -21,6 +21,16 @@ export function fileToBase64(file) {
 // result is only ever the structured config, never a money figure to trust.
 export async function interpretPayStructure({ text, file }) {
   const payload = {};
+
+  if (file) {
+    const supported = ["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type);
+    if (!supported) {
+      throw new Error("Use a JPG, PNG, WEBP or GIF screenshot/photo. PDF upload is not supported by DeepSeek vision yet.");
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      throw new Error("That image is over 8 MB. Use a smaller or clearer screenshot instead.");
+    }
+  }
   if (text && text.trim()) payload.text = text.trim();
   if (file) {
     const { base64, mimeType } = await fileToBase64(file);

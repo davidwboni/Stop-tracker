@@ -1,20 +1,92 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import InvoiceCreate from "./InvoiceCreate";
 import InvoiceHistory from "./InvoiceHistory";
 import PayPeriodList from "../features/payperiod/PayPeriodList";
+import EntryChecker from "./EntryChecker";
 import TabCoach from "./TabCoach";
-import { FileText, CheckCircle2, History } from "lucide-react";
+import { FileText, CheckCircle2, History, Crown, ScanLine } from "lucide-react";
+import { trackEvent } from "../services/productAnalytics";
 
 const InvoicePage = () => {
-  const [activeTab, setActiveTab] = useState("create");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get("tab");
+  const initialTab = ["create", "history", "verify"].includes(requestedTab) ? requestedTab : "create";
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [prefillInvoice, setPrefillInvoice] = useState(null);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setSearchParams(tab === "create" ? {} : { tab }, { replace: true });
+  };
+
+  useEffect(() => {
+    trackEvent("invoice_tab_viewed", { tab: activeTab });
+    if (activeTab === "verify") {
+      trackEvent("invoice_check_started", { surface: "invoice" });
+    }
+  }, [activeTab]);
 
   const handleGenerateInvoice = (prefill) => {
     setPrefillInvoice(prefill);
     setActiveTab("create");
   };
+
+  if (activeTab === "verify") {
+    return (
+      <motion.div
+        className="max-w-2xl mx-auto pb-safe px-4 py-6"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <div className="mb-5">
+          <h1 className="text-2xl sm:text-3xl font-bold">Check Pay</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Compare your own Stop Tracker record with the total shown on your statement.
+          </p>
+        </div>
+
+        <EntryChecker />
+
+        <div className="mt-4 rounded-[16px] border border-primary/20 bg-primary/5 p-4">
+          <div className="flex items-start gap-3">
+            <div className="rounded-[12px] bg-primary/10 p-2 text-primary">
+              <ScanLine className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <h2 className="font-semibold text-sm">Scan statement with AI</h2>
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                  <Crown className="h-3 w-3" /> PRO
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                Upload a photo or PDF and let Stop Tracker read the statement for you. This will be a premium feature so API costs are covered.
+              </p>
+              <button
+                type="button"
+                disabled
+                className="mt-3 h-9 rounded-[11px] border border-border bg-card px-3 text-xs font-semibold text-muted-foreground opacity-70"
+              >
+                Coming with Pro
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => handleTabChange("create")}
+          className="mt-5 text-xs text-muted-foreground underline underline-offset-4"
+        >
+          Open legacy invoice tools
+        </button>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
@@ -37,7 +109,7 @@ const InvoicePage = () => {
         <p className="text-muted-foreground text-sm">Create invoices and check you've been paid right</p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-3 bg-muted h-auto rounded-[16px] p-1 gap-1">
           <TabsTrigger value="create" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2.5 rounded-[12px]">
             <FileText className="h-4 w-4" />

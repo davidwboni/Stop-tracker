@@ -1,5 +1,6 @@
 // src/features/payperiod/PayPeriodResults.jsx
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect } from "react";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Alert, AlertDescription } from "../../components/ui/alert";
@@ -9,6 +10,7 @@ import { CheckCircle2, AlertTriangle, FileText } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { calculatePeriodTotals, comparePeriodToLogs } from "./payPeriodCalculations";
 import { useData } from "../../contexts/DataContext";
+import { trackEvent } from "../../services/productAnalytics";
 
 const PayPeriodResults = ({ period, onGenerateInvoice }) => {
   const { logs, paymentConfig } = useData();
@@ -22,21 +24,43 @@ const PayPeriodResults = ({ period, onGenerateInvoice }) => {
 
   const hasDiscrepancy = comparison.some((day) => day.status !== "match");
 
+  useEffect(() => {
+    trackEvent("invoice_check_result", {
+      surface: "invoice",
+      discrepancy_found: hasDiscrepancy,
+      compared_days: comparison.length,
+    });
+  }, [hasDiscrepancy, comparison.length]);
+
   return (
     <div className="space-y-4">
-      {hasDiscrepancy ? (
-        <Alert className="bg-destructive/10 border-destructive/20">
-          <AlertTriangle className="h-4 w-4 text-destructive" />
-          <AlertDescription className="text-destructive">
-            Discrepancy found, review the daily breakdown below.
-          </AlertDescription>
-        </Alert>
-      ) : (
-        <Alert className="bg-emerald-500/10 border-emerald-500/20">
-          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-          <AlertDescription className="text-emerald-500">Every day matches your logged stops.</AlertDescription>
-        </Alert>
-      )}
+      <motion.div
+        initial={{ opacity: 0, y: 8, scale: 0.985 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ type: "spring", stiffness: 280, damping: 24 }}
+      >
+        {hasDiscrepancy ? (
+          <Alert className="bg-destructive/10 border-destructive/20">
+            <motion.div initial={{ rotate: -8, scale: 0.8 }} animate={{ rotate: 0, scale: 1 }}>
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+            </motion.div>
+            <AlertDescription className="text-destructive font-medium">
+              Discrepancy found, review the daily breakdown below.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Alert className="bg-emerald-500/10 border-emerald-500/20">
+            <motion.div
+              initial={{ scale: 0.6 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 360, damping: 18 }}
+            >
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+            </motion.div>
+            <AlertDescription className="text-emerald-500 font-medium">Every day matches your logged stops.</AlertDescription>
+          </Alert>
+        )}
+      </motion.div>
 
       <Card className="border-border/50">
         <CardHeader>
@@ -44,13 +68,19 @@ const PayPeriodResults = ({ period, onGenerateInvoice }) => {
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {comparison.map((day) => (
-              <div key={day.date} className="flex items-center justify-between p-2 bg-muted rounded-[14px] border border-border/50">
+            {comparison.map((day, index) => (
+              <motion.div
+                key={day.date}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: Math.min(index * 0.035, 0.25) }}
+                className="flex items-center justify-between p-2 bg-muted rounded-[14px] border border-border/50"
+              >
                 <span className="text-sm">{format(parseISO(day.date), "EEE, dd MMM yyyy")}</span>
                 <span className="text-sm tabular-nums">Yours: {day.loggedStops ?? "-"}</span>
                 <span className="text-sm tabular-nums">Statement: {day.statementStops ?? "-"}</span>
                 <StatusBadge status={day.status} />
-              </div>
+              </motion.div>
             ))}
           </div>
         </CardContent>

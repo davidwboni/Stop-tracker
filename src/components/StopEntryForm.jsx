@@ -9,7 +9,6 @@ import {
   DollarSign,
   FileText,
   CloudOff,
-  Cloud,
   Loader,
   CheckCircle,
   Undo
@@ -17,12 +16,26 @@ import {
 import { useData } from "../contexts/DataContext";
 import { calculateDayEarnings, PAY_MODELS } from "../features/payperiod/payStructure";
 import { Money } from "./ui/money";
+import { AnimatedMoney } from "./ui/animated-money";
+import { trackEvent } from "../services/productAnalytics";
+import { useSearchParams } from "react-router-dom";
 
 const DEFAULT_CONFIG = {
   model: "tiered_stops",
   thresholds: [{ stopCount: 110, rate: 1.98 }, { rate: 1.48 }],
   excessParcelRate: 0.05,
 };
+
+const toLocalDateString = (date = new Date()) => {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+};
+
+const mergeLogByDate = (logs, log) =>
+  [
+    ...(logs || []).filter((item) => item.id !== log.id && item.date !== log.date),
+    log,
+  ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
 const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
   // Initialize logs as an empty array if null
@@ -35,7 +48,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
       if (lastEntry) {
         const parsed = JSON.parse(lastEntry);
         return {
-          date: new Date().toISOString().split('T')[0], // Always use today's date
+          date: toLocalDateString(), // Always use today's date
           stops: parsed.stops || "",
           miles: parsed.miles || "",
           extra: parsed.extra || "",
@@ -47,7 +60,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
     }
 
     return {
-      date: new Date().toISOString().split('T')[0],
+      date: toLocalDateString(),
       stops: "",
       miles: "",
       extra: "",
@@ -56,6 +69,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
   };
 
   const [entry, setEntry] = useState(getSmartDefaults());
+  const [searchParams, setSearchParams] = useSearchParams();
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
@@ -64,9 +78,18 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
   const config = paymentConfig || DEFAULT_CONFIG;
   const model = config.model || "tiered_stops";
   const meta = PAY_MODELS.find((m) => m.id === model) || PAY_MODELS[0];
+  const todayDate = toLocalDateString();
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayDate = toLocalDateString(yesterday);
+  const existingForDate = useMemo(
+    () => safetyLogs.find((log) => log.date === entry.date) || null,
+    [safetyLogs, entry.date]
+  );
   const [showAllEntries, setShowAllEntries] = useState(false);
   const [lastSavedEntry, setLastSavedEntry] = useState(null);
   const [showUndo, setShowUndo] = useState(false);
+  const [lastSaveAction, setLastSaveAction] = useState("saved");
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [pendingEntries, setPendingEntries] = useState([]);
@@ -110,6 +133,45 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
   const handleInputBlur = useCallback(() => {
     activeInputRef.current = null;
   }, []);
+
+  const selectDate = useCallback((date) => {
+    if (!date) return;
+
+    const existing = safetyLogs.find((log) => log.date === date);
+    if (existing) {
+      setEntry({
+        date,
+        stops: existing.stops != null ? String(existing.stops) : "",
+        miles: existing.miles != null ? String(existing.miles) : "",
+        extra: existing.extra != null && existing.extra !== 0 ? String(existing.extra) : "",
+        notes: existing.notes || "",
+      });
+    } else {
+      setEntry((prev) => ({
+        ...prev,
+        date,
+        stops: "",
+        miles: "",
+        extra: "",
+        notes: "",
+      }));
+    }
+
+    setError(null);
+    setSuccess(false);
+    setShowUndo(false);
+  }, [safetyLogs]);
+
+  useEffect(() => {
+    const requestedDate = searchParams.get("date");
+    if (!requestedDate) return;
+
+    if (requestedDate <= todayDate) {
+      selectDate(requestedDate);
+    }
+
+    setSearchParams({}, { replace: true });
+  }, [searchParams, selectDate, setSearchParams, todayDate]);
 
   // Debounced input handler to reduce unnecessary re-renders
   const debouncedHandleChange = useCallback((e) => {
@@ -227,9 +289,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
       }
 
       for (const pendingEntry of pendingEntries) {
-        const updatedLogs = [...safetyLogs, pendingEntry].sort(
-          (a, b) => new Date(b.date) - new Date(a.date)
-        );
+        const updatedLogs = mergeLogByDate(safetyLogs, pendingEntry);
         await updateLogs(updatedLogs);
       }
 
@@ -278,14 +338,17 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
       const miles = parseFloat(entry.miles) || 0;
       const total = calculateDayEarnings(config, { quantity: stops, miles }) + extra;
 
+      const isUpdatingExisting = Boolean(existingForDate);
       const newLog = {
-        id: Date.now(),
+        ...(existingForDate || {}),
+        id: existingForDate?.id || Date.now(),
         date: entry.date,
         stops,
         extra,
         total,
         notes: entry.notes,
-        timestamp: new Date().toISOString(),
+        timestamp: existingForDate?.timestamp || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         ...(model === 'sliding_scale' ? { miles } : {}),
       };
       
@@ -298,7 +361,10 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
       // Handle offline scenario
       if (!isOnline) {
         // Save to pending entries for later sync
-        const newPendingEntries = [...pendingEntries, newLog];
+        const newPendingEntries = [
+          ...pendingEntries.filter((item) => item.id !== newLog.id && item.date !== newLog.date),
+          newLog,
+        ];
         setPendingEntries(newPendingEntries);
         
         // Store in localStorage
@@ -309,9 +375,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
         }
         
         // Add to local logs for immediate UI feedback
-        const updatedLogs = [...safetyLogs, newLog].sort(
-          (a, b) => new Date(b.date) - new Date(a.date)
-        );
+        const updatedLogs = mergeLogByDate(safetyLogs, newLog);
         
         // Update logs locally but show offline message
         if (updateLogs) {
@@ -326,9 +390,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
 
         while (!saveSuccessful && attempts < maxAttempts) {
           try {
-            const updatedLogs = [...safetyLogs, newLog].sort(
-              (a, b) => new Date(b.date) - new Date(a.date)
-            );
+            const updatedLogs = mergeLogByDate(safetyLogs, newLog);
             
             if (updateLogs) {
               await updateLogs(updatedLogs);
@@ -340,14 +402,15 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
             
             if (attempts === maxAttempts) {
               // Final attempt failed - treat as offline
-              const newPendingEntries = [...pendingEntries, newLog];
+              const newPendingEntries = [
+                ...pendingEntries.filter((item) => item.id !== newLog.id && item.date !== newLog.date),
+                newLog,
+              ];
               setPendingEntries(newPendingEntries);
               localStorage.setItem('pending-entries', JSON.stringify(newPendingEntries));
               
               // Still update local logs for UI
-              const updatedLogs = [...safetyLogs, newLog].sort(
-                (a, b) => new Date(b.date) - new Date(a.date)
-              );
+              const updatedLogs = mergeLogByDate(safetyLogs, newLog);
               if (updateLogs) {
                 await updateLogs(updatedLogs);
               }
@@ -373,15 +436,24 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
       
       // Clear form with fresh smart defaults
       setEntry({
-        date: new Date().toISOString().split('T')[0],
-        stops: entry.stops, // Keep the same stops count as smart default
-        miles: entry.miles, // Keep the same miles as smart default (sliding scale)
-        extra: entry.extra, // Keep the same extra amount as smart default
-        notes: "", // Clear notes for next entry
+        date: todayDate,
+        stops: "",
+        miles: "",
+        extra: "",
+        notes: "",
       });
       
+      setLastSaveAction(isUpdatingExisting ? "updated" : "saved");
       setSuccess(true);
       setShowUndo(true);
+      trackEvent(isUpdatingExisting ? "daily_entry_updated" : "daily_entry_created", {
+        entry_method: "full_form",
+        pay_model: model,
+        offline: !isOnline,
+        has_extra: extra > 0,
+        has_notes: Boolean(entry.notes?.trim()),
+        is_first_entry: !isUpdatingExisting && safetyLogs.length === 0,
+      });
       
       // Add successful save haptic feedback
       if (navigator.vibrate) {
@@ -410,14 +482,19 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
       // Restore the form data
       setEntry({
         date: lastSavedEntry.entry.date,
-        stops: lastSavedEntry.entry.stops.toString(),
-        extra: lastSavedEntry.entry.extra.toString(),
+        stops: lastSavedEntry.entry.stops?.toString?.() || "",
+        miles: lastSavedEntry.entry.miles?.toString?.() || "",
+        extra: lastSavedEntry.entry.extra?.toString?.() || "",
         notes: lastSavedEntry.entry.notes || ""
       });
       
       setShowUndo(false);
       setLastSavedEntry(null);
       setSuccess(false);
+      trackEvent("daily_entry_undone", {
+        entry_method: "full_form",
+        pay_model: model,
+      });
       
     } catch (error) {
       console.error('Error undoing entry:', error);
@@ -469,12 +546,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
           </div>
         );
       case "synced":
-        return (
-          <div className="flex items-center text-green-500 text-sm">
-            <Cloud className="w-3 h-3 mr-1" />
-            <span>All changes saved</span>
-          </div>
-        );
+        return null;
       case "offline":
         return (
           <div className="flex items-center text-amber-500 text-sm">
@@ -490,12 +562,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
           </div>
         );
       default:
-        return (
-          <div className="flex items-center text-green-500 text-sm">
-            <Cloud className="w-3 h-3 mr-1" />
-            <span>Ready</span>
-          </div>
-        );
+        return null;
     }
   };
 
@@ -515,7 +582,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
           <CardContent className="px-4 pt-1 pb-4">
             <form onSubmit={optimizedHandleSubmit} className="space-y-5">
               {/* Main input - model-driven hero field (most important, thumb-friendly position) */}
-              <div className="bg-primary/5 p-4 rounded-[18px] border border-primary/20">
+              <div className="brand-surface p-4 rounded-[18px]">
                 <label className="block text-sm font-semibold text-primary mb-2 text-center">
                   {meta.primary.label}
                 </label>
@@ -580,11 +647,25 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                   </div>
                 )}
 
-                {entry.stops && (
-                  <p className="text-center text-sm text-primary mt-2 font-medium">
-                    <Money amount={estimatedEarnings} /> estimated
-                  </p>
-                )}
+                <AnimatePresence mode="wait">
+                  {entry.stops && (
+                    <motion.div
+                      key={estimatedEarnings}
+                      initial={{ opacity: 0, y: 6, scale: 0.985 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.18 }}
+                      className="mt-3 rounded-[14px] border border-primary/20 bg-card/75 px-4 py-3 text-center"
+                    >
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                        Expected earnings
+                      </div>
+                      <div className="mt-0.5 text-2xl font-extrabold tracking-[-0.03em] text-primary">
+                        <AnimatedMoney amount={estimatedEarnings} />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* Secondary inputs in thumb-reach zone */}
@@ -594,16 +675,46 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                     <label className="block text-xs font-medium text-muted-foreground mb-2">
                       📅 Date
                     </label>
+                    <div className="grid grid-cols-2 gap-2 mb-2">
+                      <button
+                        type="button"
+                        onClick={() => selectDate(todayDate)}
+                        className={`h-9 rounded-[11px] border text-xs font-semibold transition-colors ${
+                          entry.date === todayDate
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border bg-card text-muted-foreground"
+                        }`}
+                      >
+                        Today
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => selectDate(yesterdayDate)}
+                        className={`h-9 rounded-[11px] border text-xs font-semibold transition-colors ${
+                          entry.date === yesterdayDate
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border bg-card text-muted-foreground"
+                        }`}
+                      >
+                        Yesterday
+                      </button>
+                    </div>
                     <Input
                       type="date"
                       name="date"
                       value={entry.date}
-                      onChange={debouncedHandleChange}
+                      max={todayDate}
+                      onChange={(e) => selectDate(e.target.value)}
                       onFocus={() => handleInputFocus({ current: null })}
                       onBlur={handleInputBlur}
                       required
                       className="h-12 rounded-[14px] focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm touch-manipulation"
                     />
+                    {existingForDate && (
+                      <p className="mt-2 text-[11px] text-muted-foreground">
+                        Editing saved entry
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-muted-foreground mb-2">
@@ -659,7 +770,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                 <Button
                   type="submit"
                   disabled={isSubmitting || !entry.stops}
-                  className="w-full py-4 px-6 rounded-[18px] font-semibold text-base shadow-xl h-14 min-h-[56px] touch-manipulation active:scale-98 flex items-center justify-center"
+                  className="w-full py-4 px-6 rounded-[18px] font-semibold text-base h-14 min-h-[56px] touch-manipulation pressable brand-glow flex items-center justify-center"
                 >
                   {saving ? (
                     <>
@@ -668,8 +779,18 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                     </>
                   ) : (
                     <>
-                      <Save className="mr-3 h-5 w-5" />
-                      <span>Save Entry {entry.stops ? `(${entry.stops} stops)` : ''}</span>
+                      <motion.span
+                        initial={{ scale: 0.7, rotate: -8 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        transition={{ type: "spring", stiffness: 420, damping: 20 }}
+                        className="mr-3"
+                      >
+                        {existingForDate ? <CheckCircle className="h-5 w-5" /> : <Save className="h-5 w-5" />}
+                      </motion.span>
+                      <span>
+                        {existingForDate ? "Update Entry" : "Save Entry"}
+                        {entry.stops ? ` (${entry.stops} ${meta.primary.unit})` : ""}
+                      </span>
                     </>
                   )}
                 </Button>
@@ -695,7 +816,7 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                   >
                     <div className="flex items-center">
                       <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                      <p className="text-xs font-medium">Entry saved successfully!</p>
+                      <p className="text-xs font-medium">{lastSaveAction === "updated" ? "Entry updated successfully!" : "Entry saved successfully!"}</p>
                     </div>
                   </motion.div>
                 )}
@@ -712,8 +833,8 @@ const StopEntryForm = ({ logs = [], updateLogs, syncStatus }) => {
                       <div className="flex items-center">
                         <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
                         <div>
-                          <p className="text-xs font-medium text-amber-800">Entry saved successfully!</p>
-                          <p className="text-xs text-amber-600 mt-1">Tap undo if this was a mistake</p>
+                          <p className="text-xs font-medium text-amber-800 dark:text-amber-200">{lastSaveAction === "updated" ? "Entry updated successfully!" : "Entry saved successfully!"}</p>
+                          <p className="text-xs text-amber-600 dark:text-amber-300 mt-1">Tap undo if this was a mistake</p>
                         </div>
                       </div>
                       <Button

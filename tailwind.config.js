@@ -24,14 +24,19 @@ module.exports = {
         border: 'var(--border)',
         input: 'var(--input)',
         ring: 'var(--ring)',
+        'brand-navy': 'var(--brand-navy)',
+        'brand-teal': 'var(--brand-teal)',
+        'brand-mint': 'var(--brand-mint)',
+        'brand-success': 'var(--brand-success)',
+        'brand-warning': 'var(--brand-warning)',
       },
       fontFamily: {
         sans: [
+          'Inter',
           '-apple-system',
           'BlinkMacSystemFont',
-          'San Francisco',
-          'Helvetica Neue',
-          'Arial',
+          'Segoe UI',
+          'Roboto',
           'sans-serif'
         ],
       },

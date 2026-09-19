@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import ErrorBoundary from './ErrorBoundary';
 import { motion } from 'framer-motion';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
@@ -11,14 +11,14 @@ import FloatingActionButton from './FloatingActionButton';
 import PayOnboarding from './PayOnboarding';
 import { useData } from '../contexts/DataContext';
 import { calculateDayEarnings } from '../features/payperiod/payStructure';
+import { trackEvent, trackPageView, setAnalyticsUserProperties } from '../services/productAnalytics';
+import AnalyticsConsent from './AnalyticsConsent';
 
 // Bottom-nav tab order, swiping left/right steps through these.
 const TAB_ORDER = [
   '/app/dashboard',
   '/app/entries',
-  '/app/routes',
   '/app/invoice',
-  '/app/stats',
   '/app/profile',
 ];
 
@@ -28,6 +28,23 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const touchStart = useRef(null);
+  const previousPath = useRef(location.pathname);
+  const previousTabIndex = TAB_ORDER.findIndex((p) => previousPath.current.startsWith(p));
+  const currentTabIndex = TAB_ORDER.findIndex((p) => location.pathname.startsWith(p));
+  const pageDirection = previousTabIndex >= 0 && currentTabIndex >= 0 && currentTabIndex < previousTabIndex ? -1 : 1;
+
+  useEffect(() => {
+    trackPageView(location.pathname);
+    previousPath.current = location.pathname;
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!user) return;
+    setAnalyticsUserProperties({
+      account_type: user.isGuest ? 'guest' : (user.role || 'free'),
+      pay_model: paymentConfig?.model || 'unknown',
+    });
+  }, [user, paymentConfig?.model]);
 
   const onTouchStart = (e) => {
     // Don't hijack pans on the map or any horizontal scroller.
@@ -79,6 +96,12 @@ const Layout = () => {
       );
       
       await updateLogs(updatedLogs);
+      trackEvent('daily_entry_created', {
+        entry_method: 'quick',
+        pay_model: paymentConfig?.model || 'unknown',
+        offline: !navigator.onLine,
+        is_first_entry: (logs || []).length === 0,
+      });
       
       // Add haptic feedback for success
       if (navigator.vibrate) {
@@ -97,11 +120,16 @@ const Layout = () => {
 
   // First-run gate: brand-new users set up their pay before entering the app.
   if (needsOnboarding) {
-    return <PayOnboarding onComplete={completeOnboarding} />;
+    return (
+      <>
+        <PayOnboarding onComplete={completeOnboarding} />
+        <AnalyticsConsent />
+      </>
+    );
   }
 
   return (
-    <div className="min-h-[100dvh] bg-gradient-to-br from-gray-50 via-blue-50/20 to-teal-50/30 dark:from-gray-900 dark:via-blue-900/10 dark:to-teal-900/20 flex flex-col pt-safe">
+    <div className="min-h-[100dvh] bg-gradient-to-br from-background via-background to-primary/5 flex flex-col pt-safe">
       <SyncStatus />
 
       <main
@@ -116,9 +144,9 @@ const Layout = () => {
           <ErrorBoundary>
             <motion.div
               key={location.pathname}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, ease: 'easeOut' }}
+              initial={{ opacity: 0, x: pageDirection * 14, y: 3 }}
+              animate={{ opacity: 1, x: 0, y: 0 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             >
               <Outlet />
             </motion.div>
@@ -127,6 +155,7 @@ const Layout = () => {
         </div>
       </main>
 
+      <AnalyticsConsent />
       <SwipeHint />
       <AppNavigation className="flex-shrink-0 pb-safe" />
 

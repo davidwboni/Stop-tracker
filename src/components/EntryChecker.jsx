@@ -1,8 +1,10 @@
 import React, { useState, useMemo } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useData } from "../contexts/DataContext";
 import { Input } from "./ui/input";
 import { Money } from "./ui/money";
 import { ClipboardCheck, ChevronDown, CheckCircle2, AlertTriangle } from "lucide-react";
+import { trackEvent } from "../services/productAnalytics";
 
 // Dead-simple reconciliation, right where the driver keeps their logs: pick the
 // invoice's period, type its total stops, and see instantly whether your logged
@@ -32,10 +34,26 @@ const EntryChecker = () => {
     };
   }, [logs, from, to, invoiceStops]);
 
+  React.useEffect(() => {
+    if (!result?.hasInvoice) return;
+    const timer = setTimeout(() => {
+      trackEvent("invoice_check_result", {
+        surface: "entries",
+        discrepancy_found: result.diff !== 0,
+        direction: result.diff === 0 ? "match" : result.diff > 0 ? "logged_more" : "logged_fewer",
+      });
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [result?.hasInvoice, result?.diff]);
+
   return (
     <div className="mb-4">
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          const next = !open;
+          setOpen(next);
+          if (next) trackEvent("invoice_check_started", { surface: "entries" });
+        }}
         className="w-full flex items-center justify-between bg-card border border-border rounded-[14px] px-4 py-3 touch-manipulation active:scale-[0.99] transition-transform"
         aria-expanded={open}
       >
@@ -46,8 +64,16 @@ const EntryChecker = () => {
         <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
-      {open && (
-        <div className="mt-2 bg-card border border-border rounded-[14px] p-4 space-y-3">
+      <AnimatePresence initial={false}>
+        {open && (
+        <motion.div
+          initial={{ opacity: 0, height: 0, y: -6 }}
+          animate={{ opacity: 1, height: "auto", y: 0 }}
+          exit={{ opacity: 0, height: 0, y: -6 }}
+          transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+          className="mt-2 overflow-hidden"
+        >
+        <div className="bg-card border border-border rounded-[14px] p-4 space-y-3">
           <p className="text-xs text-muted-foreground">
             Pick the invoice's period and type its total stops. We'll compare it to what you logged.
           </p>
@@ -73,8 +99,15 @@ const EntryChecker = () => {
             />
           </div>
 
+          <AnimatePresence mode="wait">
           {result && (
-            <div className="rounded-[12px] bg-primary/5 border border-primary/20 p-3 space-y-2">
+            <motion.div
+              key={`${from}-${to}-${invoiceStops}`}
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="rounded-[12px] bg-primary/5 border border-primary/20 p-3 space-y-2"
+            >
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">You logged</span>
                 <span className="font-semibold tabular-nums">
@@ -105,10 +138,13 @@ const EntryChecker = () => {
                   </div>
                 </>
               )}
-            </div>
+            </motion.div>
           )}
+          </AnimatePresence>
         </div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </div>
   );
 };

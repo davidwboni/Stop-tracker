@@ -1,0 +1,48 @@
+name: Refresh Lockfile
+
+on:
+  push:
+    branches:
+      - feat/product-analytics-motion
+    paths:
+      - package.json
+      - functions/package.json
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/product-analytics-motion
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Refresh app package-lock
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Refresh Functions package-lock
+        working-directory: functions
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Commit lockfile if changed
+        shell: bash
+        run: |
+          if git diff --quiet -- package-lock.json functions/package-lock.json; then
+            echo "Lockfiles already match package manifests"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json functions/package-lock.json
+          git commit -m "chore: refresh package lock"
+          git fetch origin feat/product-analytics-motion
+          git rebase origin/feat/product-analytics-motion
+          git push origin HEAD:feat/product-analytics-motion

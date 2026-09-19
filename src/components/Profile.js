@@ -9,11 +9,15 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { updateProfile } from "firebase/auth";
 import { db, auth } from "../services/firebase";
 import { useTheme } from "../contexts/ThemeContext";
+import { getAnalyticsConsent, setAnalyticsConsent } from "../services/productAnalytics";
 import {
   User,
   Camera,
   Save,
   Award,
+  Crown,
+  MapPin,
+  ScanLine,
   LogOut,
   AlertCircle,
   Loader2,
@@ -23,9 +27,7 @@ import {
   DollarSign,
   ChevronRight,
   Trash2,
-  Trophy,
-  Flame,
-  Star,
+  BarChart3,
 } from "lucide-react";
 
 const Profile = ({ userId, user, onLogout }) => {
@@ -37,6 +39,7 @@ const Profile = ({ userId, user, onLogout }) => {
   const [editMode, setEditMode] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [formData, setFormData] = useState({ displayName: "", email: "", bio: "" });
+  const [analyticsEnabled, setAnalyticsEnabled] = useState(() => getAnalyticsConsent() === true);
 
   const storage = getStorage();
   const navigate = useNavigate();
@@ -83,6 +86,13 @@ const Profile = ({ userId, user, onLogout }) => {
     }
   }, [success]);
 
+  const handleAnalyticsToggle = async () => {
+    const next = !analyticsEnabled;
+    await setAnalyticsConsent(next);
+    setAnalyticsEnabled(next);
+    setSuccess(next ? "Usage analytics enabled" : "Usage analytics disabled");
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -91,14 +101,14 @@ const Profile = ({ userId, user, onLogout }) => {
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) return setError("Please select an image file");
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) return setError("Please select a JPG, PNG or WEBP image");
     if (file.size > 2 * 1024 * 1024) return setError("Image size must be less than 2MB");
 
     setUpdating(true);
     setError(null);
     try {
       const timestamp = Date.now();
-      const storageRef = ref(storage, `users/${userId}/profile_${timestamp}`);
+      const storageRef = ref(storage, `users/${userId}/profile`);
       await uploadBytes(storageRef, file);
       const downloadURL = await getDownloadURL(storageRef);
       await updateDoc(doc(db, "users", userId), { photoURL: downloadURL, photoUpdatedAt: timestamp });
@@ -166,12 +176,6 @@ const Profile = ({ userId, user, onLogout }) => {
 
   const isPro = userData?.role === "pro";
   const initial = (userData?.displayName || "U").charAt(0).toUpperCase();
-  const achievements = [
-    { name: "Delivery Expert", icon: <Trophy className="w-5 h-5" /> },
-    { name: "Perfect Week", icon: <Flame className="w-5 h-5" /> },
-    { name: "Top Performer", icon: <Star className="w-5 h-5" /> },
-  ];
-
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -303,6 +307,28 @@ const Profile = ({ userId, user, onLogout }) => {
             </div>
           </div>
 
+          <div className={rowBase}>
+            <span className="flex items-center gap-3 text-sm">
+              <BarChart3 className="w-5 h-5 text-muted-foreground" />
+              <span>
+                <span className="block">Usage analytics</span>
+                <span className="block text-[11px] text-muted-foreground">No pay, invoice, address or note contents</span>
+              </span>
+            </span>
+            <button
+              type="button"
+              onClick={handleAnalyticsToggle}
+              aria-pressed={analyticsEnabled}
+              className={`relative h-7 w-12 rounded-full transition-colors ${analyticsEnabled ? "bg-primary" : "bg-muted"}`}
+            >
+              <span
+                className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                  analyticsEnabled ? "translate-x-5" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+
           <button onClick={() => setEditMode((v) => !v)} className={`${rowBase} hover:bg-muted/40`}>
             <span className="flex items-center gap-3 text-sm">
               <User className="w-5 h-5 text-muted-foreground" />
@@ -349,18 +375,41 @@ const Profile = ({ userId, user, onLogout }) => {
         </div>
       </div>
 
-      {/* Achievements, de-emphasised */}
-      <div className="opacity-60">
+      {/* Monetisation preview - no fake checkout until billing is connected. */}
+      <div>
         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-          Achievements
+          Stop Tracker Pro
         </div>
-        <div className="grid grid-cols-3 gap-2">
-          {achievements.map((a) => (
-            <div key={a.name} className="border border-border rounded-[12px] p-3 flex flex-col items-center gap-1.5">
-              <span className="text-muted-foreground">{a.icon}</span>
-              <span className="text-[10px] text-muted-foreground text-center leading-tight">{a.name}</span>
+        <div className="rounded-[14px] border border-primary/20 bg-primary/5 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Crown className="w-5 h-5 text-primary" />
+            <span className="font-semibold text-sm">{isPro ? "Pro plan active" : "Premium features"}</span>
+          </div>
+          <div className="space-y-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-primary" />
+              Route optimisation
             </div>
-          ))}
+            <div className="flex items-center gap-2">
+              <ScanLine className="w-4 h-4 text-primary" />
+              AI statement scanning
+            </div>
+          </div>
+          {!isPro && (
+            <div className="mt-3">
+              <p className="text-[11px] text-muted-foreground mb-3">
+                Manual work tracking and Check Pay stay free. Pro adds protected paid-API features and removes ads.
+              </p>
+              <Button
+                type="button"
+                onClick={() => navigate("/app/upgrade")}
+                className="w-full h-10"
+              >
+                <Crown className="w-4 h-4 mr-2" />
+                Upgrade to Pro
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 

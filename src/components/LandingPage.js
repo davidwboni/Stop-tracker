@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Truck, Zap, Sparkles, FileText, ArrowRight } from "lucide-react";
+import { ClipboardCheck, Sparkles, CircleDollarSign, ArrowRight } from "lucide-react";
+import Logo from "./Logo";
 import SignInSheet from "./SignInSheet";
 
 // App-style first-run screen, not a marketing website: one screen, no scroll,
@@ -8,19 +9,19 @@ import SignInSheet from "./SignInSheet";
 // the app as a guest (no separate "continue as guest" step).
 const BENEFITS = [
   {
-    icon: Zap,
-    title: "Log in seconds",
-    body: "One number at the end of your round. That's it.",
+    icon: ClipboardCheck,
+    title: "Log your work",
+    body: "Record the stops, miles or hours you completed that day.",
+  },
+  {
+    icon: CircleDollarSign,
+    title: "Know what you earned",
+    body: "Your saved pay structure calculates the expected total.",
   },
   {
     icon: Sparkles,
-    title: "Any pay deal",
-    body: "Tell us how you're paid, or upload your rate sheet. We work it out.",
-  },
-  {
-    icon: FileText,
-    title: "Invoice in a tap",
-    body: "Send a proper invoice and check you've been paid right.",
+    title: "Check your pay",
+    body: "Compare your records with a statement and spot discrepancies.",
   },
 ];
 
@@ -43,11 +44,8 @@ export default function LandingPage({ onContactUs, onPrivacyPolicy, onTermsOfSer
       />
 
       <div className="relative w-full max-w-sm flex flex-col flex-1 py-6">
-        <motion.div variants={rise} custom={0} initial="hidden" animate="show" className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-[12px] bg-primary flex items-center justify-center">
-            <Truck className="w-5 h-5 text-primary-foreground" />
-          </div>
-          <span className="font-semibold text-lg">Stop Tracker</span>
+        <motion.div variants={rise} custom={0} initial="hidden" animate="show">
+          <Logo />
         </motion.div>
 
         <motion.h1
@@ -57,9 +55,9 @@ export default function LandingPage({ onContactUs, onPrivacyPolicy, onTermsOfSer
           animate="show"
           className="text-3xl font-bold leading-tight mt-7"
         >
-          Every stop,
+          Track your work.
           <br />
-          every penny.
+          <span className="text-primary">Verify your pay.</span>
         </motion.h1>
 
         <motion.p
@@ -69,7 +67,7 @@ export default function LandingPage({ onContactUs, onPrivacyPolicy, onTermsOfSer
           animate="show"
           className="text-muted-foreground mt-3 leading-relaxed"
         >
-          The pay tracker built for delivery drivers.
+          Keep an independent record of what you did and what you should be paid.
         </motion.p>
 
         <div className="mt-7 space-y-4">
@@ -105,7 +103,7 @@ export default function LandingPage({ onContactUs, onPrivacyPolicy, onTermsOfSer
         >
           <button
             onClick={() => setSheetOpen(true)}
-            className="w-full min-h-[52px] rounded-[16px] bg-primary text-primary-foreground font-medium flex items-center justify-center touch-manipulation active:scale-[0.98] transition-transform"
+            className="w-full min-h-[52px] rounded-[16px] bg-primary text-primary-foreground font-semibold flex items-center justify-center touch-manipulation pressable brand-glow"
           >
             Get started
             <ArrowRight className="w-5 h-5 ml-2" />

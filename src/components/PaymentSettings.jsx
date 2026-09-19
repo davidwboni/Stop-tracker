@@ -5,8 +5,6 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Alert, AlertDescription } from "./ui/alert";
-import { doc, updateDoc } from "firebase/firestore";
-import { db } from "../services/firebase";
 import { useData } from "../contexts/DataContext";
 import {
   PAY_MODELS,
@@ -46,7 +44,7 @@ const SAMPLE = {
 const num = (v) => (v === "" || v === undefined || v === null ? 0 : parseFloat(v) || 0);
 
 const PaymentSettings = ({ userId, user, onSettingsSaved }) => {
-  const { paymentConfig } = useData();
+  const { paymentConfig, updatePaymentConfig } = useData();
   const [config, setConfig] = useState(() => normalizePayStructure(paymentConfig));
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState(null);
@@ -83,17 +81,14 @@ const PaymentSettings = ({ userId, user, onSettingsSaved }) => {
     setUpdating(true);
     setError(null);
     try {
-      if (user?.isGuest) {
-        setSuccess("Settings saved locally");
-        if (onSettingsSaved) onSettingsSaved(cfg);
-        return;
-      }
-      await updateDoc(doc(db, "users", userId), {
-        paymentConfig: cfg,
-        updatedAt: new Date().toISOString(),
-      });
-      setSuccess("Payment settings saved");
-      if (onSettingsSaved) onSettingsSaved(cfg);
+      const normalized = normalizePayStructure(cfg);
+      const saved = updatePaymentConfig
+        ? await updatePaymentConfig(normalized)
+        : normalized;
+
+      setConfig(saved);
+      setSuccess(user?.isGuest ? "Settings saved locally" : "Payment settings saved");
+      if (onSettingsSaved) onSettingsSaved(saved);
     } catch (err) {
       console.error("Error updating payment config:", err);
       setError("Couldn't save settings. Try again.");

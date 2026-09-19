@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -7,23 +7,32 @@ import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import StopEntryForm from "./StopEntryForm";
 import DashboardTutorial from "./DashboardTutorial";
-import { Calendar, Package, TrendingUp, FileText, ArrowRight, DollarSign } from "lucide-react";
+import { Calendar, Package, TrendingUp, FileText, ArrowRight, DollarSign, CheckCircle2, MapPin, Crown } from "lucide-react";
 import { Money } from "./ui/money";
+import { AnimatedMoney } from "./ui/animated-money";
+import { PAY_MODELS } from "../features/payperiod/payStructure";
+import AdBanner from "./AdBanner";
+
+const toLocalDateString = (date = new Date()) => {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+};
 
 const SimpleDashboard = () => {
   const { user } = useAuth();
   const { logs, updateLogs, loading, paymentConfig } = useData();
   const navigate = useNavigate();
+  const payMeta = PAY_MODELS.find((m) => m.id === paymentConfig?.model) || PAY_MODELS[0];
 
   // Check if today is already logged
   const todayAlreadyLogged = React.useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateString();
     return logs?.some(log => log.date === today) || false;
   }, [logs]);
 
   // Today's earnings
   const todayData = React.useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateString();
     const todayLog = logs?.find(log => log.date === today);
     return todayLog ? { stops: todayLog.stops, earnings: todayLog.total || 0 } : { stops: 0, earnings: 0 };
   }, [logs]);
@@ -34,7 +43,7 @@ const SimpleDashboard = () => {
     const today = new Date();
     const weekStart = new Date(today);
     weekStart.setDate(today.getDate() - today.getDay());
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = toLocalDateString(today);
 
     const thisWeekLogs = safetyLogs.filter(log => {
       const logDate = new Date(log.date);
@@ -57,7 +66,7 @@ const SimpleDashboard = () => {
   // Most recent activity ordered by actual date (newest first), excluding any
   // future-dated entries that would otherwise surface here by mistake.
   const recentActivity = React.useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateString();
     return [...(logs || [])]
       .filter(log => log.date <= today)
       .sort((a, b) => (a.date < b.date ? 1 : -1))
@@ -118,42 +127,119 @@ const SimpleDashboard = () => {
         </p>
       </motion.div>
 
-      {/* Today's Quick Summary */}
+      {/* Logging today's work is the dashboard's primary job. */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
+        transition={{ delay: 0.06 }}
       >
-        <div className="grid grid-cols-2 gap-3">
-          <Card
-            onClick={() => navigate('/app/entries')}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/app/entries'); }}
-            aria-label="View your recent entries"
-            className="bg-card border-border/50 overflow-hidden min-w-0 cursor-pointer hover:border-primary/30 active:scale-[0.98] transition-all touch-manipulation"
-          >
-            <CardContent className="p-4">
-              <div className="text-sm text-muted-foreground mb-1">Today's Stops</div>
-              <div className="text-2xl sm:text-3xl font-bold">{todayData.stops}</div>
-              <div className="text-xs text-muted-foreground mt-1">stops</div>
-            </CardContent>
-          </Card>
-          <Card
-            onClick={() => navigate('/app/stats')}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/app/stats'); }}
-            aria-label="View your earnings stats"
-            className="bg-card border-border/50 overflow-hidden min-w-0 cursor-pointer hover:border-primary/30 active:scale-[0.98] transition-all touch-manipulation"
-          >
-            <CardContent className="p-4">
-              <div className="text-sm text-muted-foreground mb-1">Today's Earnings</div>
-              <div className="text-2xl sm:text-3xl font-bold text-primary"><Money amount={todayData.earnings} /></div>
-              <div className="text-xs text-muted-foreground mt-1">earned</div>
-            </CardContent>
-          </Card>
+        <div className="flex items-center gap-3 mb-2 px-1">
+          <div className="rounded-[12px] bg-primary/10 p-2 text-primary">
+            <Package className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-lg">
+              {todayAlreadyLogged ? "Update today's work" : "Log today's work"}
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Enter your shift and Stop Tracker calculates the expected pay instantly.
+            </p>
+          </div>
         </div>
+        <Card className="bg-card border-primary/20 overflow-hidden">
+          <CardContent className="p-6">
+            <StopEntryForm logs={logs} updateLogs={updateLogs} />
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Today's earnings becomes a clear result, not another navigation step. */}
+      <motion.div
+        initial={{ opacity: 0, y: 12, scale: 0.985 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ delay: 0.1, type: "spring", stiffness: 260, damping: 24 }}
+      >
+        <Card className="brand-surface brand-glow overflow-hidden">
+          <CardContent className="p-5 sm:p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-sm font-medium text-muted-foreground">Today's earnings</div>
+                <motion.div
+                  key={todayData.earnings}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-1 text-4xl sm:text-5xl font-extrabold tracking-[-0.04em] text-foreground"
+                >
+                  <AnimatedMoney amount={todayData.earnings} duration={420} />
+                </motion.div>
+                <div className="mt-2 text-sm text-muted-foreground">
+                  {todayAlreadyLogged
+                    ? `${todayData.stops} ${payMeta?.primary?.unit || "units"} logged today`
+                    : "Save today's work above to see your total"}
+                </div>
+              </div>
+              <div className={`rounded-full p-3 ${todayAlreadyLogged ? "bg-emerald-500/10 text-emerald-500" : "bg-primary/10 text-primary"}`}>
+                {todayAlreadyLogged ? <CheckCircle2 className="w-6 h-6" /> : <DollarSign className="w-6 h-6" />}
+              </div>
+            </div>
+            <div className="mt-5 flex items-center justify-between border-t border-primary/15 pt-3">
+              <span className="text-xs text-muted-foreground">
+                {todayAlreadyLogged ? "Today's work is saved" : "Nothing logged yet today"}
+              </span>
+              <button
+                type="button"
+                onClick={() => navigate("/app/entries")}
+                className="inline-flex items-center gap-1 text-sm font-medium text-primary"
+              >
+                Entries <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Quick Action Buttons */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2"
+      >
+        <Button
+          onClick={() => navigate('/app/stats')}
+          variant="outline"
+          className="flex-col h-auto py-4 gap-2 rounded-[14px] active:scale-95 touch-manipulation"
+        >
+          <TrendingUp className="w-6 h-6 text-secondary" />
+          <span className="font-medium text-xs">Stats</span>
+        </Button>
+        <Button
+          onClick={() => navigate('/app/routes')}
+          variant="outline"
+          className="relative flex-col h-auto py-4 gap-2 rounded-[14px] active:scale-95 touch-manipulation"
+        >
+          <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold text-primary">
+            <Crown className="h-2.5 w-2.5" /> PRO
+          </span>
+          <MapPin className="w-6 h-6 text-primary" />
+          <span className="font-medium text-xs">Routes</span>
+        </Button>
+        <Button
+          onClick={() => navigate('/app/invoice?tab=verify')}
+          variant="outline"
+          className="flex-col h-auto py-4 gap-2 rounded-[14px] active:scale-95 touch-manipulation"
+        >
+          <FileText className="w-6 h-6 text-primary" />
+          <span className="font-medium text-xs">Check Pay</span>
+        </Button>
+        <Button
+          onClick={() => navigate('/app/settings')}
+          variant="outline"
+          className="flex-col h-auto py-4 gap-2 rounded-[14px] active:scale-95 touch-manipulation"
+        >
+          <DollarSign className="w-6 h-6 text-secondary" />
+          <span className="font-medium text-xs">Pay Structure</span>
+        </Button>
       </motion.div>
 
       {/* Weekly Summary */}
@@ -198,27 +284,6 @@ const SimpleDashboard = () => {
         </motion.div>
       )}
 
-      {/* Main Entry Form */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
-        <Card className="bg-card border-border/50 overflow-hidden">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Package className="w-5 h-5 text-primary" />
-              </div>
-              <h2 className="font-semibold text-lg">
-                {todayAlreadyLogged ? "Update Today's Entry" : "Log Today's Deliveries"}
-              </h2>
-            </div>
-            <StopEntryForm logs={logs} updateLogs={updateLogs} />
-          </CardContent>
-        </Card>
-      </motion.div>
-
       {/* Recent Activity */}
       {recentActivity.length > 0 && (
         <motion.div
@@ -237,11 +302,13 @@ const SimpleDashboard = () => {
           </div>
           <div className="space-y-2">
             {recentActivity.map((log) => (
-              <motion.div
+              <motion.button
+                type="button"
                 key={log.id}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="bg-card rounded-[14px] p-4 border border-border/50 hover:border-primary/30 transition-colors"
+                onClick={() => navigate(`/app/dashboard?date=${encodeURIComponent(log.date)}`)}
+                className="w-full text-left bg-card rounded-[14px] p-4 border border-border/50 hover:border-primary/30 transition-colors pressable"
               >
                 <div className="flex items-center justify-between">
                   <div>
@@ -260,44 +327,15 @@ const SimpleDashboard = () => {
                     <Money amount={log.total || 0} />
                   </div>
                 </div>
-              </motion.div>
+              </motion.button>
             ))}
           </div>
         </motion.div>
       )}
 
-      {/* Quick Action Buttons */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="grid grid-cols-3 gap-3 pt-2"
-      >
-        <Button
-          onClick={() => navigate('/app/stats')}
-          variant="outline"
-          className="flex-col h-auto py-4 gap-2 rounded-[14px] active:scale-95 touch-manipulation"
-        >
-          <TrendingUp className="w-6 h-6 text-secondary" />
-          <span className="font-medium text-xs">Stats</span>
-        </Button>
-        <Button
-          onClick={() => navigate('/app/invoice')}
-          variant="outline"
-          className="flex-col h-auto py-4 gap-2 rounded-[14px] active:scale-95 touch-manipulation"
-        >
-          <FileText className="w-6 h-6 text-primary" />
-          <span className="font-medium text-xs">Invoices</span>
-        </Button>
-        <Button
-          onClick={() => navigate('/app/settings')}
-          variant="outline"
-          className="flex-col h-auto py-4 gap-2 rounded-[14px] active:scale-95 touch-manipulation"
-        >
-          <DollarSign className="w-6 h-6 text-secondary" />
-          <span className="font-medium text-xs">Pay Structure</span>
-        </Button>
-      </motion.div>
+      {/* Free-plan ads stay below the useful content and never interrupt saving a shift. */}
+      <AdBanner />
+
     </div>
   );
 };

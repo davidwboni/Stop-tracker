@@ -4,18 +4,14 @@ import { Button } from "./ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Trash2,
-  ArrowUpDown,
-  ChevronDown,
-  ChevronUp,
-  BarChart2,
-  TrendingUp,
-  DollarSign,
+  Pencil,
   Zap,
   Package,
   MapPin
 } from "lucide-react";
 import _ from "lodash";
 import { Money } from "./ui/money";
+import { useNavigate } from "react-router-dom";
 
 const formatDate = (inputDate) => {
   const date = new Date(inputDate);
@@ -29,26 +25,14 @@ const formatDate = (inputDate) => {
 };
 
 const EntriesList = ({ logs, onDeleteEntry }) => {
-  const [sortBy, setSortBy] = useState("date");
-  const [sortOrder, setSortOrder] = useState("desc");
+  const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [viewDetails, setViewDetails] = useState(false);
 
-  const handleSort = (field) => {
-    if (sortBy === field) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortBy(field);
-      setSortOrder("desc");
-    }
-    // Add haptic feedback
-    if (navigator.vibrate) navigator.vibrate(5);
-  };
-
   const sortedLogs = useMemo(
-    () => _.orderBy(logs, [sortBy], [sortOrder]),
-    [logs, sortBy, sortOrder]
+    () => _.orderBy(logs, ["date"], ["desc"]),
+    [logs]
   );
 
   const totalPages = Math.ceil(logs.length / itemsPerPage);
@@ -57,134 +41,21 @@ const EntriesList = ({ logs, onDeleteEntry }) => {
     page * itemsPerPage
   );
 
-  const calculateSummary = (days) => {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
-    return logs
-      .filter((log) => new Date(log.date) >= cutoffDate)
-      .reduce(
-        (acc, log) => ({
-          stops: acc.stops + log.stops,
-          total: acc.total + (log.total || 0),
-        }),
-        { stops: 0, total: 0 }
-      );
-  };
-
-  const last7Days = calculateSummary(7);
-  const last4Weeks = calculateSummary(28);
-  const lastMonth = calculateSummary(30);
-
-  const SortButton = ({ field, label, icon: Icon }) => (
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={() => handleSort(field)}
-      className="flex items-center gap-2 h-10 rounded-[14px] transition-all duration-200 hover:bg-primary/5 touch-manipulation min-h-[44px]"
-    >
-      {Icon && <Icon className="w-4 h-4" />}
-      <span className="font-medium">{label}</span>
-      {sortBy === field ? (
-        sortOrder === "asc" ? (
-          <ChevronUp className="w-4 h-4 text-primary" />
-        ) : (
-          <ChevronDown className="w-4 h-4 text-primary" />
-        )
-      ) : (
-        <ArrowUpDown className="w-4 h-4 opacity-30" />
-      )}
-    </Button>
-  );
 
   return (
     <div className="space-y-6">
-      {/* Stats Summary */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Last 7 Days */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          whileHover={{ scale: 1.02 }}
-          transition={{ duration: 0.2 }}
-        >
-          <Card className="border-border/50 touch-manipulation">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <TrendingUp className="w-8 h-8 text-primary" />
-                <span className="text-xs font-medium bg-muted text-muted-foreground px-2 py-1 rounded-full">7 Days</span>
-              </div>
-              <div className="text-3xl font-bold mb-1 tabular-nums">{last7Days.stops}</div>
-              <div className="text-muted-foreground text-sm mb-3">Stops Delivered</div>
-              <div className="flex items-baseline">
-                <span className="text-2xl font-bold text-primary"><Money amount={last7Days.total} /></span>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Last 4 Weeks */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.1 }}
-          whileHover={{ scale: 1.02 }}
-        >
-          <Card className="border-border/50 touch-manipulation">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <Package className="w-8 h-8 text-primary" />
-                <span className="text-xs font-medium bg-muted text-muted-foreground px-2 py-1 rounded-full">28 Days</span>
-              </div>
-              <div className="text-3xl font-bold mb-1 tabular-nums">{last4Weeks.stops}</div>
-              <div className="text-muted-foreground text-sm mb-3">Stops Delivered</div>
-              <div className="flex items-baseline">
-                <span className="text-2xl font-bold text-primary"><Money amount={last4Weeks.total} /></span>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Last Month */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
-          whileHover={{ scale: 1.02 }}
-          className="sm:col-span-2 lg:col-span-1"
-        >
-          <Card className="border-border/50 touch-manipulation h-full">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <DollarSign className="w-8 h-8 text-primary" />
-                <span className="text-xs font-medium bg-muted text-muted-foreground px-2 py-1 rounded-full">30 Days</span>
-              </div>
-              <div className="text-3xl font-bold mb-1 tabular-nums">{lastMonth.stops}</div>
-              <div className="text-muted-foreground text-sm mb-3">Stops Delivered</div>
-              <div className="flex items-baseline">
-                <span className="text-2xl font-bold text-primary"><Money amount={lastMonth.total} /></span>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-
       {/* Main Entries Card */}
-      <Card className="border-border/50 shadow-sm rounded-[18px] overflow-hidden">
-        <CardHeader className="border-b border-border">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <CardTitle className="text-xl font-bold flex items-center">
-              <Zap className="w-6 h-6 text-primary mr-2" />
-              All Deliveries
-              <span className="ml-2 text-sm font-normal text-muted-foreground">
-                ({logs.length} total)
-              </span>
-            </CardTitle>
-            <div className="flex flex-wrap gap-2">
-              <SortButton field="date" label="Date" />
-              <SortButton field="stops" label="Stops" />
-              <SortButton field="total" label="Amount" />
-            </div>
-          </div>
+      <Card className="border-border/60 shadow-sm rounded-[18px] overflow-hidden">
+        <CardHeader className="border-b border-border py-4">
+          <CardTitle className="text-base font-semibold flex items-center justify-between">
+            <span className="flex items-center">
+              <Zap className="w-5 h-5 text-primary mr-2" />
+              Work diary
+            </span>
+            <span className="text-xs font-normal text-muted-foreground">
+              {logs.length} {logs.length === 1 ? "day" : "days"}
+            </span>
+          </CardTitle>
         </CardHeader>
 
         <CardContent className="p-4 sm:p-6">
@@ -200,7 +71,7 @@ const EntriesList = ({ logs, onDeleteEntry }) => {
                   whileHover={{ scale: 1.01 }}
                   className="group"
                 >
-                  <div className="flex justify-between items-center p-4 sm:p-5 rounded-[14px] bg-card hover:bg-primary/5 border border-border/50 hover:border-primary/30 transition-all duration-300 shadow-sm hover:shadow-md touch-manipulation">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 p-4 sm:p-5 rounded-[14px] bg-card hover:bg-primary/5 border border-border/50 hover:border-primary/30 transition-all duration-300 shadow-sm hover:shadow-md touch-manipulation">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-2">
                         <div className="font-bold text-foreground text-lg">
@@ -230,8 +101,8 @@ const EntriesList = ({ logs, onDeleteEntry }) => {
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-4 flex-shrink-0">
-                      <div className="text-right">
+                    <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto flex-shrink-0">
+                      <div className="text-right mr-1">
                         <div className="text-2xl font-bold text-foreground">
                           <Money amount={log.total || 0} />
                         </div>
@@ -239,13 +110,28 @@ const EntriesList = ({ logs, onDeleteEntry }) => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => {
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          if (navigator.vibrate) navigator.vibrate(8);
+                          navigate(`/app/dashboard?date=${encodeURIComponent(log.date)}`);
+                        }}
+                        aria-label={`Edit entry for ${formatDate(log.date)}`}
+                        className="hover:bg-primary/10 hover:text-primary rounded-[14px] min-h-[44px] min-w-[44px] touch-manipulation"
+                      >
+                        <Pencil className="w-4.5 h-4.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(event) => {
+                          event.stopPropagation();
                           if (navigator.vibrate) navigator.vibrate([10, 50, 10]);
                           onDeleteEntry(log.id);
                         }}
-                        className="opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive rounded-[14px] transition-all duration-200 min-h-[44px] min-w-[44px] touch-manipulation"
+                        aria-label={`Delete entry for ${formatDate(log.date)}`}
+                        className="opacity-70 hover:opacity-100 hover:bg-destructive/10 hover:text-destructive rounded-[14px] transition-all duration-200 min-h-[44px] min-w-[44px] touch-manipulation"
                       >
-                        <Trash2 className="w-5 h-5" />
+                        <Trash2 className="w-4.5 h-4.5" />
                       </Button>
                     </div>
                   </div>

@@ -6,7 +6,7 @@ import { ArrowLeft, ShieldCheck, Shield, Lock, Eye, Database } from 'lucide-reac
 
 const PrivacyPolicy = ({ onBack }) => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-teal-50 px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 px-4 sm:px-6 lg:px-8 py-8">
       <div className="max-w-6xl mx-auto">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
@@ -23,7 +23,7 @@ const PrivacyPolicy = ({ onBack }) => {
         </Button>
         
         <Card className="overflow-hidden shadow-apple-card hover:shadow-apple-card-hover transition-all duration-500 border-0">
-          <CardHeader className="relative bg-gradient-to-br from-blue-600 via-indigo-600 to-teal-700 text-white py-12 overflow-hidden">
+          <CardHeader className="relative bg-brand-navy text-white py-12 overflow-hidden">
             <div className="absolute inset-0 bg-black/10"></div>
             <div className="absolute -top-4 -right-4 w-32 h-32 bg-white/10 rounded-full"></div>
             <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-white/5 rounded-full"></div>
@@ -37,7 +37,7 @@ const PrivacyPolicy = ({ onBack }) => {
                 <p className="text-blue-100 text-lg font-medium">Your privacy and data protection matter to us</p>
               </div>
             </div>
-            <p className="relative z-10 text-blue-200 text-sm bg-blue-800/30 px-4 py-2 rounded-xl inline-block">Last Updated: March 21, 2025</p>
+            <p className="relative z-10 text-blue-200 text-sm bg-blue-800/30 px-4 py-2 rounded-xl inline-block">Last Updated: September 18, 2026</p>
           </CardHeader>
           <CardContent className="p-6 sm:p-8 lg:p-10 bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50">
             <div className="prose dark:prose-invert max-w-none prose-headings:text-gray-900 dark:prose-headings:text-white prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-li:text-gray-700 dark:prose-li:text-gray-300">
@@ -83,16 +83,17 @@ const PrivacyPolicy = ({ onBack }) => {
                 </div>
               </div>
           
-          <h3>Usage Data</h3>
+          <h3>Optional Product Analytics</h3>
           <p>
-            We collect data about how you use the App, including:
+            If you choose to allow analytics, Stop Tracker records high-level product events so we can understand
+            whether the app is useful and where the experience needs improvement. These events can include screens
+            viewed, onboarding completion, feature usage, and whether a pay comparison found a discrepancy.
           </p>
-          <ul>
-            <li>Delivery stop records you input</li>
-            <li>Login times and frequency of use</li>
-            <li>Features you interact with</li>
-            <li>Device information (type, operating system, browser)</li>
-          </ul>
+          <p>
+            Product analytics do not include your earnings, pay rates, invoice contents, notes, delivery addresses,
+            name, email address, or the free-form text you enter into AI pay setup. You can change this preference
+            at any time in Profile under Usage analytics.
+          </p>
           
           <h2>How We Use Your Information</h2>
           <p>
@@ -108,6 +109,29 @@ const PrivacyPolicy = ({ onBack }) => {
             <li>Detect, prevent, and address technical issues</li>
           </ul>
           
+          <h2>AI-Assisted Features</h2>
+          <p>
+            When you choose an AI-assisted setup feature, the description or rate-sheet image you submit is sent
+            through our protected Firebase backend to DeepSeek for interpretation. The DeepSeek API key is never
+            included in the browser or app. Normal earnings, stop, mileage and pay calculations do not require AI;
+            they are calculated by Stop Tracker's deterministic calculation code.
+          </p>
+          <p>
+            We send a pseudonymous technical identifier for request isolation rather than your name or email. Do not
+            upload information that is not needed for the feature.
+          </p>
+
+          <h2>Payments and Advertising</h2>
+          <p>
+            Web Pro subscriptions are processed by Stripe. Stripe receives the information needed to complete and
+            manage the payment; Verso stores only billing identifiers and subscription status needed to determine
+            whether Pro is active.
+          </p>
+          <p>
+            The free web plan may show Google advertising when advertising is enabled. Pro is ad-free. Advertising
+            is kept out of the daily shift-save flow, and ad services are not loaded for Pro users.
+          </p>
+
           <h2>Data Storage and Security</h2>
           <p>
             Your data is stored securely on Google Firebase servers. We implement appropriate technical and
@@ -140,10 +164,10 @@ const PrivacyPolicy = ({ onBack }) => {
             <li>Objection to processing of your personal data</li>
           </ul>
           
-          <h2>Cookies and Tracking Technologies</h2>
+          <h2>Analytics and Local Preferences</h2>
           <p>
-            We use cookies and similar tracking technologies to track activity on our App and to hold certain information.
-            You can instruct your browser to refuse all cookies or to indicate when a cookie is being sent.
+            Stop Tracker stores your analytics preference on your device. Firebase Analytics is only used for product
+            analytics after you choose to allow it. If you decline, product analytics events are not transmitted.
           </p>
           
           <h2>Children's Privacy</h2>
