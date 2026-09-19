@@ -101,7 +101,7 @@ const SimpleDashboard = () => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-4 pb-24 space-y-4">
+    <div className="max-w-2xl mx-auto px-1 py-2 pb-24 space-y-4">
       <DashboardTutorial />
 
       {/* Greeting Header */}
@@ -110,7 +110,7 @@ const SimpleDashboard = () => {
         animate={{ opacity: 1, y: 0 }}
         className="pt-2"
       >
-        <h1 className="text-4xl font-bold mb-2">
+        <h1 className="text-3xl font-bold tracking-tight mb-1">
           {greeting}, {user?.displayName?.split(' ')[0] || "Driver"}!
         </h1>
         <p className="text-muted-foreground">
@@ -148,9 +148,9 @@ const SimpleDashboard = () => {
             className="bg-card border-border/50 overflow-hidden min-w-0 cursor-pointer hover:border-primary/30 active:scale-[0.98] transition-all touch-manipulation"
           >
             <CardContent className="p-4">
-              <div className="text-sm text-muted-foreground mb-1">Today's Earnings</div>
+              <div className="text-sm text-muted-foreground mb-1">Expected Today</div>
               <div className="text-2xl sm:text-3xl font-bold text-primary"><Money amount={todayData.earnings} /></div>
-              <div className="text-xs text-muted-foreground mt-1">earned</div>
+              <div className="text-xs text-muted-foreground mt-1">expected</div>
             </CardContent>
           </Card>
         </div>
@@ -173,7 +173,7 @@ const SimpleDashboard = () => {
           >
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="font-semibold text-lg">This Week</h2>
+                <h2 className="font-semibold text-lg">Current Pay Period</h2>
                 <div className="flex items-center gap-1 text-primary opacity-60">
                   <Calendar className="w-5 h-5" />
                   <ArrowRight className="w-4 h-4" />
@@ -182,11 +182,11 @@ const SimpleDashboard = () => {
               <div className="grid grid-cols-3 gap-3">
                 <div className="min-w-0">
                   <div className="text-xl sm:text-2xl font-bold">{weekStats.stops}</div>
-                  <div className="text-xs text-muted-foreground mt-1">Total Stops</div>
+                  <div className="text-xs text-muted-foreground mt-1">Your stops</div>
                 </div>
                 <div className="min-w-0">
                   <div className="text-xl sm:text-2xl font-bold text-primary"><Money amount={weekStats.earnings} whole /></div>
-                  <div className="text-xs text-muted-foreground mt-1">Earned</div>
+                  <div className="text-xs text-muted-foreground mt-1">Expected</div>
                 </div>
                 <div className="min-w-0">
                   <div className="text-xl sm:text-2xl font-bold"><Money amount={weekStats.avgPerDay} whole /></div>
@@ -211,7 +211,7 @@ const SimpleDashboard = () => {
                 <Package className="w-5 h-5 text-primary" />
               </div>
               <h2 className="font-semibold text-lg">
-                {todayAlreadyLogged ? "Update Today's Entry" : "Log Today's Deliveries"}
+                {todayAlreadyLogged ? "Update Today's Entry" : "Log Today's Work"}
               </h2>
             </div>
             <StopEntryForm logs={logs} updateLogs={updateLogs} />
