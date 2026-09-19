@@ -7,6 +7,7 @@ import { Card, CardContent } from "./ui/card";
 import StopEntryForm from "./StopEntryForm";
 import { Money } from "./ui/money";
 import { ArrowRight, BarChart3, FileText, MapPin, ShieldCheck, UserCircle } from "lucide-react";
+import { getPeriodForDate, summarizePeriod } from "../features/payperiod/periods";
 
 const dateKey = (d) => d.toISOString().split("T")[0];
 const startOfCurrentPeriod = () => {
@@ -18,28 +19,19 @@ const startOfCurrentPeriod = () => {
 
 const SimpleDashboard = () => {
   const { user } = useAuth();
-  const { logs = [], updateLogs, loading } = useData();
+  const { logs = [], updateLogs, loading, payPeriodAnchor } = useData();
   const navigate = useNavigate();
   const today = dateKey(new Date());
 
   const todayLog = useMemo(() => logs.find((l) => l.date === today), [logs, today]);
-  const periodStart = useMemo(() => startOfCurrentPeriod(), []);
-  const periodLogs = useMemo(() => logs.filter((l) => {
-    const d = new Date(l.date + "T00:00:00");
-    return d >= periodStart && l.date <= today;
-  }), [logs, periodStart, today]);
-
-  const period = useMemo(() => ({
-    stops: periodLogs.reduce((s,l) => s + (Number(l.stops) || 0), 0),
-    expected: periodLogs.reduce((s,l) => s + (Number(l.total) || 0), 0),
-    days: periodLogs.length,
-  }), [periodLogs]);
+  const periodDef = useMemo(() => getPeriodForDate(payPeriodAnchor || today, new Date()), [payPeriodAnchor, today]);
+  const period = useMemo(() => summarizePeriod(logs, periodDef), [logs, periodDef]);
 
   const recent = useMemo(() => [...logs].filter(l => l.date <= today).sort((a,b) => b.date.localeCompare(a.date)).slice(0,3), [logs, today]);
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-  const startLabel = periodStart.toLocaleDateString("en-GB",{day:"numeric",month:"short"});
-  const endLabel = new Date().toLocaleDateString("en-GB",{day:"numeric",month:"short"});
+  const startLabel = new Date(period.start+"T12:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short"});
+  const endLabel = new Date(period.end+"T12:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short"});
 
   if (loading) return <div className="flex min-h-[60vh] items-center justify-center"><div className="h-10 w-10 animate-spin rounded-full border-2 border-[#7567ff] border-t-transparent"/></div>;
 
@@ -92,7 +84,7 @@ const SimpleDashboard = () => {
               <div><div className="text-3xl font-bold">{period.stops.toLocaleString("en-GB")}</div><div className="mt-1 text-xs text-[#8e9ab2]">stops recorded</div></div>
               <div><div className="text-3xl font-bold text-[#8f83ff]"><Money amount={period.expected}/></div><div className="mt-1 text-xs text-[#8e9ab2]">expected earnings</div></div>
             </div>
-            <div className="mt-5 border-t border-[#202a3d] pt-4 text-sm text-[#9aa6bd]">{period.days} work {period.days === 1 ? "day" : "days"} logged in this 4-week view</div>
+            <div className="mt-5 border-t border-[#202a3d] pt-4 text-sm text-[#9aa6bd]">{period.daysLogged} work {period.daysLogged === 1 ? "day" : "days"} logged in this 4-week period</div>
           </CardContent>
         </Card>
       </section>
