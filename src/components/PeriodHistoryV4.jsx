@@ -24,7 +24,7 @@ const PeriodHistoryV4 = ({ compact=false }) => {
   const currentId=periods[0]?.id;
 
   const advance = async (period,status) => {
-    const next = status==="complete"?"invoice_sent":status==="invoice_sent"?"awaiting_statement":status==="awaiting_statement"?"ready_to_check":null;
+    const next = status==="invoice_sent"?"awaiting_statement":status==="awaiting_statement"?"ready_to_check":null;
     if(next) await updatePeriodRecord(period.id,{status:next});
   };
 
@@ -39,7 +39,7 @@ const PeriodHistoryV4 = ({ compact=false }) => {
         <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold ${meta.cls}`}><Icon className="h-3 w-3"/>{meta.label}</span>
       </div>
       <div className="mt-4 grid grid-cols-2 gap-4"><div><div className="text-xl font-bold">{p.stops.toLocaleString("en-GB")}</div><div className="text-[11px] text-[#7f8ba3]">stops</div></div><div><div className="text-xl font-bold text-[#8f83ff]"><Money amount={p.expected}/></div><div className="text-[11px] text-[#7f8ba3]">expected</div></div></div>
-      {status==="complete" && <button onClick={()=>advance(p,status)} className="mt-4 flex w-full items-center justify-between rounded-xl border border-[#302a5b] bg-[#17152b] p-3 text-sm font-semibold"><span>Generate / send invoice</span><ChevronRight className="h-4 w-4"/></button>}
+      {status==="complete" && <button onClick={()=>navigate("/app/invoice",{state:{periodId:p.id,startDate:p.start,endDate:p.end,amount:p.expected,stops:p.stops}})} className="mt-4 flex w-full items-center justify-between rounded-xl border border-[#302a5b] bg-[#17152b] p-3 text-sm font-semibold"><span>Generate invoice</span><ChevronRight className="h-4 w-4"/></button>}
       {status==="invoice_sent" && <button onClick={()=>advance(p,status)} className="mt-4 flex w-full items-center justify-between rounded-xl border border-[#26314a] bg-[#0d1422] p-3 text-sm font-semibold"><span>Mark invoice sent</span><ChevronRight className="h-4 w-4"/></button>}
       {status==="awaiting_statement" && <button onClick={()=>advance(p,status)} className="mt-4 flex w-full items-center justify-between rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-sm font-semibold"><span>Statement received</span><ChevronRight className="h-4 w-4"/></button>}
       {status==="ready_to_check" && <button onClick={()=>navigate("/app/check-pay",{state:{periodId:p.id}})} className="mt-4 flex w-full items-center justify-between rounded-xl bg-[#7567ff] p-3 text-sm font-bold text-white"><span>Check statement</span><ChevronRight className="h-4 w-4"/></button>}
