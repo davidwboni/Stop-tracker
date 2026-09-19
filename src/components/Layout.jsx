@@ -16,10 +16,8 @@ import { calculateDayEarnings } from '../features/payperiod/payStructure';
 const TAB_ORDER = [
   '/app/dashboard',
   '/app/entries',
-  '/app/routes',
   '/app/invoice',
   '/app/stats',
-  '/app/profile',
 ];
 
 const Layout = () => {
@@ -101,7 +99,7 @@ const Layout = () => {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-gradient-to-br from-gray-50 via-blue-50/20 to-teal-50/30 dark:from-gray-900 dark:via-blue-900/10 dark:to-teal-900/20 flex flex-col pt-safe">
+    <div className="min-h-[100dvh] bg-[#080c14] text-[#f5f7fb] flex flex-col pt-safe">
       <SyncStatus />
 
       <main
@@ -112,7 +110,7 @@ const Layout = () => {
         {/* Full-width scroll area; an inner block owns the max-width + centering
             so it stays centred on iOS WebKit (a flex item with max-width can
             left-bias under align-items:stretch). */}
-        <div className="w-full max-w-6xl mx-auto pt-8 pb-8 px-4">
+        <div className="w-full max-w-6xl mx-auto pt-5 pb-24 px-4">
           <ErrorBoundary>
             <motion.div
               key={location.pathname}
