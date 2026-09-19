@@ -14,6 +14,7 @@ const DataContext = createContext({
   paymentConfig: null,
   needsOnboarding: false,
   completeOnboarding: () => Promise.resolve(),
+  updatePaymentConfig: () => Promise.resolve(null),
   forceSync: () => Promise.resolve(false)
 });
 
@@ -168,6 +169,38 @@ export const DataProvider = ({ children }) => {
     }
   };
 
+  // Keep the active pay model in sync everywhere immediately, then persist it.
+  // Dashboard/entry forms read this same context, so switching from per-day to
+  // stops/hourly/mileage updates the Home form without a reload.
+  const updatePaymentConfig = async (config) => {
+    const normalized = normalizePayStructure(config);
+    const previous = paymentConfig;
+
+    setPaymentConfig(normalized);
+
+    if (!user?.uid) return normalized;
+
+    try {
+      if (user.isGuest) {
+        localStorage.setItem(`guestConfig_${user.uid}`, JSON.stringify(normalized));
+      } else {
+        await setDoc(
+          doc(db, 'users', user.uid),
+          {
+            paymentConfig: normalized,
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+      }
+      return normalized;
+    } catch (err) {
+      // Do not leave the UI showing a model that failed to persist.
+      setPaymentConfig(previous);
+      throw err;
+    }
+  };
+
   // Complete first-run onboarding: optionally save the chosen pay config, mark
   // the account onboarded, and clear the gate. Guests persist locally.
   const completeOnboarding = async (config) => {
@@ -234,6 +267,7 @@ export const DataProvider = ({ children }) => {
     paymentConfig,
     needsOnboarding,
     completeOnboarding,
+    updatePaymentConfig,
     forceSync
   };
 
