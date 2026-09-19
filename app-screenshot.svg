@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600">
+  <!-- Phone frame -->
+  <rect x="0" y="0" width="400" height="600" rx="20" ry="20" fill="#111827" />
+  <rect x="10" y="10" width="380" height="580" rx="15" ry="15" fill="#f9fafb" />
+  
+  <!-- Status bar -->
+  <rect x="10" y="10" width="380" height="25" fill="#6B7AFF" />
+  <circle cx="370" cy="22" r="8" fill="#ffffff" />
+  <rect x="310" y="17" width="40" height="10" rx="5" ry="5" fill="#ffffff" />
+  <text x="20" y="27" font-family="Arial" font-size="12" fill="#ffffff">9:41 AM</text>
+  
+  <!-- App header -->
+  <rect x="10" y="35" width="380" height="60" fill="#6B7AFF" />
+  <text x="20" y="75" font-family="Arial" font-weight="bold" font-size="22" fill="#ffffff">Stop Tracker</text>
+  <circle cx="360" cy="65" r="15" fill="#ffffff" />
+  <line x1="355" y1="60" x2="365" y2="70" stroke="#6B7AFF" stroke-width="3" />
+  <line x1="365" y1="60" x2="355" y2="70" stroke="#6B7AFF" stroke-width="3" />
+  
+  <!-- Dashboard summary -->
+  <rect x="25" y="110" width="350" height="100" rx="10" ry="10" fill="#ffffff" stroke="#e5e7eb" stroke-width="2" />
+  <text x="40" y="140" font-family="Arial" font-weight="bold" font-size="18" fill="#111827">Today's Summary</text>
+  
+  <text x="40" y="170" font-family="Arial" font-size="14" fill="#6b7280">Deliveries:</text>
+  <text x="130" y="170" font-family="Arial" font-weight="bold" font-size="14" fill="#111827">17</text>
+  
+  <text x="200" y="170" font-family="Arial" font-size="14" fill="#6b7280">Earnings:</text>
+  <text x="270" y="170" font-family="Arial" font-weight="bold" font-size="14" fill="#111827">£127.50</text>
+  
+  <text x="40" y="195" font-family="Arial" font-size="14" fill="#6b7280">Hours:</text>
+  <text x="130" y="195" font-family="Arial" font-weight="bold" font-size="14" fill="#111827">6.5</text>
+  
+  <text x="200" y="195" font-family="Arial" font-size="14" fill="#6b7280">Per Hour:</text>
+  <text x="270" y="195" font-family="Arial" font-weight="bold" font-size="14" fill="#111827">£19.62</text>
+  
+  <!-- Recent deliveries list -->
+  <text x="25" y="240" font-family="Arial" font-weight="bold" font-size="18" fill="#111827">Recent Deliveries</text>
+  
+  <!-- Delivery item 1 -->
+  <rect x="25" y="255" width="350" height="70" rx="10" ry="10" fill="#ffffff" stroke="#e5e7eb" stroke-width="2" />
+  <circle cx="55" cy="290" r="20" fill="#eef2ff" />
+  <text x="55" y="295" font-family="Arial" font-weight="bold" font-size="14" fill="#6B7AFF" text-anchor="middle">1</text>
+  
+  <text x="90" y="280" font-family="Arial" font-weight="bold" font-size="16" fill="#111827">123 Main St</text>
+  <text x="90" y="300" font-family="Arial" font-size="14" fill="#6b7280">14:32 • £7.50 • Completed</text>
+  
+  <circle cx="345" cy="290" r="12" fill="#dcfce7" />
+  <text x="345" y="295" font-family="Arial" font-weight="bold" font-size="16" fill="#16a34a" text-anchor="middle">✓</text>
+  
+  <!-- Delivery item 2 -->
+  <rect x="25" y="335" width="350" height="70" rx="10" ry="10" fill="#ffffff" stroke="#e5e7eb" stroke-width="2" />
+  <circle cx="55" cy="370" r="20" fill="#eef2ff" />
+  <text x="55" y="375" font-family="Arial" font-weight="bold" font-size="14" fill="#6B7AFF" text-anchor="middle">2</text>
+  
+  <text x="90" y="360" font-family="Arial" font-weight="bold" font-size="16" fill="#111827">456 Oak Avenue</text>
+  <text x="90" y="380" font-family="Arial" font-size="14" fill="#6b7280">14:47 • £8.25 • Completed</text>
+  
+  <circle cx="345" cy="370" r="12" fill="#dcfce7" />
+  <text x="345" y="375" font-family="Arial" font-weight="bold" font-size="16" fill="#16a34a" text-anchor="middle">✓</text>
+  
+  <!-- Delivery item 3 -->
+  <rect x="25" y="415" width="350" height="70" rx="10" ry="10" fill="#ffffff" stroke="#e5e7eb" stroke-width="2" />
+  <circle cx="55" cy="450" r="20" fill="#eef2ff" />
+  <text x="55" y="455" font-family="Arial" font-weight="bold" font-size="14" fill="#6B7AFF" text-anchor="middle">3</text>
+  
+  <text x="90" y="440" font-family="Arial" font-weight="bold" font-size="16" fill="#111827">789 Pine Street</text>
+  <text x="90" y="460" font-family="Arial" font-size="14" fill="#6b7280">15:03 • £10.75 • Completed</text>
+  
+  <circle cx="345" cy="450" r="12" fill="#dcfce7" />
+  <text x="345" y="455" font-family="Arial" font-weight="bold" font-size="16" fill="#16a34a" text-anchor="middle">✓</text>
+  
+  <!-- Navigation bar -->
+  <rect x="10" y="510" width="380" height="80" fill="#ffffff" />
+  
+  <!-- Nav items -->
+  <circle cx="70" cy="540" r="25" fill="#eef2ff" />
+  <text x="70" y="545" font-family="Arial" font-size="10" fill="#6B7AFF" text-anchor="middle">HOME</text>
+  
+  <circle cx="200" cy="540" r="30" fill="#6B7AFF" />
+  <text x="200" y="538" font-family="Arial" font-weight="bold" font-size="24" fill="#ffffff" text-anchor="middle">+</text>
+  <text x="200" y="560" font-family="Arial" font-size="10" fill="#6B7AFF" text-anchor="middle">NEW STOP</text>
+  
+  <circle cx="330" cy="540" r="25" fill="#eef2ff" />
+  <text x="330" y="545" font-family="Arial" font-size="10" fill="#6B7AFF" text-anchor="middle">STATS</text>
+</svg>
