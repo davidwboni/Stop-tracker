@@ -2,14 +2,15 @@ import React, { useMemo, useState } from "react";
 import { useData } from "../contexts/DataContext";
 import { Money } from "./ui/money";
 import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Keyboard, LockKeyhole, ShieldCheck, Upload } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { getPeriodForDate, getPeriodLogs } from "../features/payperiod/periods";
+import { useNavigate, useLocation } from "react-router-dom";
+import { getPeriodForDate, getPeriodLogs, listPeriods } from "../features/payperiod/periods";
 
 const n = (v) => Number(v) || 0;
 const gbDate = (d) => new Date(d + "T12:00:00").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});
 
 const CheckPayV4 = () => {
-  const { logs = [], payPeriodAnchor, updatePayPeriodAnchor } = useData();
+  const { logs = [], payPeriodAnchor, updatePayPeriodAnchor, updatePeriodRecord } = useData();
+  const location = useLocation();
   const navigate = useNavigate();
   const [mode,setMode] = useState("idle");
   const [statementStops,setStatementStops] = useState("");
@@ -18,7 +19,10 @@ const CheckPayV4 = () => {
   const [showDates,setShowDates] = useState(true);
 
   const today = new Date().toISOString().split("T")[0];
-  const periodDef = useMemo(() => getPeriodForDate(payPeriodAnchor || today, new Date()), [payPeriodAnchor,today]);
+  const periodDef = useMemo(() => {
+    const all=listPeriods(logs,payPeriodAnchor || today,12);
+    return all.find(p=>p.id===location.state?.periodId) || getPeriodForDate(payPeriodAnchor || today, new Date());
+  }, [logs,payPeriodAnchor,today,location.state]);
   const period = useMemo(() => getPeriodLogs(logs,periodDef).sort((a,b)=>a.date.localeCompare(b.date)), [logs,periodDef]);
   const stops=period.reduce((s,l)=>s+n(l.stops),0);
   const expected=period.reduce((s,l)=>s+n(l.total),0);
@@ -35,7 +39,7 @@ const CheckPayV4 = () => {
   });
 
   const updateDaily=(date,key,value)=>setDaily(prev=>({...prev,[date]:{stops:prev[date]?.stops??"",amount:prev[date]?.amount??"",[key]:value}}));
-  const compare=()=>setMode("result");
+  const compare=async()=>{ setMode("result"); await updatePeriodRecord(periodDef.id,{status:"reconciled",statementStops:statementStopsNum,statementAmount:statementAmountNum,differenceStops:stopDiff,differenceAmount:moneyDiff,reconciledAt:new Date().toISOString()}); };
   const reset=()=>{setMode("idle");setStatementStops("");setStatementAmount("");setDaily({});};
 
   return <div className="mx-auto max-w-2xl space-y-5 pb-24 pt-2">
