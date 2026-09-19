@@ -3,12 +3,13 @@ import { useData } from "../contexts/DataContext";
 import { Money } from "./ui/money";
 import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Keyboard, LockKeyhole, ShieldCheck, Upload } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { getPeriodForDate, getPeriodLogs } from "../features/payperiod/periods";
 
 const n = (v) => Number(v) || 0;
 const gbDate = (d) => new Date(d + "T12:00:00").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});
 
 const CheckPayV4 = () => {
-  const { logs = [] } = useData();
+  const { logs = [], payPeriodAnchor, updatePayPeriodAnchor } = useData();
   const navigate = useNavigate();
   const [mode,setMode] = useState("idle");
   const [statementStops,setStatementStops] = useState("");
@@ -16,8 +17,9 @@ const CheckPayV4 = () => {
   const [daily,setDaily] = useState({});
   const [showDates,setShowDates] = useState(true);
 
-  const cutoff = useMemo(() => { const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-27); return d; }, []);
-  const period = useMemo(() => logs.filter(l => new Date(l.date+"T00:00:00") >= cutoff && l.date <= new Date().toISOString().split("T")[0]).sort((a,b)=>a.date.localeCompare(b.date)), [logs,cutoff]);
+  const today = new Date().toISOString().split("T")[0];
+  const periodDef = useMemo(() => getPeriodForDate(payPeriodAnchor || today, new Date()), [payPeriodAnchor,today]);
+  const period = useMemo(() => getPeriodLogs(logs,periodDef).sort((a,b)=>a.date.localeCompare(b.date)), [logs,periodDef]);
   const stops=period.reduce((s,l)=>s+n(l.stops),0);
   const expected=period.reduce((s,l)=>s+n(l.total),0);
   const hasDaily = Object.keys(daily).length > 0;
@@ -39,7 +41,7 @@ const CheckPayV4 = () => {
   return <div className="mx-auto max-w-2xl space-y-5 pb-24 pt-2">
     <div><div className="mb-3 inline-flex rounded-2xl bg-[#7567ff]/10 p-3 text-[#8f83ff]"><ShieldCheck/></div><h1 className="text-3xl font-bold tracking-tight">Check Pay</h1><p className="mt-2 max-w-lg text-sm leading-6 text-[#8e9ab2]">Compare the statement you receive with your independent Stop Tracker record.</p></div>
 
-    <div className="rounded-2xl border border-[#202a3d] bg-[#111827] p-5">
+    <div className="rounded-2xl border border-[#202a3d] bg-[#111827] p-5"><div className="mb-4 flex items-center justify-between gap-3"><div><div className="text-xs text-[#8e9ab2]">4-week period</div><div className="mt-1 text-sm font-semibold">{new Date(periodDef.start+"T12:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short"})} — {new Date(periodDef.end+"T12:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}</div></div><label className="text-[10px] text-[#69758d]">PERIOD START<input type="date" value={payPeriodAnchor || today} onChange={e=>updatePayPeriodAnchor(e.target.value)} className="mt-1 block rounded-lg border border-[#26314a] bg-[#090f1a] p-2 text-xs text-white"/></label></div>
       <p className="text-xs font-bold tracking-[.18em] text-[#69758d]">YOUR CURRENT RECORD</p>
       <div className="mt-4 grid grid-cols-2 gap-4"><div><div className="text-3xl font-bold">{stops.toLocaleString("en-GB")}</div><div className="mt-1 text-xs text-[#8e9ab2]">stops recorded</div></div><div><div className="text-3xl font-bold text-[#8f83ff]"><Money amount={expected}/></div><div className="mt-1 text-xs text-[#8e9ab2]">expected</div></div></div>
       <p className="mt-5 border-t border-[#202a3d] pt-4 text-xs leading-5 text-[#8e9ab2]">Expected earnings come from your own entries and saved pay structure. They are not confirmed pay until compared with your statement.</p>
