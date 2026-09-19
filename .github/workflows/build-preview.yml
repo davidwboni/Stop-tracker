@@ -47,27 +47,3 @@ jobs:
           git add -A
           git commit -m "chore: publish Stop Tracker preview build"
           git push origin HEAD:preview-build --force
-
-      - name: Rebuild GitHub Pages fallback
-        shell: bash
-        run: |
-          git checkout feat/product-analytics-motion
-          rm -rf build
-          PUBLIC_URL=/Stop-tracker npm run build
-          test -f build/index.html
-          cp build/index.html build/404.html
-
-      - name: Publish GitHub Pages fallback
-        shell: bash
-        run: |
-          cp -R build /tmp/stop-tracker-pages
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout --orphan gh-pages
-          git rm -rf .
-          git clean -fdx
-          cp -R /tmp/stop-tracker-pages/. .
-          touch .nojekyll
-          git add -A
-          git commit -m "chore: publish Stop Tracker GitHub Pages preview"
-          git push origin HEAD:gh-pages --force
