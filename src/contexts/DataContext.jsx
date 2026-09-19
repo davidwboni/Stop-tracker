@@ -205,17 +205,20 @@ export const DataProvider = ({ children }) => {
 
   // Complete first-run onboarding: optionally save the chosen pay config, mark
   // the account onboarded, and clear the gate. Guests persist locally.
-  const completeOnboarding = async (config) => {
+  const completeOnboarding = async (config, options = {}) => {
     if (config) setPaymentConfig(normalizePayStructure(config));
+    if (options.payPeriodAnchor) setPayPeriodAnchor(options.payPeriodAnchor);
     setNeedsOnboarding(false);
     if (!user?.uid) return;
     try {
       if (user.isGuest) {
         if (config) localStorage.setItem(`guestConfig_${user.uid}`, JSON.stringify(config));
+        if (options.payPeriodAnchor) localStorage.setItem(`payPeriodAnchor_${user.uid}`, options.payPeriodAnchor);
         localStorage.setItem(`onboarded_${user.uid}`, '1');
       } else {
         const payload = { onboarded: true, updatedAt: new Date().toISOString() };
         if (config) payload.paymentConfig = config;
+        if (options.payPeriodAnchor) payload.payPeriodAnchor = options.payPeriodAnchor;
         await setDoc(doc(db, 'users', user.uid), payload, { merge: true });
       }
     } catch (err) {
