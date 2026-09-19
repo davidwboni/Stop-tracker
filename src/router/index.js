@@ -9,6 +9,7 @@ import DashboardWrapper from '../components/DashboardWrapper';
 import EntriesWrapper from '../components/EntriesWrapper';
 import StatsPage from '../components/StatsPage';
 import InvoicePage from '../components/InvoicePage';
+import CheckPayV4 from '../components/CheckPayV4';
 import ErrorBoundary from '../components/ErrorBoundary';
 import ProfileWrapper from '../components/ProfileWrapper';
 import PaymentSettingsWrapper from '../components/PaymentSettingsWrapper';
@@ -84,6 +85,7 @@ const router = createBrowserRouter([
           { path: 'entries', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><EntriesWrapper /></React.Suspense></ErrorBoundary> },
           { path: 'routes', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><RoutePlannerWrapper /></React.Suspense></ErrorBoundary> },
           { path: 'invoice', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><InvoicePage /></React.Suspense></ErrorBoundary> },
+          { path: 'check-pay', element: <ErrorBoundary><CheckPayV4 /></ErrorBoundary> },
           { path: 'stats', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><StatsPage /></React.Suspense></ErrorBoundary> },
           { path: 'profile', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><ProfileWrapper /></React.Suspense></ErrorBoundary> },
           { path: 'settings', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><PaymentSettingsWrapper /></React.Suspense></ErrorBoundary> },
