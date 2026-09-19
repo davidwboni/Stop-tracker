@@ -16,6 +16,7 @@ const DataContext = createContext({
   completeOnboarding: () => Promise.resolve(),
   forceSync: () => Promise.resolve(false),
   payPeriodAnchor: null,
+  payPeriodNeedsConfirmation: false,
   updatePayPeriodAnchor: () => Promise.resolve(),
   periodRecords: {},
   updatePeriodRecord: () => Promise.resolve()
@@ -32,6 +33,7 @@ export const DataProvider = ({ children }) => {
   const [paymentConfig, setPaymentConfig] = useState(normalizePayStructure(null));
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [payPeriodAnchor, setPayPeriodAnchor] = useState(null);
+  const [payPeriodNeedsConfirmation, setPayPeriodNeedsConfirmation] = useState(false);
   const [periodRecords, setPeriodRecords] = useState({});
 
   // Initial data load - with error handling and retry mechanism
@@ -92,7 +94,8 @@ export const DataProvider = ({ children }) => {
               localStorage.setItem(`guestLogs_${user.uid}`, JSON.stringify(demoLogs));
             }
             setPaymentConfig(normalizePayStructure(guestConfig ? JSON.parse(guestConfig) : null));
-            setPayPeriodAnchor(guestAnchor || new Date().toISOString().split('T')[0]);
+            setPayPeriodAnchor(guestAnchor || null);
+            setPayPeriodNeedsConfirmation(!guestAnchor && demoLogs.length > 0);
             setPeriodRecords(guestPeriods ? JSON.parse(guestPeriods) : {});
             setIsNewUser(true); // Guest users are always "new" for demo purposes
             // First-run pay setup for guests too, survives reload via localStorage.
@@ -143,7 +146,8 @@ export const DataProvider = ({ children }) => {
           if (mainData.paymentConfig) {
             setPaymentConfig(normalizePayStructure(mainData.paymentConfig));
           }
-          setPayPeriodAnchor(mainData.payPeriodAnchor || new Date().toISOString().split('T')[0]);
+          setPayPeriodAnchor(mainData.payPeriodAnchor || null);
+          setPayPeriodNeedsConfirmation(!mainData.payPeriodAnchor && !logsEmpty);
           setPeriodRecords(mainData.periodRecords || {});
 
           // First-run: prompt pay setup only for a genuinely new user who has no
@@ -207,7 +211,7 @@ export const DataProvider = ({ children }) => {
   // the account onboarded, and clear the gate. Guests persist locally.
   const completeOnboarding = async (config, options = {}) => {
     if (config) setPaymentConfig(normalizePayStructure(config));
-    if (options.payPeriodAnchor) setPayPeriodAnchor(options.payPeriodAnchor);
+    if (options.payPeriodAnchor) { setPayPeriodAnchor(options.payPeriodAnchor); setPayPeriodNeedsConfirmation(false); }
     setNeedsOnboarding(false);
     if (!user?.uid) return;
     try {
@@ -229,6 +233,7 @@ export const DataProvider = ({ children }) => {
   const updatePayPeriodAnchor = async (date) => {
     if (!date) return;
     setPayPeriodAnchor(date);
+    setPayPeriodNeedsConfirmation(false);
     if (!user?.uid) return;
     try {
       if (user.isGuest) localStorage.setItem(`payPeriodAnchor_${user.uid}`, date);
@@ -295,6 +300,7 @@ export const DataProvider = ({ children }) => {
     completeOnboarding,
     forceSync,
     payPeriodAnchor,
+    payPeriodNeedsConfirmation,
     updatePayPeriodAnchor,
     periodRecords,
     updatePeriodRecord
