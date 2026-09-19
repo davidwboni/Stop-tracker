@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import InvoiceCreate from "./InvoiceCreate";
@@ -6,10 +6,19 @@ import InvoiceHistory from "./InvoiceHistory";
 import PayPeriodList from "../features/payperiod/PayPeriodList";
 import TabCoach from "./TabCoach";
 import { FileText, CheckCircle2, History } from "lucide-react";
+import { useLocation } from "react-router-dom";
 
 const InvoicePage = () => {
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState("create");
   const [prefillInvoice, setPrefillInvoice] = useState(null);
+
+  useEffect(() => {
+    if (location.state?.periodId) {
+      setPrefillInvoice({ periodId: location.state.periodId, startDate: location.state.startDate, endDate: location.state.endDate, amount: location.state.amount, stops: location.state.stops });
+      setActiveTab("create");
+    }
+  }, [location.state]);
 
   const handleGenerateInvoice = (prefill) => {
     setPrefillInvoice(prefill);
