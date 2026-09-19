@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
+import { useData } from "../contexts/DataContext";
 import { useInvoice } from "../contexts/InvoiceContext";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -23,6 +24,7 @@ const blankLine = () => ({ id: Date.now() + Math.random(), desc: "", qty: "", ra
 const money = (n) => `£${(Number(n) || 0).toFixed(2)}`;
 
 export default function InvoiceCreate({ prefill }) {
+  const { updatePeriodRecord } = useData();
   const {
     clients,
     saveClient,
@@ -41,11 +43,15 @@ export default function InvoiceCreate({ prefill }) {
   const [dateFrom, setDateFrom] = useState(prefill?.startDate || "");
   const [dateTo, setDateTo] = useState(prefill?.endDate || "");
   const [client, setClient] = useState(null);
+
+  React.useEffect(() => {
+    if (!client && clients?.length === 1) setClient(clients[0]);
+  }, [clients, client]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [newClient, setNewClient] = useState(null);
   const [lines, setLines] = useState(
     prefill?.amount
-      ? [{ id: 1, desc: "Delivery earnings", qty: "1", rate: String(prefill.amount) }]
+      ? [{ id: 1, desc: prefill?.stops ? `Delivery work — ${prefill.stops} stops` : "Delivery earnings", qty: "1", rate: String(prefill.amount) }]
       : [blankLine()]
   );
   const [notes, setNotes] = useState("");
@@ -208,6 +214,7 @@ export default function InvoiceCreate({ prefill }) {
       dateFrom,
       dateTo,
       lines,
+      periodId: prefill?.periodId || null,
     });
   };
 
@@ -221,6 +228,7 @@ export default function InvoiceCreate({ prefill }) {
       const docPdf = buildPdf();
       docPdf.save(`Invoice_${invoiceNumber}.pdf`);
       await persist();
+      if (prefill?.periodId) await updatePeriodRecord(prefill.periodId,{status:"invoice_sent",invoiceNumber,invoiceAmount:total,invoiceGeneratedAt:new Date().toISOString()});
       setSaved(true);
     } catch (e) {
       console.error(e);
@@ -244,6 +252,7 @@ export default function InvoiceCreate({ prefill }) {
         docPdf.save(`Invoice_${invoiceNumber}.pdf`);
       }
       await persist();
+      if (prefill?.periodId) await updatePeriodRecord(prefill.periodId,{status:"invoice_sent",invoiceNumber,invoiceAmount:total,invoiceGeneratedAt:new Date().toISOString()});
       setSaved(true);
     } catch (e) {
       if (e?.name !== "AbortError") {
@@ -258,6 +267,8 @@ export default function InvoiceCreate({ prefill }) {
   // ---------- Create form ----------
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+      {prefill?.periodId && <div className="rounded-[14px] border border-[#302a5b] bg-[#17152b] p-4"><div className="text-xs font-bold uppercase tracking-wider text-[#8f83ff]">Pay period ready</div><div className="mt-1 font-semibold">{prefill.startDate} → {prefill.endDate}</div><div className="mt-1 text-sm text-muted-foreground">{prefill.stops || 0} stops · {money(prefill.amount)}</div><div className="mt-2 text-xs text-muted-foreground">This invoice was prefilled from your Stop Tracker ledger. Review it before sharing.</div></div>}
+
       {/* Header row: number + sender */}
       <div className="flex items-center justify-between">
         <div>
