@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Crown, Route, ScanLine, X } from "lucide-react";
+import { Crown, MapPin, ScanLine, X } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
@@ -82,7 +82,7 @@ const PremiumFeatureGate = ({ featureName = "this feature", children }) => {
 
               <div className="mt-5 space-y-3">
                 <div className="flex items-start gap-3 rounded-[14px] border border-border p-3">
-                  <Route className="mt-0.5 h-5 w-5 text-primary" />
+                  <MapPin className="mt-0.5 h-5 w-5 text-primary" />
                   <div>
                     <div className="text-sm font-semibold">Road-aware route optimisation</div>
                     <div className="text-xs text-muted-foreground">
