@@ -10,6 +10,7 @@ import EntriesWrapper from '../components/EntriesWrapper';
 import StatsPage from '../components/StatsPage';
 import InvoicePage from '../components/InvoicePage';
 import CheckPayV4 from '../components/CheckPayV4';
+import PeriodHistoryV4 from '../components/PeriodHistoryV4';
 import ErrorBoundary from '../components/ErrorBoundary';
 import ProfileWrapper from '../components/ProfileWrapper';
 import PaymentSettingsWrapper from '../components/PaymentSettingsWrapper';
@@ -86,6 +87,7 @@ const router = createBrowserRouter([
           { path: 'routes', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><RoutePlannerWrapper /></React.Suspense></ErrorBoundary> },
           { path: 'invoice', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><InvoicePage /></React.Suspense></ErrorBoundary> },
           { path: 'check-pay', element: <ErrorBoundary><CheckPayV4 /></ErrorBoundary> },
+          { path: 'periods', element: <ErrorBoundary><div className="max-w-2xl mx-auto pb-24 pt-2"><h1 className="text-3xl font-bold tracking-tight mb-2">Pay Periods</h1><p className="text-sm text-muted-foreground mb-5">Your four-week work, invoice and statement history.</p><PeriodHistoryV4 /></div></ErrorBoundary> },
           { path: 'stats', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><StatsPage /></React.Suspense></ErrorBoundary> },
           { path: 'profile', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><ProfileWrapper /></React.Suspense></ErrorBoundary> },
           { path: 'settings', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><PaymentSettingsWrapper /></React.Suspense></ErrorBoundary> },
