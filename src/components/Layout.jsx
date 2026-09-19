@@ -16,7 +16,7 @@ import { calculateDayEarnings } from '../features/payperiod/payStructure';
 const TAB_ORDER = [
   '/app/dashboard',
   '/app/entries',
-  '/app/invoice',
+  '/app/check-pay',
   '/app/stats',
 ];
 
