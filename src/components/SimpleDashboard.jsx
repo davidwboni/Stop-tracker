@@ -1,25 +1,19 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useData } from "../contexts/DataContext";
 import { Card, CardContent } from "./ui/card";
-import StopEntryForm from "./StopEntryForm";
+import DailyQuickEntry from "./DailyQuickEntry";
 import { Money } from "./ui/money";
-import { ArrowRight, BarChart3, FileText, MapPin, ShieldCheck, UserCircle } from "lucide-react";
+import { ArrowRight, Plus, UserCircle } from "lucide-react";
 import { getPeriodForDate, summarizePeriod } from "../features/payperiod/periods";
 
 const dateKey = (d) => d.toISOString().split("T")[0];
-const startOfCurrentPeriod = () => {
-  const d = new Date();
-  d.setHours(0,0,0,0);
-  d.setDate(d.getDate() - 27);
-  return d;
-};
-
 const SimpleDashboard = () => {
   const { user } = useAuth();
-  const { logs = [], updateLogs, loading, payPeriodAnchor } = useData();
+  const { logs = [], loading, payPeriodAnchor } = useData();
+  const [quickOpen,setQuickOpen] = useState(false);
   const navigate = useNavigate();
   const today = dateKey(new Date());
 
@@ -32,6 +26,13 @@ const SimpleDashboard = () => {
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const startLabel = new Date(period.start+"T12:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short"});
   const endLabel = new Date(period.end+"T12:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short"});
+
+  useEffect(()=>{
+    if(loading || todayLog) return;
+    const dismissed=localStorage.getItem(`daily-quick-entry-dismissed-${today}`);
+    if(new Date().getHours()>=13 && !dismissed) setQuickOpen(true);
+  },[loading,todayLog,today]);
+  const dismissQuick=()=>{localStorage.setItem(`daily-quick-entry-dismissed-${today}`,"1");setQuickOpen(false);};
 
   if (loading) return <div className="flex min-h-[60vh] items-center justify-center"><div className="h-10 w-10 animate-spin rounded-full border-2 border-[#7567ff] border-t-transparent"/></div>;
 
@@ -63,11 +64,11 @@ const SimpleDashboard = () => {
             </CardContent>
           </Card>
         ) : (
-          <Card className="overflow-hidden border-[#302a5b] bg-gradient-to-br from-[#18152d] via-[#12182a] to-[#101624]">
+          <Card className="border-[#302a5b] bg-gradient-to-br from-[#18152d] via-[#12182a] to-[#101624]">
             <CardContent className="p-5">
-              <h2 className="text-xl font-bold">Log today's work</h2>
-              <p className="mb-5 mt-1 text-sm text-[#929db2]">A few seconds now means no guesswork on payday.</p>
-              <StopEntryForm logs={logs} updateLogs={updateLogs}/>
+              <h2 className="text-xl font-bold">Ready when you are</h2>
+              <p className="mt-1 text-sm text-[#929db2]">Log today's deliveries in a few seconds.</p>
+              <button onClick={()=>setQuickOpen(true)} className="mt-4 h-14 w-full rounded-2xl bg-[#7567ff] text-sm font-bold text-white">Log today's work</button>
             </CardContent>
           </Card>
         )}
@@ -89,21 +90,6 @@ const SimpleDashboard = () => {
         </Card>
       </section>
 
-      <section>
-        <p className="mb-2 text-xs font-bold tracking-[0.18em] text-[#69758d]">QUICK TOOLS</p>
-        <div className="grid grid-cols-4 gap-2">
-          {[
-            ["Routes",MapPin,"/app/routes",true],
-            ["Invoice",FileText,"/app/invoice",false],
-            ["Check Pay",ShieldCheck,"/app/check-pay",false],
-            ["Insights",BarChart3,"/app/stats",false],
-          ].map(([label,Icon,path,pro]) => <button key={label} onClick={() => navigate(path)} className="relative min-h-[88px] rounded-2xl border border-[#202a3d] bg-[#111827] px-2 py-3 active:scale-95">
-            {pro && <span className="absolute right-1.5 top-1.5 rounded-full bg-[#7567ff] px-1.5 py-0.5 text-[8px] font-bold">PRO</span>}
-            <Icon className="mx-auto mb-2 h-5 w-5 text-[#8f83ff]"/><span className="text-[11px] font-semibold">{label}</span>
-          </button>)}
-        </div>
-      </section>
-
       {recent.length > 0 && <section>
         <div className="mb-2 flex items-center justify-between"><p className="text-xs font-bold tracking-[0.18em] text-[#69758d]">RECENT</p><button onClick={() => navigate("/app/entries")} className="text-xs font-semibold text-[#8f83ff]">View all</button></div>
         <div className="overflow-hidden rounded-2xl border border-[#202a3d] bg-[#111827]">
@@ -114,7 +100,7 @@ const SimpleDashboard = () => {
         </div>
       </section>}
 
-      <p className="px-2 pt-2 text-center text-xs text-[#5f6a80]">Your work. Your records. Your pay.</p>
+      <button onClick={()=>setQuickOpen(true)} className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-[#3a3370] bg-gradient-to-r from-[#5f50e8] to-[#7866ff] text-sm font-bold text-white shadow-lg shadow-[#7567ff]/10"><Plus className="h-5 w-5"/> {todayLog?"Update today’s entry":"Log today’s deliveries"}</button>\n      <p className="px-2 pt-2 text-center text-xs text-[#5f6a80]">Your work. Your records. Your pay.</p>\n      <DailyQuickEntry open={quickOpen} onClose={dismissQuick} onSaved={()=>setQuickOpen(false)}/>
     </div>
   );
 };
