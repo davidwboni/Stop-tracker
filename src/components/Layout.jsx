@@ -7,7 +7,6 @@ import { useAuth } from '../contexts/AuthContext';
 import SyncStatus from './SyncStatus';
 import AppNavigation from './AppNavigation';
 import AppFooter from './AppFooter';
-import FloatingActionButton from './FloatingActionButton';
 import PayOnboarding from './PayOnboarding';
 import { useData } from '../contexts/DataContext';
 import { calculateDayEarnings } from '../features/payperiod/payStructure';
@@ -22,7 +21,7 @@ const TAB_ORDER = [
 ];
 
 const Layout = () => {
-  const { user } = useAuth();
+  useAuth();
   const { logs, updateLogs, paymentConfig, needsOnboarding, completeOnboarding } = useData();
   const navigate = useNavigate();
   const location = useLocation();
@@ -129,13 +128,6 @@ const Layout = () => {
       <SwipeHint />
       <AppNavigation className="flex-shrink-0 pb-safe" />
 
-      {/* Floating Action Button for Quick Entry */}
-      {user && (
-        <FloatingActionButton
-          onAddEntry={handleQuickEntry}
-          isVisible={true}
-        />
-      )}
     </div>
   );
 };
