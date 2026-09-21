@@ -32,7 +32,8 @@ import {
   Clock,
   ChevronDown,
   ChevronUp,
-  Flag
+  Flag,
+  Crown
 } from "lucide-react";
 import {
   isPostcodeLike,
@@ -60,6 +61,7 @@ const RoutePlanner = () => {
   const activeSearchControllerRef = useRef(null);
   const { frequentAddresses, recordAddressUse } = useAddressMemory();
   const [expandedAddressId, setExpandedAddressId] = useState(null);
+  const [optimizationUses, setOptimizationUses] = useState(() => Number(localStorage.getItem("routeOptimizationUses") || 0));
 
   // Load saved routes on mount
   useEffect(() => {
@@ -422,6 +424,7 @@ const RoutePlanner = () => {
   // back to the local straight-line nearest-neighbor algorithm if no API
   // key is configured or the request fails for any reason.
   const optimizeRoute = async () => {
+    if (optimizationUses >= 3) { showError("Your 3 free full-route optimisations are used. Upgrade to Pro for full route optimisation."); return; }
     if (addresses.length < 2) {
       showError("Please add at least 2 addresses to optimize");
       return;
@@ -440,6 +443,7 @@ const RoutePlanner = () => {
             source: 'google'
           });
           setAddresses(result.route);
+          const nextUses=optimizationUses+1; setOptimizationUses(nextUses); localStorage.setItem('routeOptimizationUses',String(nextUses));
           setIsOptimizing(false);
           return;
         }
@@ -451,6 +455,7 @@ const RoutePlanner = () => {
     // Fallback path, small delay retained so the loading state doesn't flash
     setTimeout(() => {
       optimizeRouteLocally();
+      const nextUses=optimizationUses+1; setOptimizationUses(nextUses); localStorage.setItem('routeOptimizationUses',String(nextUses));
       setIsOptimizing(false);
     }, 400);
   };
@@ -521,7 +526,7 @@ const RoutePlanner = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto pb-safe px-4 py-6 space-y-6">
+    <div className="max-w-5xl mx-auto pb-safe px-3 sm:px-4 py-5 space-y-5">
       {/* Notifications */}
       <AnimatePresence>
         {error && (
@@ -558,17 +563,17 @@ const RoutePlanner = () => {
       >
         <div className="flex items-center gap-3 mb-2">
           <Navigation2 className="w-8 h-8 text-primary" />
-          <h1 className="text-3xl font-bold">Route Planner</h1>
+          <h1 className="text-3xl font-bold">Routes</h1>\n          <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-[#6657f5]/40 bg-[#6657f5]/15 px-3 py-1 text-xs font-bold text-[#9b91ff]"><Crown className="h-3.5 w-3.5"/> PRO</span>
         </div>
         <p className="text-muted-foreground">
-          Plan and optimize your delivery route
+          Check addresses, build your stops and optimise your round
         </p>
       </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="space-y-5">
         {/* Map Section - second on mobile so Add Stops is immediately reachable,
             first (left) on large screens */}
-        <div className="lg:col-span-2 order-2 lg:order-1">
+        <div>
           <Card className="border-border/50 h-full">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
@@ -584,7 +589,7 @@ const RoutePlanner = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4">
-              <div className="h-64 sm:h-80 lg:h-[600px]">
+              <div className="h-[42vh] min-h-[300px] max-h-[520px]">
                 {HAS_GOOGLE_MAPS ? (
                   <GoogleRouteMap addresses={addresses} />
                 ) : (
@@ -646,7 +651,7 @@ const RoutePlanner = () => {
 
         {/* Address Input & List Section - first on mobile for the type-and-go
             morning workflow, right column on large screens */}
-        <div className="space-y-6 order-1 lg:order-2">
+        <div className="space-y-5">
           {/* Address Search */}
           <Card className="border-border/50">
             <CardHeader>
@@ -662,7 +667,7 @@ const RoutePlanner = () => {
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       type="text"
-                      placeholder="Search UK address..."
+                      placeholder="Search an address..."
                       value={currentAddress}
                       onChange={(e) => setCurrentAddress(e.target.value)}
                       onFocus={() => {
@@ -728,7 +733,7 @@ const RoutePlanner = () => {
                 </AnimatePresence>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-xl border border-[#6657f5]/25 bg-[#6657f5]/10 px-3 py-2 text-xs text-muted-foreground"><span className="font-semibold text-[#9b91ff]">{optimizationUses < 3 ? `${3-optimizationUses} of 3 free full-route optimisations remaining` : "Free trials used"}</span><span className="block mt-0.5">Address search and route building stay free.</span></div>\n              <div className="grid grid-cols-2 gap-2">
                 <Button
                   onClick={optimizeRoute}
                   disabled={addresses.length < 2 || isOptimizing}
@@ -736,7 +741,7 @@ const RoutePlanner = () => {
                   size="sm"
                 >
                   <Zap className="h-4 w-4 mr-1" />
-                  {isOptimizing ? "Optimizing..." : "Optimize"}
+                  {isOptimizing ? "Optimising..." : optimizationUses >= 3 ? "Go Pro" : "Optimise"}
                 </Button>
 
                 <Button
