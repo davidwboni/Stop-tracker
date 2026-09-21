@@ -34,7 +34,7 @@ export default function InvoiceCreate({ prefill }) {
     saveSenderProfile,
   } = useInvoice();
 
-  const [editingSender, setEditingSender] = useState(false);
+  const [editingSender, setEditingSender] = useState(false);\n  const [confirmedStops, setConfirmedStops] = useState(prefill?.stops ? String(prefill.stops) : "");
   const [sender, setSender] = useState(
     senderProfile || { name: "", address: "", email: "", extra: "" }
   );
@@ -93,14 +93,14 @@ export default function InvoiceCreate({ prefill }) {
             <h3 className="font-semibold">Your invoice details</h3>
           </div>
           <p className="text-sm text-muted-foreground">
-            This is your own business info shown on every invoice. Set it once, edit anytime.
+            Set this up once and Stop Tracker will reuse it for future four-week invoices. Your invoice details stay attached to your signed-in account.
           </p>
         </div>
 
         <Field label="Your / business name" value={sender.name} onChange={(v) => setSender({ ...sender, name: v })} />
         <Field label="Address" value={sender.address} onChange={(v) => setSender({ ...sender, address: v })} />
         <Field label="Email" value={sender.email} onChange={(v) => setSender({ ...sender, email: v })} />
-        <Field label="UTR / VAT no." optional value={sender.extra} onChange={(v) => setSender({ ...sender, extra: v })} />
+        <Field label="UTR / VAT no. / company details" optional value={sender.extra} onChange={(v) => setSender({ ...sender, extra: v })} />
 
         {error && (
           <Alert variant="destructive">
@@ -214,11 +214,11 @@ export default function InvoiceCreate({ prefill }) {
       dateFrom,
       dateTo,
       lines,
-      periodId: prefill?.periodId || null,
+      periodId: prefill?.periodId || null,\n      confirmedStops: prefill?.periodId ? Number(confirmedStops) : null,\n      status: "generated",
     });
   };
 
-  const canGenerate = client && total > 0;
+  const canGenerate = client && total > 0 && (!prefill?.periodId || Number(confirmedStops) >= 0);
 
   const handleDownload = async () => {
     if (!canGenerate) return setError("Add a client and at least one line with an amount.");
@@ -228,7 +228,7 @@ export default function InvoiceCreate({ prefill }) {
       const docPdf = buildPdf();
       docPdf.save(`Invoice_${invoiceNumber}.pdf`);
       await persist();
-      if (prefill?.periodId) await updatePeriodRecord(prefill.periodId,{status:"invoice_sent",invoiceNumber,invoiceAmount:total,invoiceGeneratedAt:new Date().toISOString()});
+      if (prefill?.periodId) await updatePeriodRecord(prefill.periodId,{status:"invoice_generated",invoiceNumber,invoiceAmount:total,confirmedStops:Number(confirmedStops),invoiceGeneratedAt:new Date().toISOString()});
       setSaved(true);
     } catch (e) {
       console.error(e);
@@ -267,7 +267,7 @@ export default function InvoiceCreate({ prefill }) {
   // ---------- Create form ----------
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-      {prefill?.periodId && <div className="rounded-[14px] border border-[#302a5b] bg-[#17152b] p-4"><div className="text-xs font-bold uppercase tracking-wider text-[#8f83ff]">Pay period ready</div><div className="mt-1 font-semibold">{prefill.startDate} → {prefill.endDate}</div><div className="mt-1 text-sm text-muted-foreground">{prefill.stops || 0} stops · {money(prefill.amount)}</div><div className="mt-2 text-xs text-muted-foreground">This invoice was prefilled from your Stop Tracker ledger. Review it before sharing.</div></div>}
+      {prefill?.periodId && <div className="rounded-[18px] border border-[#302a5b] bg-[#17152b] p-4"><div className="text-xs font-bold uppercase tracking-wider text-[#8f83ff]">Confirm your period</div><div className="mt-1 font-semibold">{prefill.startDate} → {prefill.endDate}</div><div className="mt-1 text-sm text-muted-foreground">{prefill.stops || 0} stops · {money(prefill.amount)} expected</div><label className="mt-4 block text-xs text-muted-foreground">Confirm total stops<input inputMode="numeric" type="number" min="0" value={confirmedStops} onChange={(e)=>setConfirmedStops(e.target.value)} className="mt-1 h-12 w-full rounded-xl border border-[#34415f] bg-[#0a101b] px-3 text-lg font-bold text-white outline-none focus:border-[#7567ff]"/></label><div className="mt-2 text-xs text-muted-foreground">This is a final check only. Your invoice remains prefilled from your ledger.</div></div>}
 
       {/* Header row: number + sender */}
       <div className="flex items-center justify-between">
