@@ -56,8 +56,8 @@ const CheckPayV4 = () => {
   const chooseAiFile=(file)=>{if(!file)return;setAiFile(file);setMode("ai-review");};
   const runAi=async()=>{setAiLoading(true);setAiError("");try{const result=await extractStatement(aiFile);if(result.statementStops!=null)setStatementStops(String(result.statementStops));if(result.statementAmount!=null)setStatementAmount(String(result.statementAmount));const nextDaily={};(result.daily||[]).forEach(d=>{if(d.date)nextDaily[d.date]={stops:d.stops??"",amount:d.amount??""};});setDaily(nextDaily);const s=await getPremiumStatus();setAiUses(s.statementAiUses||0);setIsPro(!!s.isPro);setAiFile(null);setMode("manual");}catch(e){setAiError(e?.message||"Could not read this statement.");}finally{setAiLoading(false);}};
 
-  return <div className="mx-auto max-w-2xl space-y-5 pb-24 pt-2">
-    <div className="flex items-center justify-between gap-3"><div><h1 className="text-3xl font-bold tracking-tight">Check Pay</h1><p className="mt-1 text-sm text-[#8e9ab2]">Does your statement match your records?</p></div><ShieldCheck className="h-7 w-7 text-[#7567ff]"/></div>
+  return <div className="mx-auto max-w-2xl space-y-4 pb-24 -mt-2">
+    <div className="flex items-center justify-between gap-3"><h1 className="text-2xl font-bold tracking-tight">Check Pay</h1><span className="text-xs text-[#8e9ab2]">Compare · verify</span></div>
 
     <div className="rounded-2xl border border-[#202a3d] bg-[#111827] p-4">
       <div className="flex items-center justify-between gap-3"><div><div className="text-[10px] font-bold tracking-[.16em] text-[#69758d]">YOUR RECORDS</div><div className="mt-1 text-xs text-[#8e9ab2]">{new Date(periodDef.start+"T12:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short"})} — {new Date(periodDef.end+"T12:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}</div></div><label className="text-[9px] text-[#69758d]">CHANGE PERIOD<input type="date" value={payPeriodAnchor || today} onChange={e=>updatePayPeriodAnchor(e.target.value)} className="mt-1 block rounded-lg border border-[#26314a] bg-[#090f1a] p-2 text-xs text-white"/></label></div>
