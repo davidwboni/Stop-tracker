@@ -1,11 +1,12 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
 
 admin.initializeApp();
 
-const DEEPSEEK_API_KEY = defineSecret("DEEPSEEK_API_KEY");\nconst STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");\nconst DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
+const DEEPSEEK_API_KEY = defineSecret("DEEPSEEK_API_KEY");\nconst STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
+const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");\nconst DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 
 // System prompt: describe the six pay models + the exact JSON we want back.
 // The AI ONLY transcribes/interprets into structured config — it never computes
@@ -137,11 +138,14 @@ exports.createProCheckout = onCall(
   { secrets: [STRIPE_SECRET_KEY], cors: true, invoker: "public" },
   async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "You must be signed in.");
-    const priceId = String(request.data?.priceId || "");
-    const allowed = [process.env.STRIPE_PRO_MONTHLY_PRICE_ID, process.env.STRIPE_PRO_ANNUAL_PRICE_ID].filter(Boolean);
-    if (!allowed.includes(priceId)) throw new HttpsError("invalid-argument", "Unknown subscription plan.");
+    const plan = request.data?.plan === "annual" ? "annual" : request.data?.plan === "monthly" ? "monthly" : null;
+    if (!plan) throw new HttpsError("invalid-argument", "Choose monthly or annual.");
     const Stripe = require("stripe");
     const stripe = new Stripe(STRIPE_SECRET_KEY.value());
+    const lookupKey = plan === "annual" ? "stop_tracker_pro_annual" : "stop_tracker_pro_monthly";
+    const prices = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 });
+    const priceId = prices.data[0]?.id;
+    if (!priceId) throw new HttpsError("failed-precondition", "This Pro plan is not configured in Stripe.");
     const userRef = admin.firestore().collection("users").doc(request.auth.uid);
     const snap = await userRef.get();
     const user = snap.data() || {};
@@ -162,6 +166,61 @@ exports.createProCheckout = onCall(
       metadata: { firebaseUid: request.auth.uid },
       subscription_data: { metadata: { firebaseUid: request.auth.uid } },
     });
+    return { url: session.url };
+  }
+);
+
+
+// Stripe is the source of truth for paid access. Clients can read their own
+// entitlement document but cannot write it (see firestore.rules).
+exports.stripeWebhook = onRequest(
+  { secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET], cors: false },
+  async (req, res) => {
+    const Stripe = require("stripe");
+    const stripe = new Stripe(STRIPE_SECRET_KEY.value());
+    let event;
+    try {
+      event = stripe.webhooks.constructEvent(req.rawBody, req.headers["stripe-signature"], STRIPE_WEBHOOK_SECRET.value());
+    } catch (err) {
+      console.error("Invalid Stripe webhook signature");
+      res.status(400).send("Invalid signature");
+      return;
+    }
+
+    const subscriptionEvents = new Set(["customer.subscription.created","customer.subscription.updated","customer.subscription.deleted"]);
+    if (subscriptionEvents.has(event.type)) {
+      const sub = event.data.object;
+      const uid = sub.metadata?.firebaseUid;
+      if (uid) {
+        const active = ["active","trialing"].includes(sub.status);
+        await admin.firestore().collection("entitlements").doc(uid).set({
+          plan: active ? "pro" : "free",
+          subscriptionStatus: sub.status,
+          stripeCustomerId: String(sub.customer || ""),
+          stripeSubscriptionId: sub.id,
+          priceId: sub.items?.data?.[0]?.price?.id || null,
+          currentPeriodEnd: sub.items?.data?.[0]?.current_period_end || null,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
+    }
+    res.status(200).json({ received: true });
+  }
+);
+
+exports.createBillingPortal = onCall(
+  { secrets: [STRIPE_SECRET_KEY], cors: true, invoker: "public" },
+  async (request) => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "You must be signed in.");
+    const Stripe = require("stripe");
+    const stripe = new Stripe(STRIPE_SECRET_KEY.value());
+    const ent = await admin.firestore().collection("entitlements").doc(request.auth.uid).get();
+    const user = await admin.firestore().collection("users").doc(request.auth.uid).get();
+    const customerId = ent.data()?.stripeCustomerId || user.data()?.stripeCustomerId;
+    if (!customerId) throw new HttpsError("failed-precondition", "No Stripe customer exists for this account.");
+    const origin = String(request.data?.origin || "").replace(/\/$/, "");
+    if (!/^https:\/\//.test(origin)) throw new HttpsError("invalid-argument", "Invalid return URL.");
+    const session = await stripe.billingPortal.sessions.create({ customer: customerId, return_url: `${origin}/app/profile` });
     return { url: session.url };
   }
 );
