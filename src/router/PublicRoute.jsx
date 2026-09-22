@@ -1,16 +1,9 @@
 import React from 'react';
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import AppFooter from '../components/AppFooter';
 
 const PublicRoute = () => {
   const { user, loading } = useAuth();
-  const { pathname } = useLocation();
-  // The landing page is an app-style first-run screen that must fit one screen
-  // and carries its own Privacy/Terms/Contact links, so the site footer would
-  // both duplicate them and push the page into scrolling.
-  const isLanding = pathname === '/';
-
   // Show loading indicator while auth state is being checked
   if (loading) {
     return (
@@ -25,13 +18,8 @@ const PublicRoute = () => {
     return <Navigate to="/app/dashboard" replace />;
   }
   
-  // Render public routes with footer if not authenticated
-  return (
-    <>
-      <Outlet />
-      {!isLanding && <AppFooter />}
-    </>
-  );
+  // Public screens own their own compact layout; no legacy global footer.
+  return <Outlet />;
 };
 
 export default PublicRoute;
