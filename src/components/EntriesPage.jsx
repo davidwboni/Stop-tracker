@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
-import { FileText, Filter, Search, Package, ChevronDown, X } from "lucide-react";
+import { Filter, Search, Package, ChevronDown, X } from "lucide-react";
 import { Input } from "./ui/input";
 import EntriesList from "./EntriesList";
 import EntryChecker from "./EntryChecker";
@@ -50,23 +50,18 @@ const EntriesPage = () => {
   const hasFilters = searchTerm || startDate || endDate;
 
   return (
-    <div className="max-w-2xl mx-auto pb-24 pt-2">
+    <div className="max-w-2xl mx-auto pb-24 -mt-2">
       
 
-      {/* Slim header */}
-      <div className="flex items-center gap-3 mb-4">
-        <div className="p-2 bg-primary/10 rounded-[12px]">
-          <FileText className="w-5 h-5 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Entries</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Your independent day-by-day work ledger · {(logs || []).length} days tracked</p>
-        </div>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold tracking-tight">Entries</h1>
+        <span className="text-xs text-[#8e9ab2]">{(logs || []).length} days tracked</span>
       </div>
 
       <EntryChecker />
 
       {/* Day-by-day list, the focus */}
+      <div data-tour="entries-ledger">
       {(logs || []).length === 0 ? (
         <Card className="border-2 border-dashed border-border rounded-[18px]">
           <CardContent className="py-12 text-center">
@@ -80,6 +75,7 @@ const EntriesPage = () => {
       ) : (
         <><p className="mb-2 px-1 text-[11px] text-muted-foreground">Swipe an entry to the right to edit its date, stops or notes.</p><EntriesList logs={filteredLogs} onDeleteEntry={handleDeleteEntry} onEditEntry={setEditing} /></>
       )}
+      </div>
 
       {editing&&<div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/65 p-3"><div className="w-full max-w-md rounded-[24px] border border-[#2a3550] bg-[#111827] p-5"><div className="flex items-center justify-between"><h2 className="text-lg font-bold">Edit entry</h2><button onClick={()=>setEditing(null)} className="p-2 text-muted-foreground"><X/></button></div><div className="mt-4 grid grid-cols-2 gap-3"><label className="text-xs text-muted-foreground">Date<input type="date" value={editing.date} onChange={e=>setEditing({...editing,date:e.target.value})} className="mt-1 h-11 w-full rounded-xl border border-[#34415f] bg-[#0a101b] px-3 text-white"/></label><label className="text-xs text-muted-foreground">Stops<input inputMode="numeric" type="number" value={editing.stops} onChange={e=>setEditing({...editing,stops:e.target.value})} className="mt-1 h-11 w-full rounded-xl border border-[#34415f] bg-[#0a101b] px-3 text-white"/></label></div><label className="mt-3 block text-xs text-muted-foreground">Notes<input value={editing.notes||""} onChange={e=>setEditing({...editing,notes:e.target.value})} placeholder="Add a note…" className="mt-1 h-11 w-full rounded-xl border border-[#34415f] bg-[#0a101b] px-3 text-white"/></label><button onClick={saveEdit} className="mt-4 h-12 w-full rounded-xl bg-[#7567ff] font-bold text-white">Save changes</button></div></div>}
 
