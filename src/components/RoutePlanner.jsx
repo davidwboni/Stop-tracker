@@ -490,8 +490,7 @@ ${routeText}`,
   const copyRouteToClipboard = async () => {
     const routeText = addresses.map((addr, i) =>
       `${i + 1}. ${addr.address}`
-    ).join('
-');
+    ).join('\\n');
 
     try {
       await navigator.clipboard.writeText(routeText);
