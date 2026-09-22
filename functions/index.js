@@ -5,7 +5,7 @@ const { defineSecret } = require("firebase-functions/params");
 
 admin.initializeApp();
 
-const DEEPSEEK_API_KEY = defineSecret("DEEPSEEK_API_KEY");\nconst DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
+const DEEPSEEK_API_KEY = defineSecret("DEEPSEEK_API_KEY");\nconst STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");\nconst DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 
 // System prompt: describe the six pay models + the exact JSON we want back.
 // The AI ONLY transcribes/interprets into structured config — it never computes
@@ -127,6 +127,42 @@ exports.interpretPayStructure = onCall(
       summary: typeof parsed.summary === "string" ? parsed.summary : "",
       sample: parsed.sample && typeof parsed.sample.quantity === "number" ? parsed.sample : { quantity: 100 },
     };
+  }
+);
+
+// Creates a Stripe Checkout session for Stop Tracker Pro. Price IDs are
+// deliberately configuration, not secrets, so monthly/annual products can be
+// changed without shipping private credentials to the client.
+exports.createProCheckout = onCall(
+  { secrets: [STRIPE_SECRET_KEY], cors: true, invoker: "public" },
+  async (request) => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "You must be signed in.");
+    const priceId = String(request.data?.priceId || "");
+    const allowed = [process.env.STRIPE_PRO_MONTHLY_PRICE_ID, process.env.STRIPE_PRO_ANNUAL_PRICE_ID].filter(Boolean);
+    if (!allowed.includes(priceId)) throw new HttpsError("invalid-argument", "Unknown subscription plan.");
+    const Stripe = require("stripe");
+    const stripe = new Stripe(STRIPE_SECRET_KEY.value());
+    const userRef = admin.firestore().collection("users").doc(request.auth.uid);
+    const snap = await userRef.get();
+    const user = snap.data() || {};
+    let customerId = user.stripeCustomerId;
+    if (!customerId) {
+      const customer = await stripe.customers.create({ email: request.auth.token.email || undefined, metadata: { firebaseUid: request.auth.uid } });
+      customerId = customer.id;
+      await userRef.set({ stripeCustomerId: customerId }, { merge: true });
+    }
+    const origin = String(request.data?.origin || "").replace(/\/$/, "");
+    if (!/^https:\/\//.test(origin)) throw new HttpsError("invalid-argument", "Invalid return URL.");
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription", customer: customerId,
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${origin}/app/profile?billing=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/app/profile?billing=cancelled`,
+      client_reference_id: request.auth.uid,
+      metadata: { firebaseUid: request.auth.uid },
+      subscription_data: { metadata: { firebaseUid: request.auth.uid } },
+    });
+    return { url: session.url };
   }
 );
 
