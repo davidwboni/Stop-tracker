@@ -565,9 +565,9 @@ ${routeText}`,
       </AnimatePresence>
 
       {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} className="mb-2">
-        <h1 className="text-3xl font-bold">Routes</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Add your stops, then optimise when you are ready.</p>
+      <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} className="mb-1 flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">Routes</h1>
+        <span className="text-xs text-muted-foreground">Build · optimise · go</span>
       </motion.div>
 
       <div className="flex flex-col gap-5">
