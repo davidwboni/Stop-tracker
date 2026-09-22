@@ -40,10 +40,10 @@ const SimpleDashboard = () => {
 
   return (
     <div className="mx-auto max-w-2xl space-y-5 pb-24">
-      <header className="flex items-start justify-between pt-2">
+      <header className="-mt-2 flex items-center justify-between">
         <div>
-          <p className="mb-1 text-sm text-[#8e9ab2]">{greeting}</p>
-          <h1 className="text-3xl font-bold tracking-tight">{user?.displayName?.split(" ")[0] || "Driver"}</h1>
+          <p className="text-xs text-[#8e9ab2]">{greeting}</p>
+          <h1 className="text-2xl font-bold tracking-tight">{user?.displayName?.split(" ")[0] || "Driver"}</h1>
         </div>
         <button onClick={() => navigate("/app/profile")} aria-label="Open profile" className="rounded-2xl border border-[#202a3d] bg-[#111827] p-3 text-[#9aa6bd] active:scale-95">
           <UserCircle className="h-6 w-6"/>
