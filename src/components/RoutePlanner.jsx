@@ -45,8 +45,11 @@ import {
 import { resolvePlace } from "../services/googlePlaces";
 import { optimizeRouteGoogle, isGoogleRoutesConfigured } from "../services/googleRoutes";
 import { useAddressMemory } from "../contexts/AddressMemoryContext";
+import { consumeRouteOptimization, getPremiumStatus } from "../services/premium";
+import { useNavigate } from "react-router-dom";
 
 const RoutePlanner = () => {
+  const navigate = useNavigate();
   const [addresses, setAddresses] = useState([]);
   const [currentAddress, setCurrentAddress] = useState("");
   const [addressSuggestions, setAddressSuggestions] = useState([]);
@@ -61,7 +64,9 @@ const RoutePlanner = () => {
   const activeSearchControllerRef = useRef(null);
   const { frequentAddresses, recordAddressUse } = useAddressMemory();
   const [expandedAddressId, setExpandedAddressId] = useState(null);
-  const [optimizationUses, setOptimizationUses] = useState(() => Number(localStorage.getItem("routeOptimizationUses") || 0));
+  const [optimizationUses, setOptimizationUses] = useState(0);
+  const [isPro, setIsPro] = useState(false);
+  useEffect(() => { getPremiumStatus().then(s => { setOptimizationUses(s.routeOptimizationUses || 0); setIsPro(!!s.isPro); }).catch(()=>{}); }, []);
 
   // Load saved routes on mount
   useEffect(() => {
@@ -341,11 +346,14 @@ const RoutePlanner = () => {
 
     const routeText = addresses.map((addr, i) =>
       `${i + 1}. ${addr.address}`
-    ).join('\n');
+    ).join('
+');
 
     const shareData = {
       title: 'My Route',
-      text: `Route with ${addresses.length} stops:\n\n${routeText}`,
+      text: `Route with ${addresses.length} stops:
+
+${routeText}`,
     };
 
     try {
@@ -424,7 +432,7 @@ const RoutePlanner = () => {
   // back to the local straight-line nearest-neighbor algorithm if no API
   // key is configured or the request fails for any reason.
   const optimizeRoute = async () => {
-    if (optimizationUses >= 3) { showError("Your 3 free full-route optimisations are used. Upgrade to Pro for full route optimisation."); return; }
+    if (!isPro && optimizationUses >= 3) { navigate("/app/upgrade"); return; }
     if (addresses.length < 2) {
       showError("Please add at least 2 addresses to optimize");
       return;
@@ -443,7 +451,7 @@ const RoutePlanner = () => {
             source: 'google'
           });
           setAddresses(result.route);
-          const nextUses=optimizationUses+1; setOptimizationUses(nextUses); localStorage.setItem('routeOptimizationUses',String(nextUses));
+          if (!isPro) { const usage=await consumeRouteOptimization(); setOptimizationUses(usage.used || optimizationUses); }
           setIsOptimizing(false);
           return;
         }
@@ -455,7 +463,7 @@ const RoutePlanner = () => {
     // Fallback path, small delay retained so the loading state doesn't flash
     setTimeout(() => {
       optimizeRouteLocally();
-      const nextUses=optimizationUses+1; setOptimizationUses(nextUses); localStorage.setItem('routeOptimizationUses',String(nextUses));
+      if (!isPro) { const usage=await consumeRouteOptimization(); setOptimizationUses(usage.used || optimizationUses); }
       setIsOptimizing(false);
     }, 400);
   };
@@ -480,7 +488,8 @@ const RoutePlanner = () => {
   const copyRouteToClipboard = async () => {
     const routeText = addresses.map((addr, i) =>
       `${i + 1}. ${addr.address}`
-    ).join('\n');
+    ).join('
+');
 
     try {
       await navigator.clipboard.writeText(routeText);
@@ -563,7 +572,8 @@ const RoutePlanner = () => {
       >
         <div className="flex items-center gap-3 mb-2">
           <Navigation2 className="w-8 h-8 text-primary" />
-          <h1 className="text-3xl font-bold">Routes</h1>\n          <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-[#6657f5]/40 bg-[#6657f5]/15 px-3 py-1 text-xs font-bold text-[#9b91ff]"><Crown className="h-3.5 w-3.5"/> PRO</span>
+          <h1 className="text-3xl font-bold">Routes</h1>
+          <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-[#6657f5]/40 bg-[#6657f5]/15 px-3 py-1 text-xs font-bold text-[#9b91ff]"><Crown className="h-3.5 w-3.5"/> PRO</span>
         </div>
         <p className="text-muted-foreground">
           Check addresses, build your stops and optimise your round
@@ -733,7 +743,8 @@ const RoutePlanner = () => {
                 </AnimatePresence>
               </div>
 
-              <div className="rounded-xl border border-[#6657f5]/25 bg-[#6657f5]/10 px-3 py-2 text-xs text-muted-foreground"><span className="font-semibold text-[#9b91ff]">{optimizationUses < 3 ? `${3-optimizationUses} of 3 free full-route optimisations remaining` : "Free trials used"}</span><span className="block mt-0.5">Address search and route building stay free.</span></div>\n              <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-xl border border-[#6657f5]/25 bg-[#6657f5]/10 px-3 py-2 text-xs text-muted-foreground"><span className="font-semibold text-[#9b91ff]">{isPro ? "Pro · full-route optimisation included" : optimizationUses < 3 ? `${3-optimizationUses} of 3 free full-route optimisations remaining` : "Free trials used"}</span><span className="block mt-0.5">Address search and route building stay free.</span></div>
+              <div className="grid grid-cols-2 gap-2">
                 <Button
                   onClick={optimizeRoute}
                   disabled={addresses.length < 2 || isOptimizing}
@@ -741,7 +752,7 @@ const RoutePlanner = () => {
                   size="sm"
                 >
                   <Zap className="h-4 w-4 mr-1" />
-                  {isOptimizing ? "Optimising..." : optimizationUses >= 3 ? "Go Pro" : "Optimise"}
+                  {isOptimizing ? "Optimising..." : !isPro && optimizationUses >= 3 ? "Go Pro" : "Optimise"}
                 </Button>
 
                 <Button
