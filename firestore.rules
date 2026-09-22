@@ -8,10 +8,9 @@ service cloud.firestore {
         && request.resource.data.role in ["free", "guest"]
         && !request.resource.data.keys().hasAny(["stripeCustomerId", "stripeSubscriptionId", "subscriptionStatus"]);
       allow update: if request.auth != null && request.auth.uid == userId
-        && request.resource.data.role == resource.data.role
-        && request.resource.data.stripeCustomerId == resource.data.stripeCustomerId
-        && request.resource.data.stripeSubscriptionId == resource.data.stripeSubscriptionId
-        && request.resource.data.subscriptionStatus == resource.data.subscriptionStatus;
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          "role", "stripeCustomerId", "stripeSubscriptionId", "subscriptionStatus"
+        ]);
 
       // Covers every subcollection under a user's own document (deliveryLogs,
       // settings, and any future one) — a rule on the parent doc does not
