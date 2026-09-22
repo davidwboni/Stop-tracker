@@ -56,6 +56,7 @@ export default function InvoiceCreate({ prefill }) {
       : [blankLine()]
   );
   const [notes, setNotes] = useState("");
+  const [advanced, setAdvanced] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
@@ -255,7 +256,7 @@ export default function InvoiceCreate({ prefill }) {
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], title: `Invoice ${invoiceNumber}`, text: `Invoice for ${client.name}` });
       } else {
-        docPdf.save(`Invoice_${invoiceNumber}.pdf`);
+        throw new Error("Sharing files is not supported by this browser. Use Download instead.");
       }
       await persist("sent");
       if (prefill?.periodId) await updatePeriodRecord(prefill.periodId,{status:"invoice_sent",invoiceNumber,invoiceAmount:total,invoiceGeneratedAt:new Date().toISOString()});
@@ -263,7 +264,7 @@ export default function InvoiceCreate({ prefill }) {
     } catch (e) {
       if (e?.name !== "AbortError") {
         console.error(e);
-        setError("Couldn't share the invoice.");
+        setError(e?.message || "Couldn't share the invoice.");
       }
     } finally {
       setBusy(false);
@@ -339,28 +340,36 @@ export default function InvoiceCreate({ prefill }) {
         </button>
       )}
 
-      {/* Editable line items */}
-      <div>
-        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Line items</div>
+      <div className="rounded-2xl border border-[#26314a] bg-[#111827] p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-xs font-bold uppercase tracking-[.14em] text-[#69758d]">Invoice total</div>
+            <div className="mt-1 text-2xl font-bold text-[#9b91ff]">{money(total)}</div>
+            <div className="mt-1 text-xs text-[#8e9ab2]">{prefill?.stops ? `${prefill.stops.toLocaleString("en-GB")} stops from your ledger` : "Based on the invoice details below"}</div>
+          </div>
+          <button onClick={() => setAdvanced(v => !v)} className="rounded-xl border border-[#343d57] px-3 py-2 text-xs font-semibold text-[#a9b3c6]">
+            {advanced ? "Hide details" : "Edit details"}
+          </button>
+        </div>
+      </div>
+
+      {advanced && <div className="rounded-2xl border border-[#26314a] bg-[#0d1422] p-4">
+        <div className="mb-3">
+          <div className="font-semibold">Invoice details</div>
+          <p className="mt-1 text-xs text-[#7f8ba3]">Only change these if the prefilled ledger total needs an adjustment.</p>
+        </div>
         <div className="space-y-2">
           {lines.map((l) => (
-            <div key={l.id} className="flex gap-1.5 items-center">
-              <Input className="flex-1 h-9 text-sm" placeholder="e.g. Deliveries" value={l.desc} onChange={(e) => setLine(l.id, "desc", e.target.value)} />
-              <Input className="w-12 h-9 text-sm text-center" inputMode="numeric" placeholder="Qty" value={l.qty} onChange={(e) => setLine(l.id, "qty", e.target.value)} />
-              <Input className="w-16 h-9 text-sm text-center" inputMode="decimal" placeholder="£" value={l.rate} onChange={(e) => setLine(l.id, "rate", e.target.value)} />
-              <button onClick={() => removeLine(l.id)} className="p-1.5 text-muted-foreground hover:text-destructive"><Trash2 className="w-4 h-4" /></button>
+            <div key={l.id} className="grid grid-cols-[1fr_64px_84px_32px] gap-1.5 items-center">
+              <Input className="h-10 text-sm" placeholder="Work description" value={l.desc} onChange={(e) => setLine(l.id, "desc", e.target.value)} />
+              <Input className="h-10 text-sm text-center" inputMode="numeric" aria-label="Quantity" placeholder="Qty" value={l.qty} onChange={(e) => setLine(l.id, "qty", e.target.value)} />
+              <Input className="h-10 text-sm text-center" inputMode="decimal" aria-label="Rate in pounds" placeholder="Rate £" value={l.rate} onChange={(e) => setLine(l.id, "rate", e.target.value)} />
+              <button aria-label="Remove invoice line" onClick={() => removeLine(l.id)} className="p-1.5 text-muted-foreground hover:text-destructive"><Trash2 className="w-4 h-4" /></button>
             </div>
           ))}
         </div>
-        <button onClick={addLine} className="mt-2 text-sm text-primary flex items-center gap-1">
-          <Plus className="w-4 h-4" /> Add line
-        </button>
-      </div>
-
-      <div className="flex items-center justify-between px-1 py-2 border-t border-border">
-        <span className="font-semibold">Total</span>
-        <span className="text-lg font-bold text-primary tabular-nums">{money(total)}</span>
-      </div>
+        <button onClick={addLine} className="mt-3 text-sm text-primary flex items-center gap-1"><Plus className="w-4 h-4" /> Add another charge</button>
+      </div>}
 
       <textarea
         value={notes}
