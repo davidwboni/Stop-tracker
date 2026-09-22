@@ -5,8 +5,10 @@ const { defineSecret } = require("firebase-functions/params");
 
 admin.initializeApp();
 
-const DEEPSEEK_API_KEY = defineSecret("DEEPSEEK_API_KEY");\nconst STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
-const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");\nconst DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
+const DEEPSEEK_API_KEY = defineSecret("DEEPSEEK_API_KEY");
+const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
+const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
+const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 
 // System prompt: describe the six pay models + the exact JSON we want back.
 // The AI ONLY transcribes/interprets into structured config — it never computes
@@ -59,7 +61,11 @@ exports.interpretPayStructure = onCall(
       throw new HttpsError("unauthenticated", "You must be signed in.");
     }
 
-    const { text, fileBase64, mimeType } = request.data || {};\n    const allowedMime = new Set(["application/pdf","image/jpeg","image/png","image/webp"]);\n    if (typeof text === "string" && text.length > 12000) throw new HttpsError("invalid-argument","Description is too long.");\n    if (fileBase64 && (!allowedMime.has(mimeType) || typeof fileBase64 !== "string" || fileBase64.length > 12_000_000)) throw new HttpsError("invalid-argument","Upload a PDF, JPEG, PNG or WebP under the supported size limit.");\n    if (!text && !fileBase64) {
+    const { text, fileBase64, mimeType } = request.data || {};
+    const allowedMime = new Set(["application/pdf","image/jpeg","image/png","image/webp"]);
+    if (typeof text === "string" && text.length > 12000) throw new HttpsError("invalid-argument","Description is too long.");
+    if (fileBase64 && (!allowedMime.has(mimeType) || typeof fileBase64 !== "string" || fileBase64.length > 12_000_000)) throw new HttpsError("invalid-argument","Upload a PDF, JPEG, PNG or WebP under the supported size limit.");
+    if (!text && !fileBase64) {
       throw new HttpsError("invalid-argument", "Provide a description or a file.");
     }
 
@@ -87,7 +93,9 @@ exports.interpretPayStructure = onCall(
           response_format: { type: "json_object" },
           messages: [
             { role: "system", content: PAY_SYSTEM_PROMPT },
-            { role: "user", content: `Here is how I get paid:\n\n${text}` },
+            { role: "user", content: `Here is how I get paid:
+
+${text}` },
           ],
         }),
       });
