@@ -111,7 +111,20 @@ const EntriesPage = () => {
           </CardContent>
         </Card>
       ) : (
-        <><p className="mb-2 px-1 text-[11px] text-muted-foreground">Swipe an entry to the right to edit its date, stops or notes.</p><EntriesList logs={filteredLogs} onDeleteEntry={handleDeleteEntry} onEditEntry={setEditing} /></>
+        <>
+          <div className="mb-2 flex items-center gap-2 px-1 text-[11px] text-muted-foreground">
+            <motion.span
+              aria-hidden="true"
+              animate={{ x: [0, 6, 0] }}
+              transition={{ duration: 0.9, repeat: 2, repeatDelay: 0.35 }}
+              className="inline-block text-primary"
+            >
+              →
+            </motion.span>
+            <span>Swipe right to reveal <strong className="font-semibold text-primary">Edit</strong>, or tap the Edit button on any entry.</span>
+          </div>
+          <EntriesList logs={filteredLogs} onDeleteEntry={handleDeleteEntry} onEditEntry={setEditing} />
+        </>
       )}
       </div>
 
