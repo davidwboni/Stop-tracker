@@ -425,10 +425,9 @@ ${routeText}`,
     setAddresses(optimized);
   };
 
-  // Route optimization entry point, tries Google's Routes API first
-  // (real road distances/times + true waypoint optimization) and falls
-  // back to the local straight-line nearest-neighbor algorithm if no API
-  // key is configured or the request fails for any reason.
+  // Route optimization entry point. Real optimization runs through an
+  // authenticated Firebase Function backed by Google Route Optimization.
+  // If that service is unavailable, we fall back to the local heuristic.
   const optimizeRoute = async () => {
     if (!isPro && optimizationUses >= 3) { navigate("/app/upgrade"); return; }
     if (addresses.length < 2) {
@@ -449,7 +448,9 @@ ${routeText}`,
             source: 'google'
           });
           setAddresses(result.route);
-          if (!isPro) { const usage=await consumeRouteOptimization(); setOptimizationUses(usage.used || optimizationUses); }
+          if (!isPro && Number.isFinite(Number(result.used))) {
+            setOptimizationUses(Number(result.used));
+          }
           setIsOptimizing(false);
           return;
         }
