@@ -5,6 +5,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useData } from "../contexts/DataContext";
 import { Card, CardContent } from "./ui/card";
 import DailyQuickEntry from "./DailyQuickEntry";
+import DashboardTutorial from "./DashboardTutorial";
 import { Money } from "./ui/money";
 import { ArrowRight, Plus, UserCircle } from "lucide-react";
 import { getPeriodForDate, summarizePeriod } from "../features/payperiod/periods";
@@ -12,7 +13,7 @@ import { getPeriodForDate, summarizePeriod } from "../features/payperiod/periods
 const dateKey = (d) => d.toISOString().split("T")[0];
 const SimpleDashboard = () => {
   const { user } = useAuth();
-  const { logs = [], loading, payPeriodAnchor } = useData();
+  const { logs = [], loading, payPeriodAnchor, isNewUser } = useData();
   const [quickOpen,setQuickOpen] = useState(false);
   const navigate = useNavigate();
   const today = dateKey(new Date());
@@ -28,10 +29,10 @@ const SimpleDashboard = () => {
   const endLabel = new Date(period.end+"T12:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short"});
 
   useEffect(()=>{
-    if(loading || todayLog) return;
+    if(loading || todayLog || isNewUser) return;
     const dismissed=localStorage.getItem(`daily-quick-entry-dismissed-${today}`);
     if(new Date().getHours()>=13 && !dismissed) setQuickOpen(true);
-  },[loading,todayLog,today]);
+  },[loading,todayLog,today,isNewUser]);
   const dismissQuick=()=>{localStorage.setItem(`daily-quick-entry-dismissed-${today}`,"1");setQuickOpen(false);};
 
   if (loading) return <div className="flex min-h-[60vh] items-center justify-center"><div className="h-10 w-10 animate-spin rounded-full border-2 border-[#7567ff] border-t-transparent"/></div>;
@@ -100,7 +101,10 @@ const SimpleDashboard = () => {
         </div>
       </section>}
 
-      <button onClick={()=>setQuickOpen(true)} className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-[#3a3370] bg-gradient-to-r from-[#5f50e8] to-[#7866ff] text-sm font-bold text-white shadow-lg shadow-[#7567ff]/10"><Plus className="h-5 w-5"/> {todayLog?"Update today’s entry":"Log today’s deliveries"}</button>\n      <p className="px-2 pt-2 text-center text-xs text-[#5f6a80]">Your work. Your records. Your pay.</p>\n      <DailyQuickEntry open={quickOpen} onClose={dismissQuick} onSaved={()=>setQuickOpen(false)}/>
+      <button onClick={()=>setQuickOpen(true)} className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-[#3a3370] bg-gradient-to-r from-[#5f50e8] to-[#7866ff] text-sm font-bold text-white shadow-lg shadow-[#7567ff]/10"><Plus className="h-5 w-5"/> {todayLog?"Update today’s entry":"Log today’s deliveries"}</button>
+      <p className="px-2 pt-2 text-center text-xs text-[#5f6a80]">Your work. Your records. Your pay.</p>
+      <DashboardTutorial />
+      <DailyQuickEntry open={quickOpen} onClose={dismissQuick} onSaved={()=>setQuickOpen(false)}/>
     </div>
   );
 };
