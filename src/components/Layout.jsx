@@ -5,6 +5,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import SyncStatus from './SyncStatus';
 import AppNavigation from './AppNavigation';
+import AppWalkthrough from './AppWalkthrough';
 import AppFooter from './AppFooter';
 import PayOnboarding from './PayOnboarding';
 import { useData } from '../contexts/DataContext';
@@ -26,6 +27,7 @@ const Layout = () => {
   return (
     <div className="min-h-[100dvh] bg-[#080c14] text-[#f5f7fb] flex flex-col pt-safe">
       <SyncStatus />
+      <AppWalkthrough />
 
       <main
         className="w-full flex-grow overflow-y-auto touch-manipulation"
