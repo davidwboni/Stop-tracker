@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { createPortal } from "react-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import { Filter, Search, Package, ChevronDown, X } from "lucide-react";
@@ -20,6 +22,15 @@ const EntriesPage = () => {
   const [endDate, setEndDate] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [editing,setEditing] = useState(null);
+
+  useEffect(() => {
+    if (!editing) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [editing]);
 
   const handleDeleteEntry = (id) => {
     if (navigator.vibrate) navigator.vibrate([10, 50, 10]);
@@ -104,7 +115,94 @@ const EntriesPage = () => {
       )}
       </div>
 
-      {editing&&<div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/65 p-3"><div className="w-full max-w-md rounded-[24px] border border-[#2a3550] bg-[#111827] p-5"><div className="flex items-center justify-between"><h2 className="text-lg font-bold">Edit entry</h2><button onClick={()=>setEditing(null)} className="p-2 text-muted-foreground"><X/></button></div><div className="mt-4 grid grid-cols-2 gap-3"><label className="text-xs text-muted-foreground">Date<input type="date" value={editing.date} onChange={e=>setEditing({...editing,date:e.target.value})} className="mt-1 h-11 w-full rounded-xl border border-[#34415f] bg-[#0a101b] px-3 text-white"/></label><label className="text-xs text-muted-foreground">Stops<input inputMode="numeric" type="number" value={editing.stops} onChange={e=>setEditing({...editing,stops:e.target.value})} className="mt-1 h-11 w-full rounded-xl border border-[#34415f] bg-[#0a101b] px-3 text-white"/></label><label className="text-xs text-muted-foreground">Extra (£)<input inputMode="decimal" type="number" step="0.01" value={editing.extra||""} onChange={e=>setEditing({...editing,extra:e.target.value})} className="mt-1 h-11 w-full rounded-xl border border-[#34415f] bg-[#0a101b] px-3 text-white"/></label></div><label className="mt-3 block text-xs text-muted-foreground">Notes<input value={editing.notes||""} onChange={e=>setEditing({...editing,notes:e.target.value})} placeholder="Add a note…" className="mt-1 h-11 w-full rounded-xl border border-[#34415f] bg-[#0a101b] px-3 text-white"/></label><button onClick={saveEdit} className="mt-4 h-12 w-full rounded-xl bg-[#7567ff] font-bold text-white">Save changes</button></div></div>}
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {editing && (
+            <motion.div
+              className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 px-3 py-[max(16px,env(safe-area-inset-top))] backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onMouseDown={(e) => {
+                if (e.target === e.currentTarget) setEditing(null);
+              }}
+            >
+              <motion.div
+                role="dialog"
+                aria-modal="true"
+                aria-label="Edit entry"
+                className="max-h-[calc(100dvh-32px)] w-full max-w-md overflow-y-auto rounded-[24px] border border-[#2a3550] bg-[#111827] p-5 shadow-2xl"
+                initial={{ opacity: 0, scale: 0.96, y: 18 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.98, y: 12 }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold">Edit entry</h2>
+                    <p className="mt-1 text-xs text-muted-foreground">Update this work day and save your changes.</p>
+                  </div>
+                  <button onClick={() => setEditing(null)} aria-label="Close editor" className="grid h-10 w-10 place-items-center rounded-xl text-muted-foreground hover:bg-white/5">
+                    <X />
+                  </button>
+                </div>
+
+                <label className="mt-5 block text-xs text-muted-foreground">
+                  Date
+                  <input
+                    type="date"
+                    value={editing.date}
+                    onChange={(e) => setEditing({ ...editing, date: e.target.value })}
+                    className="mt-1 h-12 w-full rounded-xl border border-[#34415f] bg-[#0a101b] px-3 text-base text-white"
+                  />
+                </label>
+
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <label className="text-xs text-muted-foreground">
+                    Stops
+                    <input
+                      inputMode="numeric"
+                      type="number"
+                      min="0"
+                      value={editing.stops}
+                      onChange={(e) => setEditing({ ...editing, stops: e.target.value })}
+                      className="mt-1 h-12 w-full rounded-xl border border-[#34415f] bg-[#0a101b] px-3 text-base text-white"
+                    />
+                  </label>
+                  <label className="text-xs text-muted-foreground">
+                    Extra (£)
+                    <input
+                      inputMode="decimal"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={editing.extra || ""}
+                      onChange={(e) => setEditing({ ...editing, extra: e.target.value })}
+                      className="mt-1 h-12 w-full rounded-xl border border-[#34415f] bg-[#0a101b] px-3 text-base text-white"
+                    />
+                  </label>
+                </div>
+
+                <label className="mt-3 block text-xs text-muted-foreground">
+                  Notes
+                  <textarea
+                    value={editing.notes || ""}
+                    onChange={(e) => setEditing({ ...editing, notes: e.target.value })}
+                    placeholder="Add a note…"
+                    rows={3}
+                    className="mt-1 w-full resize-none rounded-xl border border-[#34415f] bg-[#0a101b] px-3 py-3 text-base text-white outline-none focus:border-[#7567ff]"
+                  />
+                </label>
+
+                <button onClick={saveEdit} className="mt-5 h-13 min-h-[52px] w-full rounded-xl bg-[#7567ff] font-bold text-white shadow-lg shadow-[#7567ff]/20 active:scale-[0.99]">
+                  Save changes
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
       {/* Search & filter, secondary, below the list */}
       {(logs || []).length > 0 && (
