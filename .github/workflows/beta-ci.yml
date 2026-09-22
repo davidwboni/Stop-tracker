@@ -38,5 +38,5 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: functions/package-lock.json
-      - run: npm ci
+      - run: npm install --ignore-scripts
       - run: node --check index.js
