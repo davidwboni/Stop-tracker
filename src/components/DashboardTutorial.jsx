@@ -9,22 +9,27 @@ const FLAG = "st_tutorial_v1";
 const STEPS = [
   {
     icon: Package,
-    title: "Log your day here",
-    body: "Type your stops (or miles / hours) in the box below, you'll see your estimated pay update instantly.",
+    title: "Your work ledger",
+    body: "Stop Tracker keeps your own record of the work you complete and what you expect to earn.",
   },
   {
     icon: Save,
-    title: "Save it",
-    body: "Hit Save to record the day. Changed your mind? There's an Undo right after every save.",
+    title: "Log your day in seconds",
+    body: "When you finish work, tap Log today’s deliveries, enter your stops and save. We calculate your expected earnings.",
   },
   {
     icon: TrendingUp,
-    title: "Watch it add up",
-    body: "Your week, stops, earnings, per-day, is always up top. Tap any card to dig into the details.",
+    title: "Watch the 4 weeks add up",
+    body: "Home keeps today, your current pay period and recent entries together so you can see where you stand quickly.",
+  },
+  {
+    icon: Package,
+    title: "Then check your pay",
+    body: "When your company statement arrives, open Check Pay and compare it with your independent Stop Tracker record.",
   },
 ];
 
-// A one-time coaching overlay for brand-new users on the daily screen. Shows
+// A short one-time orientation for brand-new users. Shows
 // only when the account has essentially no logs yet and hasn't seen it before.
 const DashboardTutorial = () => {
   // Gate on isNewUser (true for guests and brand-new accounts) rather than log
