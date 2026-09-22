@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import ErrorBoundary from './ErrorBoundary';
 import { motion } from 'framer-motion';
 import { Outlet, useLocation } from 'react-router-dom';
@@ -13,6 +13,11 @@ const Layout = () => {
   useAuth();
   const { needsOnboarding, completeOnboarding } = useData();
   const location = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const main = document.querySelector('main');
+    if (main) main.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [location.pathname]);
   // First-run gate: brand-new users set up their pay before entering the app.
   if (needsOnboarding) {
     return <PayOnboarding onComplete={completeOnboarding} />;
@@ -28,7 +33,7 @@ const Layout = () => {
         {/* Full-width scroll area; an inner block owns the max-width + centering
             so it stays centred on iOS WebKit (a flex item with max-width can
             left-bias under align-items:stretch). */}
-        <div className="w-full max-w-6xl mx-auto pt-5 pb-24 px-4">
+        <div className="w-full max-w-6xl mx-auto pt-3 pb-24 px-4">
           <ErrorBoundary>
             <motion.div
               key={location.pathname}
