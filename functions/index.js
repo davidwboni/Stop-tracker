@@ -59,8 +59,7 @@ exports.interpretPayStructure = onCall(
       throw new HttpsError("unauthenticated", "You must be signed in.");
     }
 
-    const { text, fileBase64, mimeType } = request.data || {};
-    if (!text && !fileBase64) {
+    const { text, fileBase64, mimeType } = request.data || {};\n    const allowedMime = new Set(["application/pdf","image/jpeg","image/png","image/webp"]);\n    if (typeof text === "string" && text.length > 12000) throw new HttpsError("invalid-argument","Description is too long.");\n    if (fileBase64 && (!allowedMime.has(mimeType) || typeof fileBase64 !== "string" || fileBase64.length > 12_000_000)) throw new HttpsError("invalid-argument","Upload a PDF, JPEG, PNG or WebP under the supported size limit.");\n    if (!text && !fileBase64) {
       throw new HttpsError("invalid-argument", "Provide a description or a file.");
     }
 
@@ -134,7 +133,7 @@ exports.interpretPayStructure = onCall(
       }
       parsed = JSON.parse(jsonStr);
     } catch (err) {
-      console.error("Failed to parse model output:", raw);
+      console.error("Failed to parse model output; response length:", raw.length);
       throw new HttpsError("internal", "The interpreter returned an unexpected format. Please reword and try again.");
     }
 
