@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useData } from "../contexts/DataContext";
 import { Money } from "./ui/money";
 import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Keyboard, ShieldCheck, Upload, Sparkles, Trash2 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getPeriodForDate, getPeriodLogs, listPeriods } from "../features/payperiod/periods";
+import { extractStatement, getPremiumStatus } from "../services/premium";
 
 const n = (v) => Number(v) || 0;
 const gbDate = (d) => new Date(d + "T12:00:00").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});
@@ -16,7 +17,13 @@ const CheckPayV4 = () => {
   const [statementStops,setStatementStops] = useState("");
   const [statementAmount,setStatementAmount] = useState("");
   const [daily,setDaily] = useState({});
-  const [showDates,setShowDates] = useState(true);\n  const [aiUses,setAiUses] = useState(()=>Number(localStorage.getItem("statementAiUses")||0));\n  const [aiFile,setAiFile] = useState(null);
+  const [showDates,setShowDates] = useState(true);
+  const [aiUses,setAiUses] = useState(0);
+  const [isPro,setIsPro] = useState(false);
+  const [aiFile,setAiFile] = useState(null);
+  const [aiLoading,setAiLoading] = useState(false);
+  const [aiError,setAiError] = useState("");
+  useEffect(()=>{ getPremiumStatus().then(s=>{setAiUses(s.statementAiUses||0);setIsPro(!!s.isPro)}).catch(()=>{}); },[]);
 
   const today = new Date().toISOString().split("T")[0];
   const periodDef = useMemo(() => {
@@ -26,9 +33,10 @@ const CheckPayV4 = () => {
   const period = useMemo(() => getPeriodLogs(logs,periodDef).sort((a,b)=>a.date.localeCompare(b.date)), [logs,periodDef]);
   const stops=period.reduce((s,l)=>s+n(l.stops),0);
   const expected=period.reduce((s,l)=>s+n(l.total),0);
+  const dailyComplete = period.length > 0 && period.every(l => daily[l.date]?.stops !== "" && daily[l.date]?.stops != null && daily[l.date]?.amount !== "" && daily[l.date]?.amount != null);
   const hasDaily = Object.keys(daily).length > 0;
-  const statementStopsNum = hasDaily ? period.reduce((s,l)=>s+n(daily[l.date]?.stops),0) : n(statementStops);
-  const statementAmountNum = hasDaily ? period.reduce((s,l)=>s+n(daily[l.date]?.amount),0) : n(statementAmount);
+  const statementStopsNum = dailyComplete ? period.reduce((s,l)=>s+n(daily[l.date]?.stops),0) : n(statementStops);
+  const statementAmountNum = dailyComplete ? period.reduce((s,l)=>s+n(daily[l.date]?.amount),0) : n(statementAmount);
   const stopDiff = statementStopsNum - stops;
   const moneyDiff = statementAmountNum - expected;
   const compared = mode === "result";
@@ -40,7 +48,9 @@ const CheckPayV4 = () => {
 
   const updateDaily=(date,key,value)=>setDaily(prev=>({...prev,[date]:{stops:prev[date]?.stops??"",amount:prev[date]?.amount??"",[key]:value}}));
   const compare=async()=>{ setMode("result"); await updatePeriodRecord(periodDef.id,{status:"reconciled",statementStops:statementStopsNum,statementAmount:statementAmountNum,differenceStops:stopDiff,differenceAmount:moneyDiff,reconciledAt:new Date().toISOString()}); };
-  const reset=()=>{setMode("idle");setStatementStops("");setStatementAmount("");setDaily({});setAiFile(null);};\n  const chooseAiFile=(file)=>{if(!file)return;setAiFile(file);setMode("ai-review");};\n  const confirmAiTrial=()=>{const next=Math.min(3,aiUses+1);setAiUses(next);localStorage.setItem("statementAiUses",String(next));setAiFile(null);setMode("manual");};
+  const reset=()=>{setMode("idle");setStatementStops("");setStatementAmount("");setDaily({});setAiFile(null);};
+  const chooseAiFile=(file)=>{if(!file)return;setAiFile(file);setMode("ai-review");};
+  const runAi=async()=>{setAiLoading(true);setAiError("");try{const result=await extractStatement(aiFile);if(result.statementStops!=null)setStatementStops(String(result.statementStops));if(result.statementAmount!=null)setStatementAmount(String(result.statementAmount));const nextDaily={};(result.daily||[]).forEach(d=>{if(d.date)nextDaily[d.date]={stops:d.stops??"",amount:d.amount??""};});setDaily(nextDaily);const s=await getPremiumStatus();setAiUses(s.statementAiUses||0);setIsPro(!!s.isPro);setAiFile(null);setMode("manual");}catch(e){setAiError(e?.message||"Could not read this statement.");}finally{setAiLoading(false);}};
 
   return <div className="mx-auto max-w-2xl space-y-5 pb-24 pt-2">
     <div><div className="mb-3 inline-flex rounded-2xl bg-[#7567ff]/10 p-3 text-[#8f83ff]"><ShieldCheck/></div><h1 className="text-3xl font-bold tracking-tight">Check Pay</h1><p className="mt-2 max-w-lg text-sm leading-6 text-[#8e9ab2]">Compare the statement you receive with your independent Stop Tracker record.</p></div>
@@ -53,10 +63,10 @@ const CheckPayV4 = () => {
 
     {mode==="idle" && <div className="space-y-3">
       <button onClick={()=>setMode("manual")} className="flex w-full items-center gap-4 rounded-2xl border border-[#302a5b] bg-[#17152b] p-4 text-left active:scale-[.99]"><div className="rounded-xl bg-[#7567ff]/15 p-3 text-[#8f83ff]"><Keyboard/></div><div className="flex-1"><div className="font-semibold">Enter statement manually</div><div className="mt-1 text-xs text-[#8e9ab2]">Free · compare totals or enter figures by day</div></div></button>
-      <label className="flex w-full cursor-pointer items-center gap-4 rounded-2xl border border-[#302a5b] bg-gradient-to-r from-[#1a1730] to-[#111827] p-4 text-left active:scale-[.99]"><div className="rounded-xl bg-[#7567ff]/15 p-3 text-[#8f83ff]"><Sparkles/></div><div className="flex-1"><div className="flex items-center gap-2 font-semibold">Upload statement with AI <span className="rounded-full bg-[#7567ff] px-2 py-0.5 text-[9px] font-bold">PRO</span></div><div className="mt-1 text-xs text-[#8e9ab2]">{aiUses<3?`${3-aiUses} of 3 free AI checks remaining · photo, screenshot or PDF`:"Free AI checks used · Pro required for further AI checks"}</div><div className="mt-1 text-[10px] text-[#69758d]">The original upload is for processing only and is not saved to your Stop Tracker account.</div></div><Upload className="h-4 w-4 text-[#8f83ff]"/><input type="file" accept="image/*,.pdf,application/pdf" capture="environment" disabled={aiUses>=3} onChange={e=>chooseAiFile(e.target.files?.[0])} className="sr-only"/></label>
+      <label className="flex w-full cursor-pointer items-center gap-4 rounded-2xl border border-[#302a5b] bg-gradient-to-r from-[#1a1730] to-[#111827] p-4 text-left active:scale-[.99]"><div className="rounded-xl bg-[#7567ff]/15 p-3 text-[#8f83ff]"><Sparkles/></div><div className="flex-1"><div className="flex items-center gap-2 font-semibold">Upload statement with AI <span className="rounded-full bg-[#7567ff] px-2 py-0.5 text-[9px] font-bold">PRO</span></div><div className="mt-1 text-xs text-[#8e9ab2]">{isPro?"Pro · AI statement checks included":aiUses<3?`${3-aiUses} of 3 free AI checks remaining · photo or screenshot`:"Free AI checks used · Pro required for further AI checks"}</div><div className="mt-1 text-[10px] text-[#69758d]">The original upload is for processing only and is not saved to your Stop Tracker account.</div></div><Upload className="h-4 w-4 text-[#8f83ff]"/><input type="file" accept="image/*,.pdf,application/pdf" capture="environment" disabled={!isPro && aiUses>=3} onChange={e=>chooseAiFile(e.target.files?.[0])} className="sr-only"/></label>
     </div>}
 
-    {mode==="ai-review" && <div className="rounded-2xl border border-[#302a5b] bg-[#111827] p-5"><div className="flex items-start gap-3"><div className="rounded-xl bg-[#7567ff]/15 p-3 text-[#8f83ff]"><Sparkles/></div><div><h2 className="text-lg font-bold">AI statement check</h2><p className="mt-1 text-xs leading-5 text-[#8e9ab2]">Selected: {aiFile?.name}. The production AI extractor will read the statement, validate the figures, show them for your confirmation, then discard the original upload.</p></div></div><div className="mt-4 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-xs leading-5 text-amber-100">Beta safety: automatic document extraction is not connected yet, so this build will not upload your statement to any AI service. Continue manually while we wire the private server-side processor.</div><button onClick={confirmAiTrial} className="mt-4 h-12 w-full rounded-xl bg-[#7567ff] text-sm font-bold text-white">Continue to secure review</button><button onClick={()=>{setAiFile(null);setMode("idle")}} className="mt-2 flex h-10 w-full items-center justify-center gap-2 text-xs text-[#7f8ba3]"><Trash2 className="h-3.5 w-3.5"/>Discard file</button></div>}
+    {mode==="ai-review" && <div className="rounded-2xl border border-[#302a5b] bg-[#111827] p-5"><div className="flex items-start gap-3"><div className="rounded-xl bg-[#7567ff]/15 p-3 text-[#8f83ff]"><Sparkles/></div><div><h2 className="text-lg font-bold">AI statement check</h2><p className="mt-1 text-xs leading-5 text-[#8e9ab2]">Selected: {aiFile?.name}. Stop Tracker sends this image securely to DeepSeek for extraction, returns the figures for your confirmation, and does not save the original image to your Stop Tracker account.</p></div></div>{aiError&&<div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-xs text-red-200">{aiError}</div>}<button onClick={runAi} disabled={aiLoading} className="mt-4 h-12 w-full rounded-xl bg-[#7567ff] text-sm font-bold text-white disabled:opacity-60">{aiLoading?"Reading statement…":"Read statement with AI"}</button><button onClick={()=>{setAiFile(null);setMode("idle")}} className="mt-2 flex h-10 w-full items-center justify-center gap-2 text-xs text-[#7f8ba3]"><Trash2 className="h-3.5 w-3.5"/>Discard file</button></div>}
 
     {mode==="manual" && <div className="space-y-4 rounded-2xl border border-[#302a5b] bg-[#111827] p-5">
       <div><h2 className="text-lg font-bold">Statement totals</h2><p className="mt-1 text-xs text-[#8e9ab2]">Enter the totals shown on the statement. Add daily figures below if you want Stop Tracker to identify exact dates.</p></div>
