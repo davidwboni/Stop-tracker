@@ -242,3 +242,18 @@
     animation: none;
   }
 }
+
+
+/* Native/PWA interaction polish */
+html { -webkit-text-size-adjust: 100%; }
+button, a, input, select, textarea { touch-action: manipulation; }
+button, [role="button"], a { -webkit-tap-highlight-color: transparent; }
+input, textarea, select { font-size: max(16px, 1em); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
