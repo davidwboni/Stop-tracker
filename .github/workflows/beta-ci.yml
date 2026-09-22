@@ -19,8 +19,12 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      # package-lock.json is currently behind package.json, so use install for the\n      # beta validation gate until the lockfile is regenerated cleanly.\n      - run: npm install --ignore-scripts\n      - run: npm test
-      - run: npm run build
+      - name: Install web dependencies
+        run: npm install --ignore-scripts
+      - name: Run web tests
+        run: npm test
+      - name: Build production web bundle
+        run: npx --yes --package react-scripts@5.0.1 react-scripts build
         env:
           CI: "true"
 
