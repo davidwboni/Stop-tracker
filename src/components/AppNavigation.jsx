@@ -19,7 +19,7 @@ const AppNavigation = () => {
         {navItems.map(({ path, icon: Icon, label }) => {
           const active = location.pathname.startsWith(path) || (path === "/app/dashboard" && location.pathname === "/app");
           return (
-            <button key={path} aria-label={label} aria-current={active ? "page" : undefined} onClick={() => { if (location.pathname.startsWith(path)) { window.scrollTo({ top: 0, behavior: "smooth" }); } else { navigate(path); requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" })); } }}
+            <button key={path} data-tour={`nav-${label.toLowerCase().replace(/\s+/g,"-")}`} aria-label={label} aria-current={active ? "page" : undefined} onClick={() => { if (location.pathname.startsWith(path)) { window.scrollTo({ top: 0, behavior: "smooth" }); } else { navigate(path); requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" })); } }}
               className={`relative flex min-h-[58px] flex-1 flex-col items-center justify-center gap-1 rounded-xl text-[10px] sm:text-[11px] font-medium transition duration-200 active:scale-95 ${active ? "text-[#7567ff]" : "text-[#7f8ba3]"}`}>
               <Icon size={21} strokeWidth={active ? 2.5 : 2} />
               <span>{label}</span>
