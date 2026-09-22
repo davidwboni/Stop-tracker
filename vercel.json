@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "create-react-app",
+  "buildCommand": "npx --yes --package react-scripts@5.0.1 react-scripts build",
+  "outputDirectory": "build",
+  "rewrites": [
+    { "source": "/((?!static/|favicon\\.ico|manifest\\.json|robots\\.txt|icons/).*)", "destination": "/index.html" }
+  ]
+}
