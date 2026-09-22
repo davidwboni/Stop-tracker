@@ -6,7 +6,6 @@ import { useAuth } from '../contexts/AuthContext';
 import SyncStatus from './SyncStatus';
 import AppNavigation from './AppNavigation';
 import AppWalkthrough from './AppWalkthrough';
-import AppFooter from './AppFooter';
 import PayOnboarding from './PayOnboarding';
 import { useData } from '../contexts/DataContext';
 
@@ -47,7 +46,6 @@ const Layout = () => {
               <Outlet />
             </motion.div>
           </ErrorBoundary>
-          <AppFooter />
         </div>
       </main>
 
