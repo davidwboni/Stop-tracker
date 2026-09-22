@@ -2,11 +2,10 @@ const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
-const Anthropic = require("@anthropic-ai/sdk");
 
 admin.initializeApp();
 
-const ANTHROPIC_API_KEY = defineSecret("ANTHROPIC_API_KEY");
+const DEEPSEEK_API_KEY = defineSecret("DEEPSEEK_API_KEY");\nconst DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 
 // System prompt: describe the six pay models + the exact JSON we want back.
 // The AI ONLY transcribes/interprets into structured config — it never computes
@@ -53,7 +52,7 @@ Rules:
 exports.interpretPayStructure = onCall(
   // invoker:"public" lets the Firebase callable protocol reach the function;
   // auth is still enforced below via request.auth (no anonymous access).
-  { secrets: [ANTHROPIC_API_KEY], cors: true, invoker: "public", memory: "512MiB", timeoutSeconds: 120 },
+  { secrets: [DEEPSEEK_API_KEY], cors: true, invoker: "public", memory: "512MiB", timeoutSeconds: 120 },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "You must be signed in.");
@@ -63,64 +62,45 @@ exports.interpretPayStructure = onCall(
       throw new HttpsError("invalid-argument", "Provide a description or a file.");
     }
 
-    const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY.value() });
-
-    const content = [];
-    if (fileBase64 && mimeType) {
-      if (mimeType === "application/pdf") {
-        content.push({
-          type: "document",
-          source: { type: "base64", media_type: "application/pdf", data: fileBase64 },
-        });
-      } else {
-        content.push({
-          type: "image",
-          source: { type: "base64", media_type: mimeType, data: fileBase64 },
-        });
-      }
+    // DeepSeek is our single AI provider. Keep the key server-side in Firebase
+    // Secret Manager; the browser never receives it.
+    // DeepSeek's chat endpoint is text-first, so documents/images must be
+    // converted to trusted text before this call. We intentionally reject raw
+    // files here rather than silently sending sensitive uploads elsewhere.
+    if (fileBase64) {
+      throw new HttpsError("failed-precondition", "Document extraction is not enabled yet. Enter the pay details as text.");
     }
-    content.push({
-      type: "text",
-      text: text
-        ? `Here is how I get paid:\n\n${text}`
-        : "Here is my pay-rate sheet. Interpret it into the JSON config.",
-    });
 
-    // Tier the model to the input: a dense rate-sheet grid is vision-critical
-    // (Sonnet 5), while a plain text description is simple extraction (Haiku).
-    const model = fileBase64 ? "claude-sonnet-5" : "claude-haiku-4-5";
-
-    let message;
+    let responseData;
     try {
-      const createParams = {
-        model,
-        max_tokens: 16000,
-        system: PAY_SYSTEM_PROMPT,
-        messages: [{ role: "user", content }],
-      };
-      // Sonnet 5 turns on adaptive thinking by default, which would consume the
-      // token budget and truncate a large rate-grid transcription mid-JSON.
-      // Disable it — this is deterministic extraction, not reasoning.
-      if (fileBase64) createParams.thinking = { type: "disabled" };
-      message = await client.messages.create(createParams);
+      const response = await fetch(DEEPSEEK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${DEEPSEEK_API_KEY.value()}`,
+        },
+        body: JSON.stringify({
+          model: "deepseek-chat",
+          temperature: 0,
+          max_tokens: 8000,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: PAY_SYSTEM_PROMPT },
+            { role: "user", content: `Here is how I get paid:\n\n${text}` },
+          ],
+        }),
+      });
+      if (!response.ok) {
+        console.error("DeepSeek request failed:", response.status);
+        throw new Error("AI provider error");
+      }
+      responseData = await response.json();
     } catch (err) {
-      console.error("Anthropic call failed:", err);
+      console.error("DeepSeek call failed:", err?.message || "unknown error");
       throw new HttpsError("internal", "Could not interpret the pay structure. Please try again.");
     }
 
-    if (message.stop_reason === "max_tokens") {
-      console.error("Output truncated (max_tokens) for model", model);
-      throw new HttpsError(
-        "internal",
-        "That rate sheet is very large to read in one go. Try a clearer single-page image, or type your key rates instead."
-      );
-    }
-
-    const raw = (message.content || [])
-      .filter((b) => b.type === "text")
-      .map((b) => b.text)
-      .join("")
-      .trim();
+    const raw = String(responseData?.choices?.[0]?.message?.content || "").trim();
 
     let parsed;
     try {
