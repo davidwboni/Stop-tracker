@@ -34,7 +34,8 @@ export default function InvoiceCreate({ prefill }) {
     saveSenderProfile,
   } = useInvoice();
 
-  const [editingSender, setEditingSender] = useState(false);\n  const [confirmedStops, setConfirmedStops] = useState(prefill?.stops ? String(prefill.stops) : "");
+  const [editingSender, setEditingSender] = useState(false);
+  const [confirmedStops, setConfirmedStops] = useState(prefill?.stops ? String(prefill.stops) : "");
   const [sender, setSender] = useState(
     senderProfile || { name: "", address: "", email: "", extra: "" }
   );
@@ -58,6 +59,7 @@ export default function InvoiceCreate({ prefill }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
+  const [persisted, setPersisted] = useState(false);
 
   const total = lines.reduce(
     (s, l) => s + (parseFloat(l.qty) || 0) * (parseFloat(l.rate) || 0),
@@ -205,7 +207,8 @@ export default function InvoiceCreate({ prefill }) {
     return docPdf;
   };
 
-  const persist = async () => {
+  const persist = async (status = "generated") => {
+    if (persisted) return;
     await addInvoice({
       invoiceNumber,
       clientName: client.name,
@@ -214,8 +217,11 @@ export default function InvoiceCreate({ prefill }) {
       dateFrom,
       dateTo,
       lines,
-      periodId: prefill?.periodId || null,\n      confirmedStops: prefill?.periodId ? Number(confirmedStops) : null,\n      status: "generated",
+      periodId: prefill?.periodId || null,
+      confirmedStops: prefill?.periodId ? Number(confirmedStops) : null,
+      status,
     });
+    setPersisted(true);
   };
 
   const canGenerate = client && total > 0 && (!prefill?.periodId || Number(confirmedStops) >= 0);
@@ -227,7 +233,7 @@ export default function InvoiceCreate({ prefill }) {
     try {
       const docPdf = buildPdf();
       docPdf.save(`Invoice_${invoiceNumber}.pdf`);
-      await persist();
+      await persist("generated");
       if (prefill?.periodId) await updatePeriodRecord(prefill.periodId,{status:"invoice_generated",invoiceNumber,invoiceAmount:total,confirmedStops:Number(confirmedStops),invoiceGeneratedAt:new Date().toISOString()});
       setSaved(true);
     } catch (e) {
@@ -251,7 +257,7 @@ export default function InvoiceCreate({ prefill }) {
       } else {
         docPdf.save(`Invoice_${invoiceNumber}.pdf`);
       }
-      await persist();
+      await persist("sent");
       if (prefill?.periodId) await updatePeriodRecord(prefill.periodId,{status:"invoice_sent",invoiceNumber,invoiceAmount:total,invoiceGeneratedAt:new Date().toISOString()});
       setSaved(true);
     } catch (e) {
