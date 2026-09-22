@@ -10,7 +10,7 @@ const FLAG="st_app_walkthrough_v2";
 const steps=[
  {path:"/app/dashboard",target:'[data-tour="log-work"]',title:"Log today’s work",body:"This is the button you’ll use at the end of a shift. Tap the highlighted button to continue.",action:"Tap Log today’s work"},
  {path:"/app/dashboard",target:'[data-tour="past-entry"]',title:"Forgot a day?",body:"Use Past entry when you missed a day. You can choose any earlier date before saving.",action:"Tap Past entry"},
- {path:"/app/entries",target:'[data-tour="entry-example"]',title:"Your work ledger",body:"This is what one saved work day looks like: date, stops, expected earnings and notes. In real use, swipe an entry to the right to edit it.",action:"Tap the example entry"},
+ {path:"/app/entries",target:'[data-tour="entry-example"]',title:"Your work ledger",body:"This temporary example shows a saved work day: date, stops, expected earnings and notes. In real use, swipe right or tap Edit. The example is never saved and disappears after the tour.",action:"Tap the example entry"},
  {path:"/app/entries",target:'[data-tour="nav-routes"]',title:"Routes",body:"Now tap Routes in the navigation. This is where you check addresses and build the order of your stops.",action:"Tap Routes",nextPath:"/app/routes"},
  {path:"/app/routes",target:'[data-tour="route-search"]',title:"Build a route",body:"Start here by searching an address. Address checking stays separate from your daily work log.",action:"Tap address search"},
  {path:"/app/routes",target:'[data-tour="nav-check-pay"]',title:"Check Pay",body:"At the end of the pay period, move to Check Pay when your contractor statement arrives.",action:"Tap Check Pay",nextPath:"/app/check-pay"},
@@ -31,6 +31,7 @@ export default function AppWalkthrough(){
  const [step,setStep]=useState(0);
  const [open,setOpen]=useState(false);
  const [rect,setRect]=useState(null);
+ const [targetMissing,setTargetMissing]=useState(false);
 
  useEffect(()=>{
    if(loading)return;
@@ -54,6 +55,7 @@ export default function AppWalkthrough(){
    if(!open)return;
    const target=steps[step]?.target;
    setRect(null);
+   setTargetMissing(false);
    if(!target)return;
    let cancelled=false;
    let tries=0;
@@ -62,6 +64,7 @@ export default function AppWalkthrough(){
      const el=document.querySelector(target);
      if(!el){
        if(tries++<30)setTimeout(locate,80);
+       else setTargetMissing(true);
        return;
      }
      const isNav=target.includes("nav-");
@@ -121,7 +124,8 @@ export default function AppWalkthrough(){
       <div className="mt-4 flex items-center gap-3">
         <div className="flex flex-1 gap-1">{steps.map((_,i)=><span key={i} className={`h-1 flex-1 rounded-full ${i<=step?"bg-[#7567ff]":"bg-[#293249]"}`}/>)}</div>
         {!s.target&&<button onClick={finish} className="rounded-xl bg-[#7567ff] px-5 py-2.5 text-sm font-bold text-white">{s.action}</button>}
-        {s.target&&<span className="whitespace-nowrap text-xs font-bold text-[#b7b0ff]">Tap highlighted area</span>}
+        {s.target&&targetMissing&&<button onClick={advance} className="rounded-xl bg-[#7567ff] px-4 py-2 text-xs font-bold text-white">Continue</button>}
+        {s.target&&!targetMissing&&<span className="whitespace-nowrap text-xs font-bold text-[#b7b0ff]">Tap highlighted area</span>}
       </div>
     </motion.div>
    </motion.div>
