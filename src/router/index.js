@@ -14,8 +14,7 @@ import PeriodHistoryV4 from '../components/PeriodHistoryV4';
 import ErrorBoundary from '../components/ErrorBoundary';
 import ProfileWrapper from '../components/ProfileWrapper';
 import PaymentSettingsWrapper from '../components/PaymentSettingsWrapper';
-// UpgradeToPro import disabled with the route below, no working billing backend yet.
-// import UpgradeToPro from '../components/UpgradeToPro';
+import UpgradeToPro from '../components/UpgradeToPro';
 import RoutePlannerWrapper from '../components/RoutePlannerWrapper';
 import ContactUs from '../components/pages/ContactUs';
 import PrivacyPolicy from '../components/pages/PrivacyPolicy';
@@ -87,14 +86,11 @@ const router = createBrowserRouter([
           { path: 'routes', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><RoutePlannerWrapper /></React.Suspense></ErrorBoundary> },
           { path: 'invoice', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><InvoicePage /></React.Suspense></ErrorBoundary> },
           { path: 'check-pay', element: <ErrorBoundary><CheckPayV4 /></ErrorBoundary> },
-          { path: 'periods', element: <ErrorBoundary><div className="max-w-2xl mx-auto pb-24 pt-2"><h1 className="text-3xl font-bold tracking-tight mb-2">Pay Periods</h1><p className="text-sm text-muted-foreground mb-5">Your four-week work, invoice and statement history.</p><PeriodHistoryV4 /></div></ErrorBoundary> },
+          { path: 'periods', element: <ErrorBoundary><div className="max-w-2xl mx-auto pb-24 -mt-2"><div className="mb-4 flex items-center justify-between gap-3"><h1 className="text-2xl font-bold tracking-tight">Pay Periods</h1><span className="text-xs text-[#8e9ab2]">4-week history</span></div><PeriodHistoryV4 /></div></ErrorBoundary> },
           { path: 'stats', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><StatsPage /></React.Suspense></ErrorBoundary> },
           { path: 'profile', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><ProfileWrapper /></React.Suspense></ErrorBoundary> },
           { path: 'settings', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><PaymentSettingsWrapper /></React.Suspense></ErrorBoundary> },
-          // Pro purchase flow has no working billing backend yet (no Stripe/Play Billing wired up) -
-          // route disabled for v1 launch so nothing dead-ends users. Re-point at <UpgradeToPro />
-          // once Google Play Billing is integrated.
-          { path: 'upgrade', element: <Navigate to="/app/dashboard" replace /> },
+          { path: 'upgrade', element: <ErrorBoundary><UpgradeToPro /></ErrorBoundary> },
           { path: 'contact', element: <ContactUs /> },
           { path: 'privacy', element: <PrivacyPolicy /> },
           { path: 'terms', element: <TermsOfService /> },

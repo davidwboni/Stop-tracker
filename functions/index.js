@@ -1,12 +1,33 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
-const Anthropic = require("@anthropic-ai/sdk");
+const crypto = require("crypto");
 
 admin.initializeApp();
 
-const ANTHROPIC_API_KEY = defineSecret("ANTHROPIC_API_KEY");
+const DEEPSEEK_API_KEY = defineSecret("DEEPSEEK_API_KEY");
+const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
+const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
+const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
+
+async function stripePost(path, params = {}) {
+  const body = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null) body.append(k, String(v)); });
+  const response = await fetch(`https://api.stripe.com/v1/${path}`, { method: "POST", headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY.value()}`, "Content-Type": "application/x-www-form-urlencoded" }, body });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data?.error?.message || "Stripe request failed");
+  return data;
+}
+
+async function stripeGet(path, params = {}) {
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => qs.append(k, String(v)));
+  const response = await fetch(`https://api.stripe.com/v1/${path}?${qs}`, { headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY.value()}` } });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data?.error?.message || "Stripe request failed");
+  return data;
+}
 
 // System prompt: describe the six pay models + the exact JSON we want back.
 // The AI ONLY transcribes/interprets into structured config — it never computes
@@ -53,75 +74,61 @@ Rules:
 exports.interpretPayStructure = onCall(
   // invoker:"public" lets the Firebase callable protocol reach the function;
   // auth is still enforced below via request.auth (no anonymous access).
-  { secrets: [ANTHROPIC_API_KEY], cors: true, invoker: "public", memory: "512MiB", timeoutSeconds: 120 },
+  { secrets: [DEEPSEEK_API_KEY], cors: true, invoker: "public", memory: "512MiB", timeoutSeconds: 120 },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "You must be signed in.");
     }
 
     const { text, fileBase64, mimeType } = request.data || {};
+    const allowedMime = new Set(["application/pdf","image/jpeg","image/png","image/webp"]);
+    if (typeof text === "string" && text.length > 12000) throw new HttpsError("invalid-argument","Description is too long.");
+    if (fileBase64 && (!allowedMime.has(mimeType) || typeof fileBase64 !== "string" || fileBase64.length > 12_000_000)) throw new HttpsError("invalid-argument","Upload a PDF, JPEG, PNG or WebP under the supported size limit.");
     if (!text && !fileBase64) {
       throw new HttpsError("invalid-argument", "Provide a description or a file.");
     }
 
-    const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY.value() });
-
-    const content = [];
-    if (fileBase64 && mimeType) {
-      if (mimeType === "application/pdf") {
-        content.push({
-          type: "document",
-          source: { type: "base64", media_type: "application/pdf", data: fileBase64 },
-        });
-      } else {
-        content.push({
-          type: "image",
-          source: { type: "base64", media_type: mimeType, data: fileBase64 },
-        });
-      }
+    // DeepSeek is our single AI provider. Keep the key server-side in Firebase
+    // Secret Manager; the browser never receives it.
+    // DeepSeek's chat endpoint is text-first, so documents/images must be
+    // converted to trusted text before this call. We intentionally reject raw
+    // files here rather than silently sending sensitive uploads elsewhere.
+    if (fileBase64) {
+      throw new HttpsError("failed-precondition", "Document extraction is not enabled yet. Enter the pay details as text.");
     }
-    content.push({
-      type: "text",
-      text: text
-        ? `Here is how I get paid:\n\n${text}`
-        : "Here is my pay-rate sheet. Interpret it into the JSON config.",
-    });
 
-    // Tier the model to the input: a dense rate-sheet grid is vision-critical
-    // (Sonnet 5), while a plain text description is simple extraction (Haiku).
-    const model = fileBase64 ? "claude-sonnet-5" : "claude-haiku-4-5";
-
-    let message;
+    let responseData;
     try {
-      const createParams = {
-        model,
-        max_tokens: 16000,
-        system: PAY_SYSTEM_PROMPT,
-        messages: [{ role: "user", content }],
-      };
-      // Sonnet 5 turns on adaptive thinking by default, which would consume the
-      // token budget and truncate a large rate-grid transcription mid-JSON.
-      // Disable it — this is deterministic extraction, not reasoning.
-      if (fileBase64) createParams.thinking = { type: "disabled" };
-      message = await client.messages.create(createParams);
+      const response = await fetch(DEEPSEEK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${DEEPSEEK_API_KEY.value()}`,
+        },
+        body: JSON.stringify({
+          model: "deepseek-chat",
+          temperature: 0,
+          max_tokens: 8000,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: PAY_SYSTEM_PROMPT },
+            { role: "user", content: `Here is how I get paid:
+
+${text}` },
+          ],
+        }),
+      });
+      if (!response.ok) {
+        console.error("DeepSeek request failed:", response.status);
+        throw new Error("AI provider error");
+      }
+      responseData = await response.json();
     } catch (err) {
-      console.error("Anthropic call failed:", err);
+      console.error("DeepSeek call failed:", err?.message || "unknown error");
       throw new HttpsError("internal", "Could not interpret the pay structure. Please try again.");
     }
 
-    if (message.stop_reason === "max_tokens") {
-      console.error("Output truncated (max_tokens) for model", model);
-      throw new HttpsError(
-        "internal",
-        "That rate sheet is very large to read in one go. Try a clearer single-page image, or type your key rates instead."
-      );
-    }
-
-    const raw = (message.content || [])
-      .filter((b) => b.type === "text")
-      .map((b) => b.text)
-      .join("")
-      .trim();
+    const raw = String(responseData?.choices?.[0]?.message?.content || "").trim();
 
     let parsed;
     try {
@@ -134,7 +141,7 @@ exports.interpretPayStructure = onCall(
       }
       parsed = JSON.parse(jsonStr);
     } catch (err) {
-      console.error("Failed to parse model output:", raw);
+      console.error("Failed to parse model output; response length:", raw.length);
       throw new HttpsError("internal", "The interpreter returned an unexpected format. Please reword and try again.");
     }
 
@@ -148,6 +155,192 @@ exports.interpretPayStructure = onCall(
       summary: typeof parsed.summary === "string" ? parsed.summary : "",
       sample: parsed.sample && typeof parsed.sample.quantity === "number" ? parsed.sample : { quantity: 100 },
     };
+  }
+);
+
+
+const STATEMENT_SYSTEM_PROMPT = `Extract delivery pay statement figures. Return JSON only:
+{"statementStops":number|null,"statementAmount":number|null,"daily":[{"date":"YYYY-MM-DD","stops":number|null,"amount":number|null}],"confidence":number,"notes":[]}
+Use only figures visible in the statement. Do not invent missing dates or values. statementAmount is the total gross statement amount relevant to the driver's delivery work for the period. confidence is 0..1.`;
+
+async function getEntitlement(uid) {
+  const snap = await admin.firestore().collection("entitlements").doc(uid).get();
+  const d = snap.data() || {};
+  return { isPro: d.plan === "pro" && ["active","trialing"].includes(d.subscriptionStatus), ...d };
+}
+
+async function consumeFreeUse(uid, field) {
+  const ref = admin.firestore().collection("usage").doc(uid);
+  return admin.firestore().runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    const data = snap.data() || {};
+    const used = Number(data[field] || 0);
+    if (used >= 3) return { allowed: false, used };
+    tx.set(ref, { [field]: used + 1, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    return { allowed: true, used: used + 1 };
+  });
+}
+
+exports.getPremiumStatus = onCall({ cors: true, invoker: "public" }, async request => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "You must be signed in.");
+  const [ent, usage] = await Promise.all([
+    getEntitlement(request.auth.uid),
+    admin.firestore().collection("usage").doc(request.auth.uid).get(),
+  ]);
+  const u = usage.data() || {};
+  return { isPro: ent.isPro, statementAiUses: Number(u.statementAiUses || 0), routeOptimizationUses: Number(u.routeOptimizationUses || 0) };
+});
+
+exports.extractStatement = onCall(
+  { secrets: [DEEPSEEK_API_KEY], cors: true, invoker: "public", memory: "512MiB", timeoutSeconds: 120 },
+  async request => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "You must be signed in.");
+    const { fileBase64, mimeType } = request.data || {};
+    const imageTypes = new Set(["image/jpeg","image/png","image/webp"]);
+    if (!imageTypes.has(mimeType) || typeof fileBase64 !== "string" || fileBase64.length > 12_000_000) {
+      throw new HttpsError("invalid-argument", "Upload a JPEG, PNG or WebP image under the supported size limit.");
+    }
+    const ent = await getEntitlement(request.auth.uid);
+    const usageRef = admin.firestore().collection("usage").doc(request.auth.uid);
+    const usage = (await usageRef.get()).data() || {};
+    if (!ent.isPro && Number(usage.statementAiUses || 0) >= 3) throw new HttpsError("permission-denied", "Your 3 free AI checks are used. Upgrade to Pro.");
+
+    let data;
+    try {
+      const response = await fetch(DEEPSEEK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${DEEPSEEK_API_KEY.value()}` },
+        body: JSON.stringify({
+          model: "deepseek-flash", temperature: 0, max_tokens: 4000,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: STATEMENT_SYSTEM_PROMPT },
+            { role: "user", content: [
+              { type: "text", text: "Extract this delivery pay statement into the requested JSON." },
+              { type: "image_url", image_url: { url: `data:${mimeType};base64,${fileBase64}`, detail: "original" } }
+            ] }
+          ]
+        })
+      });
+      if (!response.ok) throw new Error(`DeepSeek status ${response.status}`);
+      const payload = await response.json();
+      data = JSON.parse(String(payload?.choices?.[0]?.message?.content || "{}").replace(/^\`\`\`(?:json)?\\s*/i,"").replace(/\`\`\`\\s*$/,""));
+    } catch (err) {
+      console.error("Statement extraction failed:", err?.message || "unknown");
+      throw new HttpsError("internal", "Could not read this statement. Try a clearer image or enter it manually.");
+    }
+    if (!Number.isFinite(Number(data.statementStops)) && !Number.isFinite(Number(data.statementAmount))) {
+      throw new HttpsError("failed-precondition", "No usable statement totals were found.");
+    }
+    if (!ent.isPro) {
+      const consumed = await consumeFreeUse(request.auth.uid, "statementAiUses");
+      if (!consumed.allowed) throw new HttpsError("permission-denied", "Your 3 free AI checks are used. Upgrade to Pro.");
+    }
+    return { statementStops: data.statementStops, statementAmount: data.statementAmount, daily: Array.isArray(data.daily) ? data.daily : [], confidence: Number(data.confidence || 0), notes: Array.isArray(data.notes) ? data.notes : [] };
+  }
+);
+
+exports.consumeRouteOptimization = onCall({ cors: true, invoker: "public" }, async request => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "You must be signed in.");
+  const ent = await getEntitlement(request.auth.uid);
+  if (ent.isPro) return { allowed: true, isPro: true };
+  const result = await consumeFreeUse(request.auth.uid, "routeOptimizationUses");
+  if (!result.allowed) throw new HttpsError("permission-denied", "Your 3 free route optimisations are used. Upgrade to Pro.");
+  return { allowed: true, isPro: false, used: result.used, remaining: Math.max(0, 3 - result.used) };
+});
+
+// Creates a Stripe Checkout session for Stop Tracker Pro. Price IDs are
+// deliberately configuration, not secrets, so monthly/annual products can be
+// changed without shipping private credentials to the client.
+exports.createProCheckout = onCall(
+  { secrets: [STRIPE_SECRET_KEY], cors: true, invoker: "public" },
+  async (request) => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "You must be signed in.");
+    const plan = request.data?.plan === "annual" ? "annual" : request.data?.plan === "monthly" ? "monthly" : null;
+    if (!plan) throw new HttpsError("invalid-argument", "Choose monthly or annual.");
+    const lookupKey = plan === "annual" ? "stop_tracker_pro_annual" : "stop_tracker_pro_monthly";
+    const prices = await stripeGet("prices", { "lookup_keys[]": lookupKey, active: true, limit: 1 });
+    const priceId = prices.data[0]?.id;
+    if (!priceId) throw new HttpsError("failed-precondition", "This Pro plan is not configured in Stripe.");
+    const userRef = admin.firestore().collection("users").doc(request.auth.uid);
+    const snap = await userRef.get();
+    const user = snap.data() || {};
+    let customerId = user.stripeCustomerId;
+    if (!customerId) {
+      const customer = await stripePost("customers", { email: request.auth.token.email || undefined, "metadata[firebaseUid]": request.auth.uid });
+      customerId = customer.id;
+      await userRef.set({ stripeCustomerId: customerId }, { merge: true });
+    }
+    const origin = String(request.data?.origin || "").replace(/\/$/, "");
+    if (!/^https:\/\//.test(origin)) throw new HttpsError("invalid-argument", "Invalid return URL.");
+    const session = await stripePost("checkout/sessions", {
+      mode: "subscription", customer: customerId,
+      "line_items[0][price]": priceId, "line_items[0][quantity]": 1,
+      success_url: `${origin}/app/profile?billing=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/app/profile?billing=cancelled`,
+      client_reference_id: request.auth.uid,
+      "metadata[firebaseUid]": request.auth.uid,
+      "subscription_data[metadata][firebaseUid]": request.auth.uid,
+    });
+    return { url: session.url };
+  }
+);
+
+
+// Stripe is the source of truth for paid access. Clients can read their own
+// entitlement document but cannot write it (see firestore.rules).
+exports.stripeWebhook = onRequest(
+  { secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET], cors: false },
+  async (req, res) => {
+    let event;
+    try {
+      const signature = String(req.headers["stripe-signature"] || "");
+      const parts = Object.fromEntries(signature.split(",").map(p => p.split("=")));
+      const timestamp = Number(parts.t);
+      if (!timestamp || Math.abs(Date.now() / 1000 - timestamp) > 300) throw new Error("stale signature");
+      const expected = crypto.createHmac("sha256", STRIPE_WEBHOOK_SECRET.value()).update(`${timestamp}.${req.rawBody.toString("utf8")}`).digest("hex");
+      const supplied = String(parts.v1 || "");
+      if (expected.length !== supplied.length || !crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(supplied))) throw new Error("signature mismatch");
+      event = JSON.parse(req.rawBody.toString("utf8"));
+    } catch (err) {
+      console.error("Invalid Stripe webhook signature");
+      res.status(400).send("Invalid signature");
+      return;
+    }
+
+    const subscriptionEvents = new Set(["customer.subscription.created","customer.subscription.updated","customer.subscription.deleted"]);
+    if (subscriptionEvents.has(event.type)) {
+      const sub = event.data.object;
+      const uid = sub.metadata?.firebaseUid;
+      if (uid) {
+        const active = ["active","trialing"].includes(sub.status);
+        await admin.firestore().collection("entitlements").doc(uid).set({
+          plan: active ? "pro" : "free",
+          subscriptionStatus: sub.status,
+          stripeCustomerId: String(sub.customer || ""),
+          stripeSubscriptionId: sub.id,
+          priceId: sub.items?.data?.[0]?.price?.id || null,
+          currentPeriodEnd: sub.items?.data?.[0]?.current_period_end || null,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
+    }
+    res.status(200).json({ received: true });
+  }
+);
+
+exports.createBillingPortal = onCall(
+  { secrets: [STRIPE_SECRET_KEY], cors: true, invoker: "public" },
+  async (request) => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "You must be signed in.");
+    const ent = await admin.firestore().collection("entitlements").doc(request.auth.uid).get();
+    const user = await admin.firestore().collection("users").doc(request.auth.uid).get();
+    const customerId = ent.data()?.stripeCustomerId || user.data()?.stripeCustomerId;
+    if (!customerId) throw new HttpsError("failed-precondition", "No Stripe customer exists for this account.");
+    const origin = String(request.data?.origin || "").replace(/\/$/, "");
+    if (!/^https:\/\//.test(origin)) throw new HttpsError("invalid-argument", "Invalid return URL.");
+    const session = await stripePost("billing_portal/sessions", { customer: customerId, return_url: `${origin}/app/profile` });
+    return { url: session.url };
   }
 );
 

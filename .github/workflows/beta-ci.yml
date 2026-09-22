@@ -1,0 +1,45 @@
+name: Beta CI
+
+on:
+  push:
+    branches: [beta]
+  pull_request:
+    branches: [beta, main]
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install web dependencies
+        run: npm install --ignore-scripts
+      - name: Run web tests
+        run: npm test
+      - name: Build production web bundle
+        run: npx --yes --package react-scripts@5.0.1 react-scripts build
+        env:
+          CI: "true"
+
+  functions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: functions
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+      - run: npm install --ignore-scripts
+      - run: node --check index.js

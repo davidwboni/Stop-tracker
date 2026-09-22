@@ -4,6 +4,7 @@ import { Button } from "./ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Trash2,
+  Pencil,
   ArrowUpDown,
   ChevronDown,
   ChevronUp,
@@ -28,7 +29,7 @@ const formatDate = (inputDate) => {
   });
 };
 
-const EntriesList = ({ logs, onDeleteEntry }) => {
+const EntriesList = ({ logs, onDeleteEntry, onEditEntry }) => {
   const [sortBy, setSortBy] = useState("date");
   const [sortOrder, setSortOrder] = useState("desc");
   const [page, setPage] = useState(1);
@@ -198,9 +199,13 @@ const EntriesList = ({ logs, onDeleteEntry }) => {
                   exit={{ opacity: 0, x: -100 }}
                   transition={{ delay: index * 0.05, duration: 0.3 }}
                   whileHover={{ scale: 1.01 }}
-                  className="group"
+                  className="group overflow-hidden"
+                  drag="x"
+                  dragConstraints={{left:0,right:96}}
+                  dragElastic={0.12}
+                  onDragEnd={(_,info)=>{if(info.offset.x>55)onEditEntry?.(log)}}
                 >
-                  <div className="flex justify-between items-center p-4 sm:p-5 rounded-[14px] bg-card hover:bg-primary/5 border border-border/50 hover:border-primary/30 transition-all duration-300 shadow-sm hover:shadow-md touch-manipulation">
+                  <div className="relative flex justify-between items-center p-4 sm:p-5 rounded-[14px] bg-card hover:bg-primary/5 border border-border/50 hover:border-primary/30 transition-all duration-300 shadow-sm hover:shadow-md touch-manipulation"><div className="absolute right-full mr-3 flex items-center gap-1 text-xs font-semibold text-primary"><Pencil className="h-4 w-4"/> Edit</div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-2">
                         <div className="font-bold text-foreground text-lg">

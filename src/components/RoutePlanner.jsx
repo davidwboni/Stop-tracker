@@ -44,8 +44,11 @@ import {
 import { resolvePlace } from "../services/googlePlaces";
 import { optimizeRouteGoogle, isGoogleRoutesConfigured } from "../services/googleRoutes";
 import { useAddressMemory } from "../contexts/AddressMemoryContext";
+import { consumeRouteOptimization, getPremiumStatus } from "../services/premium";
+import { useNavigate } from "react-router-dom";
 
 const RoutePlanner = () => {
+  const navigate = useNavigate();
   const [addresses, setAddresses] = useState([]);
   const [currentAddress, setCurrentAddress] = useState("");
   const [addressSuggestions, setAddressSuggestions] = useState([]);
@@ -60,6 +63,9 @@ const RoutePlanner = () => {
   const activeSearchControllerRef = useRef(null);
   const { frequentAddresses, recordAddressUse } = useAddressMemory();
   const [expandedAddressId, setExpandedAddressId] = useState(null);
+  const [optimizationUses, setOptimizationUses] = useState(0);
+  const [isPro, setIsPro] = useState(false);
+  useEffect(() => { getPremiumStatus().then(s => { setOptimizationUses(s.routeOptimizationUses || 0); setIsPro(!!s.isPro); }).catch(()=>{}); }, []);
 
   // Load saved routes on mount
   useEffect(() => {
@@ -339,11 +345,13 @@ const RoutePlanner = () => {
 
     const routeText = addresses.map((addr, i) =>
       `${i + 1}. ${addr.address}`
-    ).join('\n');
+    ).join('\\n');
 
     const shareData = {
       title: 'My Route',
-      text: `Route with ${addresses.length} stops:\n\n${routeText}`,
+      text: `Route with ${addresses.length} stops:
+
+${routeText}`,
     };
 
     try {
@@ -422,6 +430,7 @@ const RoutePlanner = () => {
   // back to the local straight-line nearest-neighbor algorithm if no API
   // key is configured or the request fails for any reason.
   const optimizeRoute = async () => {
+    if (!isPro && optimizationUses >= 3) { navigate("/app/upgrade"); return; }
     if (addresses.length < 2) {
       showError("Please add at least 2 addresses to optimize");
       return;
@@ -440,6 +449,7 @@ const RoutePlanner = () => {
             source: 'google'
           });
           setAddresses(result.route);
+          if (!isPro) { const usage=await consumeRouteOptimization(); setOptimizationUses(usage.used || optimizationUses); }
           setIsOptimizing(false);
           return;
         }
@@ -449,8 +459,12 @@ const RoutePlanner = () => {
     }
 
     // Fallback path, small delay retained so the loading state doesn't flash
-    setTimeout(() => {
+    setTimeout(async () => {
       optimizeRouteLocally();
+      if (!isPro) {
+        const usage = await consumeRouteOptimization();
+        setOptimizationUses(usage.used || optimizationUses);
+      }
       setIsOptimizing(false);
     }, 400);
   };
@@ -475,7 +489,7 @@ const RoutePlanner = () => {
   const copyRouteToClipboard = async () => {
     const routeText = addresses.map((addr, i) =>
       `${i + 1}. ${addr.address}`
-    ).join('\n');
+    ).join('\\n');
 
     try {
       await navigator.clipboard.writeText(routeText);
@@ -521,7 +535,7 @@ const RoutePlanner = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto pb-safe px-4 py-6 space-y-6">
+    <div className="max-w-5xl mx-auto pb-safe px-3 sm:px-4 py-5 space-y-5">
       {/* Notifications */}
       <AnimatePresence>
         {error && (
@@ -551,24 +565,15 @@ const RoutePlanner = () => {
       </AnimatePresence>
 
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
-      >
-        <div className="flex items-center gap-3 mb-2">
-          <Navigation2 className="w-8 h-8 text-primary" />
-          <h1 className="text-3xl font-bold">Route Planner</h1>
-        </div>
-        <p className="text-muted-foreground">
-          Plan and optimize your delivery route
-        </p>
+      <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} className="-mt-2 mb-1 flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">Routes</h1>
+        <span className="text-xs text-muted-foreground">Build · optimise · go</span>
       </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="flex flex-col gap-5">
         {/* Map Section - second on mobile so Add Stops is immediately reachable,
             first (left) on large screens */}
-        <div className="lg:col-span-2 order-2 lg:order-1">
+        <div className={addresses.length ? "order-2" : "hidden"}>
           <Card className="border-border/50 h-full">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
@@ -584,7 +589,7 @@ const RoutePlanner = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4">
-              <div className="h-64 sm:h-80 lg:h-[600px]">
+              <div className="h-[42vh] min-h-[300px] max-h-[520px]">
                 {HAS_GOOGLE_MAPS ? (
                   <GoogleRouteMap addresses={addresses} />
                 ) : (
@@ -646,14 +651,12 @@ const RoutePlanner = () => {
 
         {/* Address Input & List Section - first on mobile for the type-and-go
             morning workflow, right column on large screens */}
-        <div className="space-y-6 order-1 lg:order-2">
+        <div className="order-1 space-y-5">
           {/* Address Search */}
           <Card className="border-border/50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Search className="h-4 w-4 text-primary" />
-                Add Stops
-              </CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Add stops</CardTitle>
+              <p className="text-xs font-normal text-muted-foreground">Search an address to build your route.</p>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -662,7 +665,8 @@ const RoutePlanner = () => {
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       type="text"
-                      placeholder="Search UK address..."
+                      data-tour="route-search"
+                      placeholder="Search an address..."
                       value={currentAddress}
                       onChange={(e) => setCurrentAddress(e.target.value)}
                       onFocus={() => {
@@ -728,6 +732,7 @@ const RoutePlanner = () => {
                 </AnimatePresence>
               </div>
 
+              <div className="rounded-xl border border-[#6657f5]/25 bg-[#6657f5]/10 px-3 py-2 text-xs text-muted-foreground"><span className="font-semibold text-[#9b91ff]">{isPro ? "Pro · full-route optimisation included" : optimizationUses < 3 ? `${3-optimizationUses} of 3 free full-route optimisations remaining` : "Free trials used"}</span><span className="block mt-0.5">Address search and route building stay free.</span></div>
               <div className="grid grid-cols-2 gap-2">
                 <Button
                   onClick={optimizeRoute}
@@ -736,7 +741,7 @@ const RoutePlanner = () => {
                   size="sm"
                 >
                   <Zap className="h-4 w-4 mr-1" />
-                  {isOptimizing ? "Optimizing..." : "Optimize"}
+                  {isOptimizing ? "Optimising..." : !isPro && optimizationUses >= 3 ? "Go Pro" : "Optimise"}
                 </Button>
 
                 <Button

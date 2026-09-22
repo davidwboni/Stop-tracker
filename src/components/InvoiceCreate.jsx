@@ -35,6 +35,7 @@ export default function InvoiceCreate({ prefill }) {
   } = useInvoice();
 
   const [editingSender, setEditingSender] = useState(false);
+  const [invoiceAmount, setInvoiceAmount] = useState(prefill?.statementAmount != null ? String(prefill.statementAmount) : "");
   const [sender, setSender] = useState(
     senderProfile || { name: "", address: "", email: "", extra: "" }
   );
@@ -49,20 +50,15 @@ export default function InvoiceCreate({ prefill }) {
   }, [clients, client]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [newClient, setNewClient] = useState(null);
-  const [lines, setLines] = useState(
-    prefill?.amount
-      ? [{ id: 1, desc: prefill?.stops ? `Delivery work — ${prefill.stops} stops` : "Delivery earnings", qty: "1", rate: String(prefill.amount) }]
-      : [blankLine()]
-  );
+  const [lines, setLines] = useState([blankLine()]);
   const [notes, setNotes] = useState("");
+  const [advanced, setAdvanced] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
+  const [persisted, setPersisted] = useState(false);
 
-  const total = lines.reduce(
-    (s, l) => s + (parseFloat(l.qty) || 0) * (parseFloat(l.rate) || 0),
-    0
-  );
+  const total = Number(invoiceAmount) || 0;
 
   const setLine = (id, key, val) =>
     setLines((ls) => ls.map((l) => (l.id === id ? { ...l, [key]: val } : l)));
@@ -93,14 +89,14 @@ export default function InvoiceCreate({ prefill }) {
             <h3 className="font-semibold">Your invoice details</h3>
           </div>
           <p className="text-sm text-muted-foreground">
-            This is your own business info shown on every invoice. Set it once, edit anytime.
+            Set this up once and Stop Tracker will reuse it for future four-week invoices. Your invoice details stay attached to your signed-in account.
           </p>
         </div>
 
         <Field label="Your / business name" value={sender.name} onChange={(v) => setSender({ ...sender, name: v })} />
         <Field label="Address" value={sender.address} onChange={(v) => setSender({ ...sender, address: v })} />
         <Field label="Email" value={sender.email} onChange={(v) => setSender({ ...sender, email: v })} />
-        <Field label="UTR / VAT no." optional value={sender.extra} onChange={(v) => setSender({ ...sender, extra: v })} />
+        <Field label="UTR / VAT no. / company details" optional value={sender.extra} onChange={(v) => setSender({ ...sender, extra: v })} />
 
         {error && (
           <Alert variant="destructive">
@@ -179,14 +175,7 @@ export default function InvoiceCreate({ prefill }) {
     autoTable(docPdf, {
       startY: y + 60,
       head: [["Description", "Qty", "Rate", "Amount"]],
-      body: lines
-        .filter((l) => l.desc || l.qty || l.rate)
-        .map((l) => [
-          l.desc || "-",
-          l.qty || "1",
-          money(l.rate),
-          money((parseFloat(l.qty) || 0) * (parseFloat(l.rate) || 0)),
-        ]),
+      body: [["Delivery services", "1", money(total), money(total)]],
       foot: [["", "", "Total", money(total)]],
       theme: "striped",
       headStyles: { fillColor: [29, 158, 117] },
@@ -205,7 +194,8 @@ export default function InvoiceCreate({ prefill }) {
     return docPdf;
   };
 
-  const persist = async () => {
+  const persist = async (status = "generated") => {
+    if (persisted) return;
     await addInvoice({
       invoiceNumber,
       clientName: client.name,
@@ -213,22 +203,24 @@ export default function InvoiceCreate({ prefill }) {
       invoiceAmount: total.toFixed(2),
       dateFrom,
       dateTo,
-      lines,
+      lines: [{desc:"Delivery services",qty:"1",rate:String(total)}],
       periodId: prefill?.periodId || null,
+      status,
     });
+    setPersisted(true);
   };
 
   const canGenerate = client && total > 0;
 
   const handleDownload = async () => {
-    if (!canGenerate) return setError("Add a client and at least one line with an amount.");
+    if (!canGenerate) return setError("Add a client and the amount you need to invoice.");
     setBusy(true);
     setError(null);
     try {
       const docPdf = buildPdf();
       docPdf.save(`Invoice_${invoiceNumber}.pdf`);
-      await persist();
-      if (prefill?.periodId) await updatePeriodRecord(prefill.periodId,{status:"invoice_sent",invoiceNumber,invoiceAmount:total,invoiceGeneratedAt:new Date().toISOString()});
+      await persist("generated");
+      if (prefill?.periodId) await updatePeriodRecord(prefill.periodId,{status:"invoice_generated",invoiceNumber,invoiceAmount:total,invoiceGeneratedAt:new Date().toISOString()});
       setSaved(true);
     } catch (e) {
       console.error(e);
@@ -239,7 +231,7 @@ export default function InvoiceCreate({ prefill }) {
   };
 
   const handleShare = async () => {
-    if (!canGenerate) return setError("Add a client and at least one line with an amount.");
+    if (!canGenerate) return setError("Add a client and the amount you need to invoice.");
     setBusy(true);
     setError(null);
     try {
@@ -249,15 +241,15 @@ export default function InvoiceCreate({ prefill }) {
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], title: `Invoice ${invoiceNumber}`, text: `Invoice for ${client.name}` });
       } else {
-        docPdf.save(`Invoice_${invoiceNumber}.pdf`);
+        throw new Error("Sharing files is not supported by this browser. Use Download instead.");
       }
-      await persist();
+      await persist("sent");
       if (prefill?.periodId) await updatePeriodRecord(prefill.periodId,{status:"invoice_sent",invoiceNumber,invoiceAmount:total,invoiceGeneratedAt:new Date().toISOString()});
       setSaved(true);
     } catch (e) {
       if (e?.name !== "AbortError") {
         console.error(e);
-        setError("Couldn't share the invoice.");
+        setError(e?.message || "Couldn't share the invoice.");
       }
     } finally {
       setBusy(false);
@@ -267,7 +259,7 @@ export default function InvoiceCreate({ prefill }) {
   // ---------- Create form ----------
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-      {prefill?.periodId && <div className="rounded-[14px] border border-[#302a5b] bg-[#17152b] p-4"><div className="text-xs font-bold uppercase tracking-wider text-[#8f83ff]">Pay period ready</div><div className="mt-1 font-semibold">{prefill.startDate} → {prefill.endDate}</div><div className="mt-1 text-sm text-muted-foreground">{prefill.stops || 0} stops · {money(prefill.amount)}</div><div className="mt-2 text-xs text-muted-foreground">This invoice was prefilled from your Stop Tracker ledger. Review it before sharing.</div></div>}
+      {prefill?.periodId && <div className="rounded-[18px] border border-[#302a5b] bg-[#17152b] p-4"><div className="text-xs font-bold uppercase tracking-wider text-[#8f83ff]">PAY PERIOD</div><div className="mt-1 font-semibold">{prefill.startDate} → {prefill.endDate}</div><div className="mt-1 text-sm text-muted-foreground">{prefill.stops || 0} stops in your Stop Tracker record · {money(prefill.amount)} expected</div></div>}
 
       {/* Header row: number + sender */}
       <div className="flex items-center justify-between">
@@ -333,27 +325,10 @@ export default function InvoiceCreate({ prefill }) {
         </button>
       )}
 
-      {/* Editable line items */}
-      <div>
-        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Line items</div>
-        <div className="space-y-2">
-          {lines.map((l) => (
-            <div key={l.id} className="flex gap-1.5 items-center">
-              <Input className="flex-1 h-9 text-sm" placeholder="e.g. Deliveries" value={l.desc} onChange={(e) => setLine(l.id, "desc", e.target.value)} />
-              <Input className="w-12 h-9 text-sm text-center" inputMode="numeric" placeholder="Qty" value={l.qty} onChange={(e) => setLine(l.id, "qty", e.target.value)} />
-              <Input className="w-16 h-9 text-sm text-center" inputMode="decimal" placeholder="£" value={l.rate} onChange={(e) => setLine(l.id, "rate", e.target.value)} />
-              <button onClick={() => removeLine(l.id)} className="p-1.5 text-muted-foreground hover:text-destructive"><Trash2 className="w-4 h-4" /></button>
-            </div>
-          ))}
-        </div>
-        <button onClick={addLine} className="mt-2 text-sm text-primary flex items-center gap-1">
-          <Plus className="w-4 h-4" /> Add line
-        </button>
-      </div>
-
-      <div className="flex items-center justify-between px-1 py-2 border-t border-border">
-        <span className="font-semibold">Total</span>
-        <span className="text-lg font-bold text-primary tabular-nums">{money(total)}</span>
+      <div className="rounded-2xl border border-[#26314a] bg-[#111827] p-4">
+        <label className="block text-xs font-bold uppercase tracking-[.14em] text-[#69758d]">Amount to invoice</label>
+        <div className="mt-2 flex items-center rounded-xl border border-[#34415f] bg-[#0a101b] px-4"><span className="text-xl text-[#8e9ab2]">£</span><input inputMode="decimal" value={invoiceAmount} onChange={e=>setInvoiceAmount(e.target.value)} placeholder="0.00" className="h-14 min-w-0 flex-1 bg-transparent px-2 text-2xl font-bold text-white outline-none"/></div>
+        <p className="mt-2 text-xs leading-5 text-[#8e9ab2]">{prefill?.statementAmount != null ? "Prefilled from the statement you checked. Change it only if needed." : "Enter the final amount shown on the statement your contractor sent you."}</p>
       </div>
 
       <textarea

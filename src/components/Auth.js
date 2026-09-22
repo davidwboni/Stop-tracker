@@ -1,291 +1,53 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Alert, AlertDescription } from "./ui/alert";
-import { Separator } from "./ui/separator";
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signInAnonymously,
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
-} from "firebase/auth";
+import { motion } from "framer-motion";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInAnonymously } from "firebase/auth";
 import { auth, signInWithGoogle } from "../services/firebase";
-import { Loader2, Mail, Phone, AlertCircle } from "lucide-react";
+import { Loader2, Mail, ArrowLeft, AlertCircle } from "lucide-react";
 
-const Auth = ({ onBack }) => {
-  const [method, setMethod] = useState("email"); // 'email', 'phone', 'google', 'anonymous'
-  const [isLogin, setIsLogin] = useState(true);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [verificationId, setVerificationId] = useState("");
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-    phone: "",
-    code: "",
-  });
+const GoogleMark = () => (
+  <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+    <path fill="#4285F4" d="M45.1 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h11.8c-.5 2.7-2 5-4.4 6.6v5.5h7.1c4.1-3.8 6.6-9.4 6.6-16.1z"/>
+    <path fill="#34A853" d="M24 46c5.9 0 10.9-2 14.5-5.4l-7.1-5.5c-2 1.3-4.5 2.1-7.4 2.1-5.7 0-10.5-3.8-12.2-9H4.5v5.7C8.1 41.1 15.4 46 24 46z"/>
+    <path fill="#FBBC05" d="M11.8 28.2c-.4-1.3-.7-2.7-.7-4.2s.2-2.9.7-4.2v-5.7H4.5C2.9 17.3 2 20.5 2 24s.9 6.7 2.5 9.9l7.3-5.7z"/>
+    <path fill="#EA4335" d="M24 10.8c3.2 0 6.1 1.1 8.4 3.3l6.3-6.3C34.9 4.1 29.9 2 24 2 15.4 2 8.1 6.9 4.5 14.1l7.3 5.7c1.7-5.2 6.5-9 12.2-9z"/>
+  </svg>
+);
 
-  const setupRecaptcha = () => {
-    if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
-        size: "invisible",
-        callback: () => {},
-      });
-    }
-  };
+export default function Auth(){
+  const [isLogin,setIsLogin]=useState(true);
+  const [email,setEmail]=useState("");
+  const [password,setPassword]=useState("");
+  const [loading,setLoading]=useState("");
+  const [error,setError]=useState("");
 
-  const handleAuth = async (type) => {
-    setError("");
-    setLoading(true);
+  const run=async(id,fn)=>{setLoading(id);setError("");try{await fn();}catch(e){const code=e?.code||"";setError(code==="auth/invalid-credential"||code==="auth/wrong-password"?"Email or password is incorrect.":code==="auth/email-already-in-use"?"That email already has an account.":code==="auth/weak-password"?"Use a password with at least 6 characters.":"We couldn't sign you in. Please try again.");setLoading("");}};
+  const submit=e=>{e.preventDefault();run("email",()=>isLogin?signInWithEmailAndPassword(auth,email,password):createUserWithEmailAndPassword(auth,email,password));};
 
-    try {
-      if (type === "email") {
-        isLogin
-          ? await signInWithEmailAndPassword(auth, formData.email, formData.password)
-          : await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-      } else if (type === "google") {
-        await signInWithGoogle();
-      } else if (type === "phone") {
-        if (!verificationId) {
-          setupRecaptcha();
-          const confirmation = await signInWithPhoneNumber(auth, formData.phone, window.recaptchaVerifier);
-          setVerificationId(confirmation.verificationId);
-        } else {
-          // Verify the code here
-        }
-      } else if (type === "anonymous") {
-        await signInAnonymously(auth);
-      }
-    } catch (err) {
-      setError(getErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getErrorMessage = (error) => {
-    switch (error.code) {
-      case "auth/email-already-in-use":
-        return "This email is already registered";
-      case "auth/invalid-email":
-        return "Invalid email address";
-      case "auth/weak-password":
-        return "Password should be at least 6 characters";
-      case "auth/user-not-found":
-      case "auth/wrong-password":
-        return "Invalid email or password";
-      default:
-        return error.message;
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/40 dark:from-gray-900 dark:via-blue-900/10 dark:to-indigo-900/20 flex items-center justify-center p-4">
-      {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-4 -right-4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-6 -left-6 w-80 h-80 bg-purple-500/5 rounded-full blur-3xl"></div>
+  return <div className="min-h-[100dvh] bg-[#080c14] px-5 py-8 text-[#f5f7fb]">
+    <motion.div initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} className="mx-auto w-full max-w-sm">
+      <button onClick={()=>window.location.href="/"} className="mb-10 grid h-11 w-11 place-items-center rounded-xl border border-[#26314a] bg-[#111827] text-[#9aa6bd]" aria-label="Back"><ArrowLeft className="h-5 w-5"/></button>
+      <div className="mb-8">
+        <div className="mb-5 grid h-14 w-14 place-items-center rounded-2xl bg-[#7567ff]/15 text-[#9b91ff]"><Mail className="h-6 w-6"/></div>
+        <h1 className="text-3xl font-bold">{isLogin?"Welcome back":"Create your account"}</h1>
+        <p className="mt-2 text-sm leading-6 text-[#8e9ab2]">{isLogin?"Sign in and get back to your work records.":"Start your independent work and pay record."}</p>
       </div>
-      
-      <motion.div
-        initial={{ opacity: 0, y: 30, scale: 0.95 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
-        className="relative z-10 w-full max-w-md"
-      >
-        <Card className="overflow-hidden shadow-2xl border-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl">
-          <CardHeader className="relative bg-gradient-to-br from-blue-500 via-cyan-500 to-teal-600 text-white py-10 text-center">
-            <div className="absolute inset-0 bg-black/10"></div>
-            <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full"></div>
-            <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-white/5 rounded-full"></div>
-            
-            {/* App Icon */}
-            <div className="relative z-10 mb-4">
-              <div className="inline-flex p-4 bg-white/20 rounded-3xl backdrop-blur-sm">
-                <Mail className="w-8 h-8" />
-              </div>
-            </div>
-            
-            <CardTitle className="relative z-10 text-3xl font-bold mb-2">
-              {method === "email" ? (isLogin ? "Welcome Back" : "Create Account") : "Sign In"}
-            </CardTitle>
-            <p className="relative z-10 text-blue-100 font-medium">
-              {method === "email" 
-                ? (isLogin ? "Sign in to your Stop Tracker account" : "Join Stop Tracker today")
-                : "Choose your sign-in method"
-              }
-            </p>
-          </CardHeader>
-          <CardContent className="p-8 bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50">
-        <AnimatePresence>
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-            >
-              <Alert className="bg-red-50 border-2 border-red-200 dark:bg-red-900/20 dark:border-red-800">
-                <AlertCircle className="h-5 w-5 text-red-500" />
-                <AlertDescription className="text-red-700 dark:text-red-400 font-medium">{error}</AlertDescription>
-              </Alert>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
-        <div className="grid grid-cols-2 gap-3 mb-8">
-          <Button
-            onClick={() => setMethod("email")}
-            className={`relative py-4 rounded-2xl font-semibold transition-all duration-300 transform hover:scale-105 ${
-              method === "email" 
-                ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg" 
-                : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-            }`}
-          >
-            <Mail className="mr-2 w-5 h-5" />
-            Email
-          </Button>
-          <Button
-            onClick={() => setMethod("phone")}
-            className={`relative py-4 rounded-2xl font-semibold transition-all duration-300 transform hover:scale-105 ${
-              method === "phone" 
-                ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg" 
-                : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-            }`}
-          >
-            <Phone className="mr-2 w-5 h-5" />
-            Phone
-          </Button>
-        </div>
+      {error&&<div className="mb-4 flex gap-2 rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-sm text-red-300"><AlertCircle className="h-4 w-4 shrink-0 mt-0.5"/>{error}</div>}
 
-        {method === "email" && (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleAuth("email");
-            }}
-            className="space-y-4"
-          >
-            <Input
-              type="email"
-              placeholder="Email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              required
-              className="bg-[var(--background)] text-[var(--text)]"
-            />
-            <Input
-              type="password"
-              placeholder="Password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              required
-              className="bg-[var(--background)] text-[var(--text)]"
-            />
-            <Button type="submit" className="w-full bg-[var(--primary)] hover:bg-[var(--secondary)]" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 w-4 h-4 animate-spin" />
-                  {isLogin ? "Logging in..." : "Creating account..."}
-                </>
-              ) : isLogin ? (
-                "Login"
-              ) : (
-                "Sign Up"
-              )}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full"
-              onClick={() => setIsLogin(!isLogin)}
-            >
-              {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Login"}
-            </Button>
-          </form>
-        )}
+      <form onSubmit={submit} className="space-y-3">
+        <label className="block text-xs text-[#8e9ab2]">Email<input autoComplete="email" type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" className="mt-1 h-13 w-full rounded-xl border border-[#2a3550] bg-[#111827] px-4 py-3 text-base text-white outline-none focus:border-[#7567ff]"/></label>
+        <label className="block text-xs text-[#8e9ab2]">Password<input autoComplete={isLogin?"current-password":"new-password"} type="password" required minLength="6" value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••" className="mt-1 h-13 w-full rounded-xl border border-[#2a3550] bg-[#111827] px-4 py-3 text-base text-white outline-none focus:border-[#7567ff]"/></label>
+        <button disabled={!!loading} className="mt-2 flex h-14 w-full items-center justify-center rounded-2xl bg-gradient-to-r from-[#6657f5] to-[#806cff] font-bold text-white disabled:opacity-60">{loading==="email"?<Loader2 className="h-5 w-5 animate-spin"/>:isLogin?"Sign in":"Create account"}</button>
+      </form>
 
-        {method === "phone" && (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleAuth("phone");
-            }}
-            className="space-y-4"
-          >
-            {!verificationId ? (
-              <Input
-                type="tel"
-                placeholder="Phone number (e.g., +447123456789)"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                required
-                className="bg-[var(--background)] text-[var(--text)]"
-              />
-            ) : (
-              <Input
-                type="text"
-                placeholder="Enter verification code"
-                value={formData.code}
-                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                required
-                className="bg-[var(--background)] text-[var(--text)]"
-              />
-            )}
-            <Button type="submit" className="w-full bg-[var(--primary)] hover:bg-[var(--secondary)]" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 w-4 h-4 animate-spin" />
-                  {verificationId ? "Verifying..." : "Sending code..."}
-                </>
-              ) : verificationId ? (
-                "Verify Code"
-              ) : (
-                "Send Code"
-              )}
-            </Button>
-          </form>
-        )}
+      <button onClick={()=>setIsLogin(v=>!v)} className="mt-4 w-full py-2 text-sm text-[#9b91ff]">{isLogin?"New to Stop Tracker? Create an account":"Already have an account? Sign in"}</button>
 
-        <div className="relative py-4">
-          <Separator />
-          <div className="relative flex justify-center text-sm text-[var(--text)]">
-            Or continue with
-          </div>
-        </div>
-
-        <div className="grid gap-4">
-          <Button
-            onClick={() => handleAuth("google")}
-            variant="outline"
-            className="w-full border-[var(--primary)] text-[var(--primary)]"
-            disabled={loading}
-          >
-            Continue with Google
-          </Button>
-          <Button
-            onClick={() => handleAuth("anonymous")}
-            variant="outline"
-            className="w-full border-[var(--primary)] text-[var(--primary)]"
-            disabled={loading}
-          >
-            Continue as Guest
-          </Button>
-        </div>
-
-        {onBack && (
-          <Button onClick={onBack} variant="ghost" className="w-full mt-4">
-            Back to Home
-          </Button>
-        )}
-            <div id="recaptcha-container" />
-          </CardContent>
-        </Card>
-      </motion.div>
-    </div>
-  );
-};
-
-export default Auth;
+      <div className="my-6 flex items-center gap-3 text-xs text-[#5f6a80]"><span className="h-px flex-1 bg-[#202a3d]"/><span>or</span><span className="h-px flex-1 bg-[#202a3d]"/></div>
+      <div className="space-y-3">
+        <button onClick={()=>run("google",signInWithGoogle)} disabled={!!loading} className="flex h-13 w-full items-center justify-center gap-3 rounded-xl border border-[#2a3550] bg-[#111827] py-3 text-sm font-semibold"><GoogleMark/>{loading==="google"?"Signing in…":"Continue with Google"}</button>
+        <button onClick={()=>run("guest",()=>signInAnonymously(auth))} disabled={!!loading} className="h-13 w-full rounded-xl border border-[#2a3550] py-3 text-sm font-semibold text-[#a9b3c6]">{loading==="guest"?"Opening preview…":"Have a look around first"}</button>
+      </div>
+      <p className="mt-8 text-center text-[11px] leading-5 text-[#5f6a80]">Your work. Your records. Your pay.</p>
+    </motion.div>
+  </div>;
+}
