@@ -2,8 +2,7 @@
 //
 // Falls back gracefully (returns null) if no API key is configured, so the
 // caller can fall back to the existing haversine nearest-neighbor algorithm.
-// Requires REACT_APP_GOOGLE_MAPS_API_KEY in .env.local, see
-// GOOGLE_MAPS_SETUP.md for how to create and restrict the key.
+// The browser key must be restricted by allowed web origins and API in Google Cloud.\n// Before paid production optimisation, move Routes requests behind an authenticated\n// server endpoint so quotas and billing cannot be abused from a copied browser key.
 
 const ROUTES_API_URL = 'https://routes.googleapis.com/directions/v2:computeRoutes';
 
