@@ -346,8 +346,7 @@ const RoutePlanner = () => {
 
     const routeText = addresses.map((addr, i) =>
       `${i + 1}. ${addr.address}`
-    ).join('
-');
+    ).join('\\n');
 
     const shareData = {
       title: 'My Route',
