@@ -9,8 +9,8 @@ Set these with the Firebase CLI / Google Cloud Secret Manager:
 - `STRIPE_WEBHOOK_SECRET` — Stripe webhook signing secret (required before subscriptions are activated).
 
 ## Firebase Functions environment (non-secret)
-- `STRIPE_PRO_MONTHLY_PRICE_ID`
-- `STRIPE_PRO_ANNUAL_PRICE_ID`
+- `STRIPE_PRO_MONTHLY_PRICE_ID` — sandbox: `price_1UIN2YFTRutCK9dShNdLMDwV`
+- `STRIPE_PRO_ANNUAL_PRICE_ID` — sandbox: `price_1UIN2aFTRutCK9dSTPigjMiY`
 
 ## Vercel / web build
 - `REACT_APP_GOOGLE_MAPS_API_KEY` — browser key. Restrict by Stop Tracker domains and enabled APIs.
@@ -22,3 +22,9 @@ Set these with the Firebase CLI / Google Cloud Secret Manager:
 3. Move billable Google Routes optimisation behind an authenticated server endpoint before enabling it broadly.
 4. Statement/photo AI uploads must be temporary: extract -> validate -> delete original -> persist only user-confirmed structured comparison.
 5. Run web, iOS and Android smoke tests after secrets are configured.
+
+### Stripe sandbox
+- Product: `prod_VIz03dr133C5mm` — Stop Tracker Pro
+- Monthly: £4.99, lookup key `stop_tracker_pro_monthly`
+- Annual: £49.99, lookup key `stop_tracker_pro_annual`
+- These IDs are test-mode only. Create separate live-mode product/prices before production launch.
