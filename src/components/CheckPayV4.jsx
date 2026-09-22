@@ -16,6 +16,10 @@ const CheckPayV4 = () => {
   const [mode,setMode] = useState("idle");
   const [statementStops,setStatementStops] = useState("");
   const [statementAmount,setStatementAmount] = useState("");
+  const [extraPayments,setExtraPayments] = useState("");
+  const [charges,setCharges] = useState("");
+  const [vat,setVat] = useState("");
+  const [finalInvoice,setFinalInvoice] = useState("");
   const [daily,setDaily] = useState({});
   const [showDates,setShowDates] = useState(true);
   const [aiUses,setAiUses] = useState(0);
@@ -47,8 +51,8 @@ const CheckPayV4 = () => {
   });
 
   const updateDaily=(date,key,value)=>setDaily(prev=>({...prev,[date]:{stops:prev[date]?.stops??"",amount:prev[date]?.amount??"",[key]:value}}));
-  const compare=async()=>{ setMode("result"); await updatePeriodRecord(periodDef.id,{status:"reconciled",statementStops:statementStopsNum,statementAmount:statementAmountNum,differenceStops:stopDiff,differenceAmount:moneyDiff,reconciledAt:new Date().toISOString()}); };
-  const reset=()=>{setMode("idle");setStatementStops("");setStatementAmount("");setDaily({});setAiFile(null);};
+  const compare=async()=>{ setMode("result"); await updatePeriodRecord(periodDef.id,{status:"reconciled",statementStops:statementStopsNum,statementAmount:statementAmountNum,extraPayments:n(extraPayments),charges:n(charges),vat:n(vat),finalInvoiceAmount:n(finalInvoice)||statementAmountNum,differenceStops:stopDiff,differenceAmount:moneyDiff,reconciledAt:new Date().toISOString()}); };
+  const reset=()=>{setMode("idle");setStatementStops("");setStatementAmount("");setExtraPayments("");setCharges("");setVat("");setFinalInvoice("");setDaily({});setAiFile(null);};
   const chooseAiFile=(file)=>{if(!file)return;setAiFile(file);setMode("ai-review");};
   const runAi=async()=>{setAiLoading(true);setAiError("");try{const result=await extractStatement(aiFile);if(result.statementStops!=null)setStatementStops(String(result.statementStops));if(result.statementAmount!=null)setStatementAmount(String(result.statementAmount));const nextDaily={};(result.daily||[]).forEach(d=>{if(d.date)nextDaily[d.date]={stops:d.stops??"",amount:d.amount??""};});setDaily(nextDaily);const s=await getPremiumStatus();setAiUses(s.statementAiUses||0);setIsPro(!!s.isPro);setAiFile(null);setMode("manual");}catch(e){setAiError(e?.message||"Could not read this statement.");}finally{setAiLoading(false);}};
 
@@ -73,6 +77,7 @@ const CheckPayV4 = () => {
         <label className="text-xs text-[#8e9ab2]">Statement stops<input inputMode="numeric" value={statementStops} onChange={e=>setStatementStops(e.target.value)} placeholder="0" className="mt-2 h-12 w-full rounded-xl border border-[#2a3550] bg-[#0b111d] px-3 text-lg font-bold text-white outline-none focus:border-[#7567ff]"/></label>
         <label className="text-xs text-[#8e9ab2]">Statement amount (£)<input inputMode="decimal" value={statementAmount} onChange={e=>setStatementAmount(e.target.value)} placeholder="0.00" className="mt-2 h-12 w-full rounded-xl border border-[#2a3550] bg-[#0b111d] px-3 text-lg font-bold text-white outline-none focus:border-[#7567ff]"/></label>
       </div>
+      <details className="rounded-xl border border-[#26314a] bg-[#0d1422] p-3"><summary className="cursor-pointer text-sm font-semibold">Statement adjustments <span className="text-xs font-normal text-[#7f8ba3]">(optional)</span></summary><p className="mt-2 text-xs leading-5 text-[#7f8ba3]">Record the extras, deductions and VAT shown on the contractor statement for transparency.</p><div className="mt-3 grid grid-cols-2 gap-2"><input inputMode="decimal" value={extraPayments} onChange={e=>setExtraPayments(e.target.value)} placeholder="Extra payments £" className="h-11 rounded-lg border border-[#26314a] bg-[#090f1a] px-3 text-sm"/><input inputMode="decimal" value={charges} onChange={e=>setCharges(e.target.value)} placeholder="Charges £" className="h-11 rounded-lg border border-[#26314a] bg-[#090f1a] px-3 text-sm"/><input inputMode="decimal" value={vat} onChange={e=>setVat(e.target.value)} placeholder="VAT £" className="h-11 rounded-lg border border-[#26314a] bg-[#090f1a] px-3 text-sm"/><input inputMode="decimal" value={finalInvoice} onChange={e=>setFinalInvoice(e.target.value)} placeholder="Final to invoice £" className="h-11 rounded-lg border border-[#26314a] bg-[#090f1a] px-3 text-sm"/></div></details>
       {period.length>0 && <div>
         <button onClick={()=>setShowDates(!showDates)} className="flex w-full items-center justify-between border-t border-[#202a3d] pt-4 text-sm font-semibold"><span>Optional: compare by date</span>{showDates?<ChevronUp className="h-4 w-4"/>:<ChevronDown className="h-4 w-4"/>}</button>
         {showDates && <div className="mt-3 space-y-2">{period.map(l=><div key={l.date} className="rounded-xl border border-[#202a3d] bg-[#0d1422] p-3">
@@ -98,7 +103,7 @@ const CheckPayV4 = () => {
       <button onClick={reset} className="mt-2 w-full py-2 text-xs text-[#7f8ba3]">Start over</button>
     </div>}
 
-    <button onClick={()=>navigate("/app/invoice")} className="w-full rounded-2xl border border-[#202a3d] bg-[#111827] p-4 text-sm font-semibold">Need to send your invoice? <span className="text-[#8f83ff]">Open Invoice →</span></button>
+    <button onClick={()=>navigate("/app/invoice",{state:{periodId:periodDef.id,statementAmount:n(finalInvoice)||statementAmountNum}})} className="w-full rounded-2xl border border-[#202a3d] bg-[#111827] p-4 text-sm font-semibold">{compared?"Statement checked — create your invoice":"Need to send your invoice?"} <span className="text-[#8f83ff]">Open Invoice →</span></button>
   </div>
 };
 export default CheckPayV4;
