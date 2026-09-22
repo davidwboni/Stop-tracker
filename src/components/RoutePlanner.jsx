@@ -32,8 +32,7 @@ import {
   Clock,
   ChevronDown,
   ChevronUp,
-  Flag,
-  Crown
+  Flag
 } from "lucide-react";
 import {
   isPostcodeLike,
@@ -566,25 +565,15 @@ ${routeText}`,
       </AnimatePresence>
 
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
-      >
-        <div className="flex items-center gap-3 mb-2">
-          <Navigation2 className="w-8 h-8 text-primary" />
-          <h1 className="text-3xl font-bold">Routes</h1>
-          <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-[#6657f5]/40 bg-[#6657f5]/15 px-3 py-1 text-xs font-bold text-[#9b91ff]"><Crown className="h-3.5 w-3.5"/> PRO</span>
-        </div>
-        <p className="text-muted-foreground">
-          Check addresses, build your stops and optimise your round
-        </p>
+      <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} className="mb-2">
+        <h1 className="text-3xl font-bold">Routes</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Add your stops, then optimise when you are ready.</p>
       </motion.div>
 
-      <div className="space-y-5">
+      <div className="flex flex-col gap-5">
         {/* Map Section - second on mobile so Add Stops is immediately reachable,
             first (left) on large screens */}
-        <div>
+        <div className={addresses.length ? "order-2" : "hidden"}>
           <Card className="border-border/50 h-full">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
@@ -662,14 +651,12 @@ ${routeText}`,
 
         {/* Address Input & List Section - first on mobile for the type-and-go
             morning workflow, right column on large screens */}
-        <div className="space-y-5">
+        <div className="order-1 space-y-5">
           {/* Address Search */}
           <Card className="border-border/50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Search className="h-4 w-4 text-primary" />
-                Add Stops
-              </CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Add stops</CardTitle>
+              <p className="text-xs font-normal text-muted-foreground">Search an address to build your route.</p>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
