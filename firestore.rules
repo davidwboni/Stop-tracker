@@ -2,7 +2,16 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && request.auth.uid == userId;
+      // Clients may edit profile/app fields but may never grant themselves paid access.
+      allow create: if request.auth != null && request.auth.uid == userId
+        && request.resource.data.role in ["free", "guest"]
+        && !request.resource.data.keys().hasAny(["stripeCustomerId", "stripeSubscriptionId", "subscriptionStatus"]);
+      allow update: if request.auth != null && request.auth.uid == userId
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.stripeCustomerId == resource.data.stripeCustomerId
+        && request.resource.data.stripeSubscriptionId == resource.data.stripeSubscriptionId
+        && request.resource.data.subscriptionStatus == resource.data.subscriptionStatus;
 
       // Covers every subcollection under a user's own document (deliveryLogs,
       // settings, and any future one) — a rule on the parent doc does not
@@ -10,6 +19,12 @@ service cloud.firestore {
       match /{document=**} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
+    }
+
+    // Billing state is written only by trusted Admin SDK Cloud Functions.
+    match /entitlements/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false;
     }
 
     match /payPeriodData/{userId} {
