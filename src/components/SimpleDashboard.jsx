@@ -5,7 +5,6 @@ import { useAuth } from "../contexts/AuthContext";
 import { useData } from "../contexts/DataContext";
 import { Card, CardContent } from "./ui/card";
 import DailyQuickEntry from "./DailyQuickEntry";
-import DashboardTutorial from "./DashboardTutorial";
 import { Money } from "./ui/money";
 import { ArrowRight, Plus, UserCircle } from "lucide-react";
 import { getPeriodForDate, summarizePeriod } from "../features/payperiod/periods";
@@ -104,7 +103,6 @@ const SimpleDashboard = () => {
 
       <div className="grid grid-cols-[1fr_auto] gap-2"><button onClick={()=>{setEntryDate(today);setQuickOpen(true)}} data-tour="log-work" className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#5f50e8] to-[#7866ff] px-4 text-sm font-bold text-white shadow-lg shadow-[#7567ff]/10"><Plus className="h-5 w-5"/> {todayLog?"Update today":"Log today’s work"}</button><button onClick={()=>{const d=new Date();d.setDate(d.getDate()-1);setEntryDate(dateKey(d));setQuickOpen(true)}} data-tour="past-entry" className="h-14 rounded-2xl border border-[#303b55] bg-[#111827] px-4 text-sm font-semibold text-[#aeb8ca]">+ Past entry</button></div>
       <p className="px-2 pt-2 text-center text-xs text-[#5f6a80]">Your work. Your records. Your pay.</p>
-      <DashboardTutorial />
       <DailyQuickEntry open={quickOpen} initialDate={entryDate} onDateChange={setEntryDate} onClose={dismissQuick} onSaved={()=>setQuickOpen(false)}/>
     </div>
   );
