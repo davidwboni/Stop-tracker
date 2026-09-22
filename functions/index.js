@@ -158,6 +158,97 @@ ${text}` },
   }
 );
 
+
+const STATEMENT_SYSTEM_PROMPT = `Extract delivery pay statement figures. Return JSON only:
+{"statementStops":number|null,"statementAmount":number|null,"daily":[{"date":"YYYY-MM-DD","stops":number|null,"amount":number|null}],"confidence":number,"notes":[]}
+Use only figures visible in the statement. Do not invent missing dates or values. statementAmount is the total gross statement amount relevant to the driver's delivery work for the period. confidence is 0..1.`;
+
+async function getEntitlement(uid) {
+  const snap = await admin.firestore().collection("entitlements").doc(uid).get();
+  const d = snap.data() || {};
+  return { isPro: d.plan === "pro" && ["active","trialing"].includes(d.subscriptionStatus), ...d };
+}
+
+async function consumeFreeUse(uid, field) {
+  const ref = admin.firestore().collection("usage").doc(uid);
+  return admin.firestore().runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    const data = snap.data() || {};
+    const used = Number(data[field] || 0);
+    if (used >= 3) return { allowed: false, used };
+    tx.set(ref, { [field]: used + 1, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    return { allowed: true, used: used + 1 };
+  });
+}
+
+exports.getPremiumStatus = onCall({ cors: true, invoker: "public" }, async request => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "You must be signed in.");
+  const [ent, usage] = await Promise.all([
+    getEntitlement(request.auth.uid),
+    admin.firestore().collection("usage").doc(request.auth.uid).get(),
+  ]);
+  const u = usage.data() || {};
+  return { isPro: ent.isPro, statementAiUses: Number(u.statementAiUses || 0), routeOptimizationUses: Number(u.routeOptimizationUses || 0) };
+});
+
+exports.extractStatement = onCall(
+  { secrets: [DEEPSEEK_API_KEY], cors: true, invoker: "public", memory: "512MiB", timeoutSeconds: 120 },
+  async request => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "You must be signed in.");
+    const { fileBase64, mimeType } = request.data || {};
+    const imageTypes = new Set(["image/jpeg","image/png","image/webp"]);
+    if (!imageTypes.has(mimeType) || typeof fileBase64 !== "string" || fileBase64.length > 12_000_000) {
+      throw new HttpsError("invalid-argument", "Upload a JPEG, PNG or WebP image under the supported size limit.");
+    }
+    const ent = await getEntitlement(request.auth.uid);
+    const usageRef = admin.firestore().collection("usage").doc(request.auth.uid);
+    const usage = (await usageRef.get()).data() || {};
+    if (!ent.isPro && Number(usage.statementAiUses || 0) >= 3) throw new HttpsError("permission-denied", "Your 3 free AI checks are used. Upgrade to Pro.");
+
+    let data;
+    try {
+      const response = await fetch(DEEPSEEK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${DEEPSEEK_API_KEY.value()}` },
+        body: JSON.stringify({
+          model: "deepseek-flash", temperature: 0, max_tokens: 4000,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: STATEMENT_SYSTEM_PROMPT },
+            { role: "user", content: [
+              { type: "text", text: "Extract this delivery pay statement into the requested JSON." },
+              { type: "image_url", image_url: { url: `data:${mimeType};base64,${fileBase64}`, detail: "original" } }
+            ] }
+          ]
+        })
+      });
+      if (!response.ok) throw new Error(`DeepSeek status ${response.status}`);
+      const payload = await response.json();
+      data = JSON.parse(String(payload?.choices?.[0]?.message?.content || "{}").replace(/^\`\`\`(?:json)?\\s*/i,"").replace(/\`\`\`\\s*$/,""));
+    } catch (err) {
+      console.error("Statement extraction failed:", err?.message || "unknown");
+      throw new HttpsError("internal", "Could not read this statement. Try a clearer image or enter it manually.");
+    }
+    if (!Number.isFinite(Number(data.statementStops)) && !Number.isFinite(Number(data.statementAmount))) {
+      throw new HttpsError("failed-precondition", "No usable statement totals were found.");
+    }
+    if (!ent.isPro) {
+      const consumed = await consumeFreeUse(request.auth.uid, "statementAiUses");
+      if (!consumed.allowed) throw new HttpsError("permission-denied", "Your 3 free AI checks are used. Upgrade to Pro.");
+    }
+    return { statementStops: data.statementStops, statementAmount: data.statementAmount, daily: Array.isArray(data.daily) ? data.daily : [], confidence: Number(data.confidence || 0), notes: Array.isArray(data.notes) ? data.notes : [] };
+  }
+);
+
+exports.consumeRouteOptimization = onCall({ cors: true, invoker: "public" }, async request => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "You must be signed in.");
+  const ent = await getEntitlement(request.auth.uid);
+  if (ent.isPro) return { allowed: true, isPro: true };
+  const result = await consumeFreeUse(request.auth.uid, "routeOptimizationUses");
+  if (!result.allowed) throw new HttpsError("permission-denied", "Your 3 free route optimisations are used. Upgrade to Pro.");
+  return { allowed: true, isPro: false, used: result.used, remaining: Math.max(0, 3 - result.used) };
+});
+
 // Creates a Stripe Checkout session for Stop Tracker Pro. Price IDs are
 // deliberately configuration, not secrets, so monthly/annual products can be
 // changed without shipping private credentials to the client.
