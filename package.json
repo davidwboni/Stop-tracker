@@ -44,7 +44,6 @@
   },
   "scripts": {
     "prestart": "node package-audit-fix.js",
-    "prebuild": "node package-audit-fix.js",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "vitest run",
@@ -54,7 +53,6 @@
     "e2e:ui": "playwright test --ui",
     "eject": "react-scripts eject",
     "security-patch": "node patch-vulnerabilities.js",
-    "postinstall": "npm run security-patch && npm dedupe && node package-audit-fix.js",
     "dedupe": "npm dedupe",
     "force-patch": "node force-patch.js",
     "audit-fix": "node package-audit-fix.js"
