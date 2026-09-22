@@ -17,6 +17,7 @@ const SimpleDashboard = () => {
   const [quickOpen,setQuickOpen] = useState(false);
   const navigate = useNavigate();
   const today = dateKey(new Date());
+  const [entryDate,setEntryDate] = useState(today);
 
   const todayLog = useMemo(() => logs.find((l) => l.date === today), [logs, today]);
   const periodDef = useMemo(() => getPeriodForDate(payPeriodAnchor || today, new Date()), [payPeriodAnchor, today]);
@@ -69,7 +70,7 @@ const SimpleDashboard = () => {
             <CardContent className="p-5">
               <h2 className="text-xl font-bold">Ready when you are</h2>
               <p className="mt-1 text-sm text-[#929db2]">Log today's deliveries in a few seconds.</p>
-              <button onClick={()=>setQuickOpen(true)} className="mt-4 h-14 w-full rounded-2xl bg-[#7567ff] text-sm font-bold text-white">Log today's work</button>
+              <button onClick={()=>{setEntryDate(today);setQuickOpen(true)}} className="mt-4 h-14 w-full rounded-2xl bg-[#7567ff] text-sm font-bold text-white">Log today's work</button>
             </CardContent>
           </Card>
         )}
@@ -101,10 +102,10 @@ const SimpleDashboard = () => {
         </div>
       </section>}
 
-      <button onClick={()=>setQuickOpen(true)} className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-[#3a3370] bg-gradient-to-r from-[#5f50e8] to-[#7866ff] text-sm font-bold text-white shadow-lg shadow-[#7567ff]/10"><Plus className="h-5 w-5"/> {todayLog?"Update today’s entry":"Log today’s deliveries"}</button>
+      <div className="grid grid-cols-[1fr_auto] gap-2"><button onClick={()=>{setEntryDate(today);setQuickOpen(true)}} data-tour="log-work" className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#5f50e8] to-[#7866ff] px-4 text-sm font-bold text-white shadow-lg shadow-[#7567ff]/10"><Plus className="h-5 w-5"/> {todayLog?"Update today":"Log today’s work"}</button><button onClick={()=>{const d=new Date();d.setDate(d.getDate()-1);setEntryDate(dateKey(d));setQuickOpen(true)}} className="h-14 rounded-2xl border border-[#303b55] bg-[#111827] px-4 text-sm font-semibold text-[#aeb8ca]">+ Past entry</button></div>
       <p className="px-2 pt-2 text-center text-xs text-[#5f6a80]">Your work. Your records. Your pay.</p>
       <DashboardTutorial />
-      <DailyQuickEntry open={quickOpen} onClose={dismissQuick} onSaved={()=>setQuickOpen(false)}/>
+      <DailyQuickEntry open={quickOpen} initialDate={entryDate} onClose={dismissQuick} onSaved={()=>setQuickOpen(false)}/>
     </div>
   );
 };
