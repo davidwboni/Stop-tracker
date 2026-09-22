@@ -76,7 +76,8 @@ const Layout = () => {
               key={location.pathname}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}\n              style={{ willChange: 'opacity, transform' }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              style={{ willChange: 'opacity, transform' }}
             >
               <Outlet />
             </motion.div>
