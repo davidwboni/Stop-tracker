@@ -181,6 +181,162 @@ async function consumeFreeUse(uid, field) {
   });
 }
 
+
+function parseGoogleDurationSeconds(value) {
+  if (typeof value !== "string") return 0;
+  const seconds = Number.parseFloat(value.replace(/s$/, ""));
+  return Number.isFinite(seconds) ? seconds : 0;
+}
+
+async function getGoogleCloudAccessToken() {
+  const response = await fetch(
+    "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token",
+    { headers: { "Metadata-Flavor": "Google" } }
+  );
+  if (!response.ok) throw new Error(`Metadata token request failed (${response.status})`);
+  const data = await response.json();
+  if (!data?.access_token) throw new Error("No Google Cloud access token returned");
+  return data.access_token;
+}
+
+// Real route optimisation for delivery-sized stop lists. The browser never
+// receives a billable routing credential: Firebase Functions uses its runtime
+// service account via Google Cloud OAuth. Grant that service account
+// routeoptimization.locations.use (for example roles/routeoptimization.editor).
+exports.optimizeDriverRoute = onCall(
+  { cors: true, invoker: "public", timeoutSeconds: 60, memory: "512MiB" },
+  async request => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "You must be signed in.");
+
+    const input = request.data?.addresses;
+    if (!Array.isArray(input) || input.length < 2 || input.length > 200) {
+      throw new HttpsError("invalid-argument", "Provide between 2 and 200 route stops.");
+    }
+
+    const addresses = input.map((a, index) => {
+      const latitude = Number(a?.latitude);
+      const longitude = Number(a?.longitude);
+      if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 ||
+          !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+        throw new HttpsError("invalid-argument", `Stop ${index + 1} has invalid coordinates.`);
+      }
+      return {
+        id: a?.id ?? index,
+        address: typeof a?.address === "string" ? a.address.slice(0, 500) : "",
+        postcode: typeof a?.postcode === "string" ? a.postcode.slice(0, 30) : "",
+        latitude,
+        longitude,
+        type: typeof a?.type === "string" ? a.type.slice(0, 50) : undefined,
+      };
+    });
+
+    const ent = await getEntitlement(request.auth.uid);
+    if (!ent.isPro) {
+      const usage = (await admin.firestore().collection("usage").doc(request.auth.uid).get()).data() || {};
+      if (Number(usage.routeOptimizationUses || 0) >= 3) {
+        throw new HttpsError("permission-denied", "Your 3 free route optimisations are used. Upgrade to Pro.");
+      }
+    }
+
+    const start = addresses[0];
+    const shipments = addresses.slice(1).map((a, index) => ({
+      label: String(index + 1),
+      deliveries: [{
+        arrivalLocation: { latitude: a.latitude, longitude: a.longitude },
+        duration: "0s",
+      }],
+      // A large penalty ensures normal delivery stops are not silently dropped
+      // just because leaving them unserved would be cheaper.
+      penaltyCost: 100000,
+    }));
+
+    const projectId =
+      process.env.GCLOUD_PROJECT ||
+      process.env.GOOGLE_CLOUD_PROJECT ||
+      admin.app().options.projectId;
+
+    if (!projectId) {
+      throw new HttpsError("failed-precondition", "Google Cloud project ID is unavailable.");
+    }
+
+    let payload;
+    try {
+      const accessToken = await getGoogleCloudAccessToken();
+      const response = await fetch(
+        `https://routeoptimization.googleapis.com/v1/projects/${encodeURIComponent(projectId)}:optimizeTours`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            timeout: "15s",
+            searchMode: "RETURN_FAST",
+            considerRoadTraffic: true,
+            model: {
+              shipments,
+              vehicles: [{
+                label: "driver",
+                travelMode: "DRIVING",
+                startLocation: { latitude: start.latitude, longitude: start.longitude },
+                costPerKilometer: 1,
+                costPerTraveledHour: 1,
+              }],
+            },
+          }),
+        }
+      );
+
+      payload = await response.json();
+      if (!response.ok) {
+        console.error("Route Optimization API failed:", response.status, payload?.error?.message || "unknown");
+        throw new Error(payload?.error?.message || `Route Optimization status ${response.status}`);
+      }
+    } catch (err) {
+      console.error("Route optimisation failed:", err?.message || "unknown");
+      throw new HttpsError("unavailable", "Could not optimise this route right now.");
+    }
+
+    const route = payload?.routes?.[0];
+    if (!route || !Array.isArray(route.visits)) {
+      throw new HttpsError("failed-precondition", "No usable route was returned.");
+    }
+    if (Array.isArray(payload?.skippedMandatoryShipmentIndices) && payload.skippedMandatoryShipmentIndices.length) {
+      throw new HttpsError("failed-precondition", "Some stops could not be included in the route.");
+    }
+
+    const ordered = [start];
+    for (const visit of route.visits) {
+      const shipmentIndex = Number(visit?.shipmentIndex);
+      if (Number.isInteger(shipmentIndex) && addresses[shipmentIndex + 1]) {
+        ordered.push(addresses[shipmentIndex + 1]);
+      }
+    }
+
+    if (ordered.length !== addresses.length) {
+      throw new HttpsError("failed-precondition", "The optimiser did not return every stop.");
+    }
+
+    let usageResult = { isPro: ent.isPro };
+    if (!ent.isPro) {
+      const consumed = await consumeFreeUse(request.auth.uid, "routeOptimizationUses");
+      if (!consumed.allowed) {
+        throw new HttpsError("permission-denied", "Your 3 free route optimisations are used. Upgrade to Pro.");
+      }
+      usageResult = { isPro: false, used: consumed.used, remaining: Math.max(0, 3 - consumed.used) };
+    }
+
+    return {
+      route: ordered,
+      totalDistanceKm: Number(route?.metrics?.travelDistanceMeters || 0) / 1000,
+      totalDurationMin: Math.ceil(parseGoogleDurationSeconds(route?.metrics?.travelDuration) / 60),
+      source: "google-route-optimization",
+      ...usageResult,
+    };
+  }
+);
+
 exports.getPremiumStatus = onCall({ cors: true, invoker: "public" }, async request => {
   if (!request.auth) throw new HttpsError("unauthenticated", "You must be signed in.");
   const [ent, usage] = await Promise.all([
