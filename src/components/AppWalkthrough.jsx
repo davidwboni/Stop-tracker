@@ -3,6 +3,7 @@ import {createPortal} from "react-dom";
 import {useLocation,useNavigate} from "react-router-dom";
 import {motion,AnimatePresence} from "framer-motion";
 import {useData} from "../contexts/DataContext";
+import {useAuth} from "../contexts/AuthContext";
 
 const FLAG="st_app_walkthrough_v2";
 
@@ -24,6 +25,7 @@ const steps=[
 
 export default function AppWalkthrough(){
  const {isNewUser,loading}=useData();
+ const {user}=useAuth();
  const nav=useNavigate();
  const loc=useLocation();
  const [step,setStep]=useState(0);
@@ -33,13 +35,14 @@ export default function AppWalkthrough(){
  useEffect(()=>{
    if(loading)return;
    let seen=false;
-   try{seen=!!localStorage.getItem(FLAG)}catch(e){}
+   const key=user?.uid?`${FLAG}_${user.uid}`:FLAG;
+   try{seen=!!localStorage.getItem(key)}catch(e){}
    if(isNewUser&&!seen){
      setStep(0);
      setOpen(true);
      nav(steps[0].path,{replace:true});
    }
- },[loading,isNewUser,nav]);
+ },[loading,isNewUser,nav,user?.uid]);
 
  useEffect(()=>{
    if(!open)return;
@@ -73,7 +76,8 @@ export default function AppWalkthrough(){
  },[open,step,loc.pathname]);
 
  const finish=()=>{
-   try{localStorage.setItem(FLAG,"1")}catch(e){}
+   const key=user?.uid?`${FLAG}_${user.uid}`:FLAG;
+   try{localStorage.setItem(key,"1")}catch(e){}
    setOpen(false);
    setRect(null);
    nav("/app/dashboard",{replace:true});
