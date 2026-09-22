@@ -16,7 +16,7 @@ const WelcomeStep = ({ firstName, config, payPeriodAnchor, setPayPeriodAnchor, o
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="w-full max-w-md flex flex-col items-center text-center space-y-5"
+      className="mx-auto w-full max-w-md min-w-0 flex flex-col items-center text-center space-y-5"
     >
       <div className="relative w-24 h-24 flex items-center justify-center">
         <motion.div
@@ -59,7 +59,7 @@ const WelcomeStep = ({ firstName, config, payPeriodAnchor, setPayPeriodAnchor, o
         <span className="text-sm font-medium text-primary">{describePayStructure(config)}</span>
       </motion.div>
 
-      <motion.div variants={rise} custom={3} initial="hidden" animate="show" className="w-full rounded-[16px] border border-[#302a5b] bg-[#111827] p-4 text-left"><label className="text-xs font-bold uppercase tracking-wider text-[#8f83ff]">Current 4-week period started</label><input type="date" value={payPeriodAnchor} onChange={(e)=>setPayPeriodAnchor(e.target.value)} className="mt-2 h-11 w-full rounded-xl border border-[#26314a] bg-[#090f1a] px-3 text-white"/><p className="mt-2 text-xs text-muted-foreground">Use the first day of your current invoice/pay cycle. Stop Tracker will keep future 28-day periods aligned automatically.</p></motion.div>
+      <motion.div variants={rise} custom={3} initial="hidden" animate="show" className="mx-auto w-full min-w-0 max-w-full box-border rounded-[16px] border border-[#302a5b] bg-[#111827] p-4 text-left"><label className="text-xs font-bold uppercase tracking-wider text-[#8f83ff]">Current 4-week period started</label><input type="date" value={payPeriodAnchor} onChange={(e)=>setPayPeriodAnchor(e.target.value)} className="mt-2 block h-11 w-full min-w-0 max-w-full box-border rounded-xl border border-[#26314a] bg-[#090f1a] px-3 text-white"/><p className="mt-2 text-xs text-muted-foreground">Use the first day of your current invoice/pay cycle. Stop Tracker will keep future 28-day periods aligned automatically.</p></motion.div>
 
       <motion.button
         variants={rise}
@@ -86,7 +86,7 @@ const PayOnboarding = ({ onComplete }) => {
   const [payPeriodAnchor, setPayPeriodAnchor] = useState(() => new Date().toISOString().split("T")[0]);
 
   return (
-    <div className="min-h-[100dvh] bg-[#080c14] text-[#f5f7fb] flex flex-col items-center justify-center px-4 py-10 pt-safe">
+    <div className="min-h-[100dvh] w-full overflow-x-hidden bg-[#080c14] text-[#f5f7fb] flex flex-col items-center justify-center px-4 py-10 pt-safe">
       {confirmed ? (
         <WelcomeStep firstName={firstName} config={confirmed} payPeriodAnchor={payPeriodAnchor} setPayPeriodAnchor={setPayPeriodAnchor} onStart={() => onComplete(confirmed,{ payPeriodAnchor })} />
       ) : (
@@ -94,7 +94,7 @@ const PayOnboarding = ({ onComplete }) => {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
-          className="w-full max-w-md space-y-6"
+          className="mx-auto w-full max-w-md min-w-0 space-y-6"
         >
           <div className="text-center space-y-2">
             <h1 className="text-3xl font-bold">Welcome, {firstName} 👋</h1>
