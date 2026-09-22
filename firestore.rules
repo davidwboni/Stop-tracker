@@ -20,6 +20,11 @@ service cloud.firestore {
       }
     }
 
+    match /usage/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false;
+    }
+
     // Billing state is written only by trusted Admin SDK Cloud Functions.
     match /entitlements/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
