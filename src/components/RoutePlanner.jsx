@@ -460,9 +460,12 @@ ${routeText}`,
     }
 
     // Fallback path, small delay retained so the loading state doesn't flash
-    setTimeout(() => {
+    setTimeout(async () => {
       optimizeRouteLocally();
-      if (!isPro) { const usage=await consumeRouteOptimization(); setOptimizationUses(usage.used || optimizationUses); }
+      if (!isPro) {
+        const usage = await consumeRouteOptimization();
+        setOptimizationUses(usage.used || optimizationUses);
+      }
       setIsOptimizing(false);
     }, 400);
   };
