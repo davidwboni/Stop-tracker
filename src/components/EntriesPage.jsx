@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import { Filter, Search, Package, ChevronDown, X } from "lucide-react";
@@ -7,9 +8,13 @@ import EntriesList from "./EntriesList";
 import EntryChecker from "./EntryChecker";
 import { useData } from "../contexts/DataContext";
 import { calculateDayEarnings } from "../features/payperiod/payStructure";
+import { Money } from "./ui/money";
 
 const EntriesPage = () => {
   const { logs, updateLogs, loading, paymentConfig } = useData();
+  const location = useLocation();
+  const showTourExample = !!location.state?.walkthrough && (logs || []).length === 0;
+  const tourAmount = calculateDayEarnings(paymentConfig,{quantity:150});
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -69,7 +74,22 @@ const EntriesPage = () => {
 
       {/* Day-by-day list, the focus */}
       <div data-tour="entries-ledger">
-      {(logs || []).length === 0 ? (
+      {showTourExample ? (
+        <div data-tour="entry-example" className="rounded-2xl border border-[#302a5b] bg-[#111827] p-4 shadow-lg shadow-black/10">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-sm font-bold">Example work day</div>
+              <div className="mt-1 text-xs text-muted-foreground">Tue, 22 Sep · 150 stops</div>
+              <div className="mt-2 text-xs text-muted-foreground">Notes: Busy route, 1 collection</div>
+            </div>
+            <div className="text-right">
+              <div className="text-base font-bold text-[#9b91ff]"><Money amount={tourAmount}/></div>
+              <div className="mt-1 text-[10px] text-[#7f8ba3]">expected</div>
+            </div>
+          </div>
+          <div className="mt-3 rounded-xl bg-[#0d1422] px-3 py-2 text-[11px] text-[#8e9ab2]">During normal use, swipe this row to the right to edit it.</div>
+        </div>
+      ) : (logs || []).length === 0 ? (
         <Card className="border-2 border-dashed border-border rounded-[18px]">
           <CardContent className="py-12 text-center">
             <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
