@@ -192,20 +192,35 @@ const EntriesList = ({ logs, onDeleteEntry, onEditEntry }) => {
           <AnimatePresence mode="popLayout">
             <div className="space-y-3">
               {paginatedLogs.map((log, index) => (
-                <motion.div
-                  key={log.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, x: -100 }}
-                  transition={{ delay: index * 0.05, duration: 0.3 }}
-                  whileHover={{ scale: 1.01 }}
-                  className="group overflow-hidden"
-                  drag="x"
-                  dragConstraints={{left:0,right:96}}
-                  dragElastic={0.12}
-                  onDragEnd={(_,info)=>{if(info.offset.x>55)onEditEntry?.(log)}}
-                >
-                  <div className="relative flex justify-between items-center p-4 sm:p-5 rounded-[14px] bg-card hover:bg-primary/5 border border-border/50 hover:border-primary/30 transition-all duration-300 shadow-sm hover:shadow-md touch-manipulation"><div className="absolute right-full mr-3 flex items-center gap-1 text-xs font-semibold text-primary"><Pencil className="h-4 w-4"/> Edit</div>
+                <div key={log.id} className="relative overflow-hidden rounded-[14px]">
+                  <button
+                    type="button"
+                    onClick={() => onEditEntry?.(log)}
+                    className="absolute inset-y-0 left-0 flex w-24 items-center justify-center gap-1.5 rounded-l-[14px] bg-primary/15 text-sm font-bold text-primary"
+                    aria-label={`Edit entry for ${formatDate(log.date)}`}
+                  >
+                    <Pencil className="h-4 w-4" />
+                    Edit
+                  </button>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: -100 }}
+                    transition={{ delay: index * 0.05, duration: 0.3 }}
+                    whileHover={{ scale: 1.01 }}
+                    className="group relative z-10"
+                    drag="x"
+                    dragConstraints={{ left: 0, right: 96 }}
+                    dragElastic={0.08}
+                    dragSnapToOrigin
+                    onDragEnd={(_, info) => {
+                      if (info.offset.x > 55) {
+                        if (navigator.vibrate) navigator.vibrate(12);
+                        onEditEntry?.(log);
+                      }
+                    }}
+                  >
+                  <div className="relative flex justify-between items-center p-4 sm:p-5 rounded-[14px] bg-card hover:bg-primary/5 border border-border/50 hover:border-primary/30 transition-all duration-300 shadow-sm hover:shadow-md touch-manipulation">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-2">
                         <div className="font-bold text-foreground text-lg">
@@ -240,6 +255,14 @@ const EntriesList = ({ logs, onDeleteEntry, onEditEntry }) => {
                         <div className="text-2xl font-bold text-foreground">
                           <Money amount={log.total || 0} />
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => onEditEntry?.(log)}
+                          className="mt-2 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-primary hover:bg-primary/10 active:scale-95"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit
+                        </button>
                       </div>
                       <Button
                         variant="ghost"
@@ -254,7 +277,8 @@ const EntriesList = ({ logs, onDeleteEntry, onEditEntry }) => {
                       </Button>
                     </div>
                   </div>
-                </motion.div>
+                  </motion.div>
+                </div>
               ))}
             </div>
           </AnimatePresence>
