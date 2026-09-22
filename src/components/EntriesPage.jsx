@@ -15,7 +15,10 @@ import { Money } from "./ui/money";
 const EntriesPage = () => {
   const { logs, updateLogs, loading, paymentConfig } = useData();
   const location = useLocation();
-  const showTourExample = !!location.state?.walkthrough && (logs || []).length === 0;
+  // Always render a temporary example during the guided tour so its target
+  // exists even if this browser already has test/real entries. It is UI-only
+  // and disappears as soon as the walkthrough leaves this screen.
+  const showTourExample = !!location.state?.walkthrough;
   const tourAmount = calculateDayEarnings(paymentConfig,{quantity:150});
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -78,10 +81,10 @@ const EntriesPage = () => {
 
       <div className="mb-4 flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold tracking-tight">Entries</h1>
-        <span className="text-xs text-[#8e9ab2]">{(logs || []).length} days tracked</span>
+        <span className="text-xs text-[#8e9ab2]">{showTourExample ? "Example mode" : `${(logs || []).length} days tracked`}</span>
       </div>
 
-      <EntryChecker />
+      {!showTourExample && <EntryChecker />}
 
       {/* Day-by-day list, the focus */}
       <div data-tour="entries-ledger">
@@ -98,7 +101,10 @@ const EntriesPage = () => {
               <div className="mt-1 text-[10px] text-[#7f8ba3]">expected</div>
             </div>
           </div>
-          <div className="mt-3 rounded-xl bg-[#0d1422] px-3 py-2 text-[11px] text-[#8e9ab2]">During normal use, swipe this row to the right to edit it.</div>
+          <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-[#0d1422] px-3 py-2 text-[11px] text-[#8e9ab2]">
+            <span>Temporary tour example — nothing here is saved.</span>
+            <span className="shrink-0 font-semibold text-[#9b91ff]">Swipe → Edit</span>
+          </div>
         </div>
       ) : (logs || []).length === 0 ? (
         <Card className="border-2 border-dashed border-border rounded-[18px]">
@@ -218,7 +224,7 @@ const EntriesPage = () => {
       )}
 
       {/* Search & filter, secondary, below the list */}
-      {(logs || []).length > 0 && (
+      {!showTourExample && (logs || []).length > 0 && (
         <div className="mt-5">
           <button
             onClick={() => setShowFilters(!showFilters)}
