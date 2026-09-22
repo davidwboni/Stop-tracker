@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef } from 'react';
 import ErrorBoundary from './ErrorBoundary';
 import { motion } from 'framer-motion';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
@@ -9,7 +9,6 @@ import AppNavigation from './AppNavigation';
 import AppFooter from './AppFooter';
 import PayOnboarding from './PayOnboarding';
 import { useData } from '../contexts/DataContext';
-import { calculateDayEarnings } from '../features/payperiod/payStructure';
 
 // Bottom-nav tab order, swiping left/right steps through these.
 const TAB_ORDER = [
@@ -22,7 +21,7 @@ const TAB_ORDER = [
 
 const Layout = () => {
   useAuth();
-  const { logs, updateLogs, paymentConfig, needsOnboarding, completeOnboarding } = useData();
+  const { needsOnboarding, completeOnboarding } = useData();
   const navigate = useNavigate();
   const location = useLocation();
   const touchStart = useRef(null);
@@ -54,45 +53,6 @@ const Layout = () => {
     }
   };
 
-  // Handle quick entry from floating action button
-  const handleQuickEntry = async (entryData) => {
-    try {
-      // Model-aware total: uses stops/miles/hours per the active pay structure,
-      // plus any extra. Matches the daily form and the FAB.
-      const total =
-        calculateDayEarnings(paymentConfig, {
-          quantity: parseFloat(entryData.stops) || 0,
-          miles: parseFloat(entryData.miles) || 0,
-        }) + (parseFloat(entryData.extra) || 0);
-
-      const newEntry = {
-        id: Date.now(),
-        ...entryData,
-        total,
-        timestamp: new Date().toISOString(),
-      };
-      
-      const updatedLogs = [...(logs || []), newEntry].sort(
-        (a, b) => new Date(b.date) - new Date(a.date)
-      );
-      
-      await updateLogs(updatedLogs);
-      
-      // Add haptic feedback for success
-      if (navigator.vibrate) {
-        navigator.vibrate([10, 50, 10]);
-      }
-      
-    } catch (error) {
-      console.error('Error adding quick entry:', error);
-      // Add haptic feedback for error
-      if (navigator.vibrate) {
-        navigator.vibrate([100, 50, 100]);
-      }
-      throw error;
-    }
-  };
-
   // First-run gate: brand-new users set up their pay before entering the app.
   if (needsOnboarding) {
     return <PayOnboarding onComplete={completeOnboarding} />;
@@ -116,7 +76,7 @@ const Layout = () => {
               key={location.pathname}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, ease: 'easeOut' }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}\n              style={{ willChange: 'opacity, transform' }}
             >
               <Outlet />
             </motion.div>
