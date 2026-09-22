@@ -10,7 +10,7 @@ const FLAG="st_app_walkthrough_v2";
 const steps=[
  {path:"/app/dashboard",target:'[data-tour="log-work"]',title:"Log today’s work",body:"This is the button you’ll use at the end of a shift. Tap the highlighted button to continue.",action:"Tap Log today’s work"},
  {path:"/app/dashboard",target:'[data-tour="past-entry"]',title:"Forgot a day?",body:"Use Past entry when you missed a day. You can choose any earlier date before saving.",action:"Tap Past entry"},
- {path:"/app/entries",target:'[data-tour="entries-ledger"]',title:"Your work ledger",body:"Every saved day appears here. Once you have entries, swipe an entry to the right to edit the date, stops or notes.",action:"Tap the ledger"},
+ {path:"/app/entries",target:'[data-tour="entry-example"]',title:"Your work ledger",body:"This is what one saved work day looks like: date, stops, expected earnings and notes. In real use, swipe an entry to the right to edit it.",action:"Tap the example entry"},
  {path:"/app/entries",target:'[data-tour="nav-routes"]',title:"Routes",body:"Now tap Routes in the navigation. This is where you check addresses and build the order of your stops.",action:"Tap Routes",nextPath:"/app/routes"},
  {path:"/app/routes",target:'[data-tour="route-search"]',title:"Build a route",body:"Start here by searching an address. Address checking stays separate from your daily work log.",action:"Tap address search"},
  {path:"/app/routes",target:'[data-tour="nav-check-pay"]',title:"Check Pay",body:"At the end of the pay period, move to Check Pay when your contractor statement arrives.",action:"Tap Check Pay",nextPath:"/app/check-pay"},
@@ -40,14 +40,14 @@ export default function AppWalkthrough(){
    if(isNewUser&&!seen){
      setStep(0);
      setOpen(true);
-     nav(steps[0].path,{replace:true});
+     nav(steps[0].path,{replace:true,state:{walkthrough:true}});
    }
  },[loading,isNewUser,nav,user?.uid]);
 
  useEffect(()=>{
    if(!open)return;
    const wanted=steps[step]?.path;
-   if(wanted&&loc.pathname!==wanted)nav(wanted,{replace:true});
+   if(wanted&&loc.pathname!==wanted)nav(wanted,{replace:true,state:{walkthrough:true}});
  },[open,step,loc.pathname,nav]);
 
  useLayoutEffect(()=>{
@@ -87,7 +87,7 @@ export default function AppWalkthrough(){
  const advance=()=>{
    const s=steps[step];
    if(step===steps.length-1)return finish();
-   if(s.nextPath)nav(s.nextPath);
+   if(s.nextPath)nav(s.nextPath,{state:{walkthrough:true}});
    setStep(v=>v+1);
  };
 
