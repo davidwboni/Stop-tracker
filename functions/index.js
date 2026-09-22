@@ -2,6 +2,7 @@ const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
+const crypto = require("crypto");
 
 admin.initializeApp();
 
@@ -9,6 +10,24 @@ const DEEPSEEK_API_KEY = defineSecret("DEEPSEEK_API_KEY");
 const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
+
+async function stripePost(path, params = {}) {
+  const body = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null) body.append(k, String(v)); });
+  const response = await fetch(`https://api.stripe.com/v1/${path}`, { method: "POST", headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY.value()}`, "Content-Type": "application/x-www-form-urlencoded" }, body });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data?.error?.message || "Stripe request failed");
+  return data;
+}
+
+async function stripeGet(path, params = {}) {
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => qs.append(k, String(v)));
+  const response = await fetch(`https://api.stripe.com/v1/${path}?${qs}`, { headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY.value()}` } });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data?.error?.message || "Stripe request failed");
+  return data;
+}
 
 // System prompt: describe the six pay models + the exact JSON we want back.
 // The AI ONLY transcribes/interprets into structured config — it never computes
@@ -148,10 +167,8 @@ exports.createProCheckout = onCall(
     if (!request.auth) throw new HttpsError("unauthenticated", "You must be signed in.");
     const plan = request.data?.plan === "annual" ? "annual" : request.data?.plan === "monthly" ? "monthly" : null;
     if (!plan) throw new HttpsError("invalid-argument", "Choose monthly or annual.");
-    const Stripe = require("stripe");
-    const stripe = new Stripe(STRIPE_SECRET_KEY.value());
     const lookupKey = plan === "annual" ? "stop_tracker_pro_annual" : "stop_tracker_pro_monthly";
-    const prices = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 });
+    const prices = await stripeGet("prices", { "lookup_keys[]": lookupKey, active: true, limit: 1 });
     const priceId = prices.data[0]?.id;
     if (!priceId) throw new HttpsError("failed-precondition", "This Pro plan is not configured in Stripe.");
     const userRef = admin.firestore().collection("users").doc(request.auth.uid);
@@ -159,20 +176,20 @@ exports.createProCheckout = onCall(
     const user = snap.data() || {};
     let customerId = user.stripeCustomerId;
     if (!customerId) {
-      const customer = await stripe.customers.create({ email: request.auth.token.email || undefined, metadata: { firebaseUid: request.auth.uid } });
+      const customer = await stripePost("customers", { email: request.auth.token.email || undefined, "metadata[firebaseUid]": request.auth.uid });
       customerId = customer.id;
       await userRef.set({ stripeCustomerId: customerId }, { merge: true });
     }
     const origin = String(request.data?.origin || "").replace(/\/$/, "");
     if (!/^https:\/\//.test(origin)) throw new HttpsError("invalid-argument", "Invalid return URL.");
-    const session = await stripe.checkout.sessions.create({
+    const session = await stripePost("checkout/sessions", {
       mode: "subscription", customer: customerId,
-      line_items: [{ price: priceId, quantity: 1 }],
+      "line_items[0][price]": priceId, "line_items[0][quantity]": 1,
       success_url: `${origin}/app/profile?billing=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/app/profile?billing=cancelled`,
       client_reference_id: request.auth.uid,
-      metadata: { firebaseUid: request.auth.uid },
-      subscription_data: { metadata: { firebaseUid: request.auth.uid } },
+      "metadata[firebaseUid]": request.auth.uid,
+      "subscription_data[metadata][firebaseUid]": request.auth.uid,
     });
     return { url: session.url };
   }
@@ -184,11 +201,16 @@ exports.createProCheckout = onCall(
 exports.stripeWebhook = onRequest(
   { secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET], cors: false },
   async (req, res) => {
-    const Stripe = require("stripe");
-    const stripe = new Stripe(STRIPE_SECRET_KEY.value());
     let event;
     try {
-      event = stripe.webhooks.constructEvent(req.rawBody, req.headers["stripe-signature"], STRIPE_WEBHOOK_SECRET.value());
+      const signature = String(req.headers["stripe-signature"] || "");
+      const parts = Object.fromEntries(signature.split(",").map(p => p.split("=")));
+      const timestamp = Number(parts.t);
+      if (!timestamp || Math.abs(Date.now() / 1000 - timestamp) > 300) throw new Error("stale signature");
+      const expected = crypto.createHmac("sha256", STRIPE_WEBHOOK_SECRET.value()).update(`${timestamp}.${req.rawBody.toString("utf8")}`).digest("hex");
+      const supplied = String(parts.v1 || "");
+      if (expected.length !== supplied.length || !crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(supplied))) throw new Error("signature mismatch");
+      event = JSON.parse(req.rawBody.toString("utf8"));
     } catch (err) {
       console.error("Invalid Stripe webhook signature");
       res.status(400).send("Invalid signature");
@@ -220,15 +242,13 @@ exports.createBillingPortal = onCall(
   { secrets: [STRIPE_SECRET_KEY], cors: true, invoker: "public" },
   async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "You must be signed in.");
-    const Stripe = require("stripe");
-    const stripe = new Stripe(STRIPE_SECRET_KEY.value());
     const ent = await admin.firestore().collection("entitlements").doc(request.auth.uid).get();
     const user = await admin.firestore().collection("users").doc(request.auth.uid).get();
     const customerId = ent.data()?.stripeCustomerId || user.data()?.stripeCustomerId;
     if (!customerId) throw new HttpsError("failed-precondition", "No Stripe customer exists for this account.");
     const origin = String(request.data?.origin || "").replace(/\/$/, "");
     if (!/^https:\/\//.test(origin)) throw new HttpsError("invalid-argument", "Invalid return URL.");
-    const session = await stripe.billingPortal.sessions.create({ customer: customerId, return_url: `${origin}/app/profile` });
+    const session = await stripePost("billing_portal/sessions", { customer: customerId, return_url: `${origin}/app/profile` });
     return { url: session.url };
   }
 );
