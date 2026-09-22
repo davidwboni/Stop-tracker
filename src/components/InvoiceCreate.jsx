@@ -35,7 +35,7 @@ export default function InvoiceCreate({ prefill }) {
   } = useInvoice();
 
   const [editingSender, setEditingSender] = useState(false);
-  const [confirmedStops, setConfirmedStops] = useState(prefill?.stops ? String(prefill.stops) : "");
+  const [invoiceAmount, setInvoiceAmount] = useState(prefill?.statementAmount != null ? String(prefill.statementAmount) : "");
   const [sender, setSender] = useState(
     senderProfile || { name: "", address: "", email: "", extra: "" }
   );
@@ -50,11 +50,7 @@ export default function InvoiceCreate({ prefill }) {
   }, [clients, client]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [newClient, setNewClient] = useState(null);
-  const [lines, setLines] = useState(
-    prefill?.amount
-      ? [{ id: 1, desc: prefill?.stops ? `Delivery work — ${prefill.stops} stops` : "Delivery earnings", qty: "1", rate: String(prefill.amount) }]
-      : [blankLine()]
-  );
+  const [lines, setLines] = useState([blankLine()]);
   const [notes, setNotes] = useState("");
   const [advanced, setAdvanced] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -62,10 +58,7 @@ export default function InvoiceCreate({ prefill }) {
   const [saved, setSaved] = useState(false);
   const [persisted, setPersisted] = useState(false);
 
-  const total = lines.reduce(
-    (s, l) => s + (parseFloat(l.qty) || 0) * (parseFloat(l.rate) || 0),
-    0
-  );
+  const total = Number(invoiceAmount) || 0;
 
   const setLine = (id, key, val) =>
     setLines((ls) => ls.map((l) => (l.id === id ? { ...l, [key]: val } : l)));
@@ -182,14 +175,7 @@ export default function InvoiceCreate({ prefill }) {
     autoTable(docPdf, {
       startY: y + 60,
       head: [["Description", "Qty", "Rate", "Amount"]],
-      body: lines
-        .filter((l) => l.desc || l.qty || l.rate)
-        .map((l) => [
-          l.desc || "-",
-          l.qty || "1",
-          money(l.rate),
-          money((parseFloat(l.qty) || 0) * (parseFloat(l.rate) || 0)),
-        ]),
+      body: [["Delivery services", "1", money(total), money(total)]],
       foot: [["", "", "Total", money(total)]],
       theme: "striped",
       headStyles: { fillColor: [29, 158, 117] },
@@ -217,25 +203,24 @@ export default function InvoiceCreate({ prefill }) {
       invoiceAmount: total.toFixed(2),
       dateFrom,
       dateTo,
-      lines,
+      lines: [{desc:"Delivery services",qty:"1",rate:String(total)}],
       periodId: prefill?.periodId || null,
-      confirmedStops: prefill?.periodId ? Number(confirmedStops) : null,
       status,
     });
     setPersisted(true);
   };
 
-  const canGenerate = client && total > 0 && (!prefill?.periodId || Number(confirmedStops) >= 0);
+  const canGenerate = client && total > 0;
 
   const handleDownload = async () => {
-    if (!canGenerate) return setError("Add a client and at least one line with an amount.");
+    if (!canGenerate) return setError("Add a client and the amount you need to invoice.");
     setBusy(true);
     setError(null);
     try {
       const docPdf = buildPdf();
       docPdf.save(`Invoice_${invoiceNumber}.pdf`);
       await persist("generated");
-      if (prefill?.periodId) await updatePeriodRecord(prefill.periodId,{status:"invoice_generated",invoiceNumber,invoiceAmount:total,confirmedStops:Number(confirmedStops),invoiceGeneratedAt:new Date().toISOString()});
+      if (prefill?.periodId) await updatePeriodRecord(prefill.periodId,{status:"invoice_generated",invoiceNumber,invoiceAmount:total,invoiceGeneratedAt:new Date().toISOString()});
       setSaved(true);
     } catch (e) {
       console.error(e);
@@ -246,7 +231,7 @@ export default function InvoiceCreate({ prefill }) {
   };
 
   const handleShare = async () => {
-    if (!canGenerate) return setError("Add a client and at least one line with an amount.");
+    if (!canGenerate) return setError("Add a client and the amount you need to invoice.");
     setBusy(true);
     setError(null);
     try {
@@ -274,7 +259,7 @@ export default function InvoiceCreate({ prefill }) {
   // ---------- Create form ----------
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-      {prefill?.periodId && <div className="rounded-[18px] border border-[#302a5b] bg-[#17152b] p-4"><div className="text-xs font-bold uppercase tracking-wider text-[#8f83ff]">Confirm your period</div><div className="mt-1 font-semibold">{prefill.startDate} → {prefill.endDate}</div><div className="mt-1 text-sm text-muted-foreground">{prefill.stops || 0} stops · {money(prefill.amount)} expected</div><label className="mt-4 block text-xs text-muted-foreground">Confirm total stops<input inputMode="numeric" type="number" min="0" value={confirmedStops} onChange={(e)=>setConfirmedStops(e.target.value)} className="mt-1 h-12 w-full rounded-xl border border-[#34415f] bg-[#0a101b] px-3 text-lg font-bold text-white outline-none focus:border-[#7567ff]"/></label><div className="mt-2 text-xs text-muted-foreground">This is a final check only. Your invoice remains prefilled from your ledger.</div></div>}
+      {prefill?.periodId && <div className="rounded-[18px] border border-[#302a5b] bg-[#17152b] p-4"><div className="text-xs font-bold uppercase tracking-wider text-[#8f83ff]">PAY PERIOD</div><div className="mt-1 font-semibold">{prefill.startDate} → {prefill.endDate}</div><div className="mt-1 text-sm text-muted-foreground">{prefill.stops || 0} stops in your Stop Tracker record · {money(prefill.amount)} expected</div></div>}
 
       {/* Header row: number + sender */}
       <div className="flex items-center justify-between">
@@ -341,35 +326,10 @@ export default function InvoiceCreate({ prefill }) {
       )}
 
       <div className="rounded-2xl border border-[#26314a] bg-[#111827] p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="text-xs font-bold uppercase tracking-[.14em] text-[#69758d]">Invoice total</div>
-            <div className="mt-1 text-2xl font-bold text-[#9b91ff]">{money(total)}</div>
-            <div className="mt-1 text-xs text-[#8e9ab2]">{prefill?.stops ? `${prefill.stops.toLocaleString("en-GB")} stops from your ledger` : "Based on the invoice details below"}</div>
-          </div>
-          <button onClick={() => setAdvanced(v => !v)} className="rounded-xl border border-[#343d57] px-3 py-2 text-xs font-semibold text-[#a9b3c6]">
-            {advanced ? "Hide details" : "Edit details"}
-          </button>
-        </div>
+        <label className="block text-xs font-bold uppercase tracking-[.14em] text-[#69758d]">Amount to invoice</label>
+        <div className="mt-2 flex items-center rounded-xl border border-[#34415f] bg-[#0a101b] px-4"><span className="text-xl text-[#8e9ab2]">£</span><input inputMode="decimal" value={invoiceAmount} onChange={e=>setInvoiceAmount(e.target.value)} placeholder="0.00" className="h-14 min-w-0 flex-1 bg-transparent px-2 text-2xl font-bold text-white outline-none"/></div>
+        <p className="mt-2 text-xs leading-5 text-[#8e9ab2]">{prefill?.statementAmount != null ? "Prefilled from the statement you checked. Change it only if needed." : "Enter the final amount shown on the statement your contractor sent you."}</p>
       </div>
-
-      {advanced && <div className="rounded-2xl border border-[#26314a] bg-[#0d1422] p-4">
-        <div className="mb-3">
-          <div className="font-semibold">Invoice details</div>
-          <p className="mt-1 text-xs text-[#7f8ba3]">Only change these if the prefilled ledger total needs an adjustment.</p>
-        </div>
-        <div className="space-y-2">
-          {lines.map((l) => (
-            <div key={l.id} className="grid grid-cols-[1fr_64px_84px_32px] gap-1.5 items-center">
-              <Input className="h-10 text-sm" placeholder="Work description" value={l.desc} onChange={(e) => setLine(l.id, "desc", e.target.value)} />
-              <Input className="h-10 text-sm text-center" inputMode="numeric" aria-label="Quantity" placeholder="Qty" value={l.qty} onChange={(e) => setLine(l.id, "qty", e.target.value)} />
-              <Input className="h-10 text-sm text-center" inputMode="decimal" aria-label="Rate in pounds" placeholder="Rate £" value={l.rate} onChange={(e) => setLine(l.id, "rate", e.target.value)} />
-              <button aria-label="Remove invoice line" onClick={() => removeLine(l.id)} className="p-1.5 text-muted-foreground hover:text-destructive"><Trash2 className="w-4 h-4" /></button>
-            </div>
-          ))}
-        </div>
-        <button onClick={addLine} className="mt-3 text-sm text-primary flex items-center gap-1"><Plus className="w-4 h-4" /> Add another charge</button>
-      </div>}
 
       <textarea
         value={notes}
