@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
-import { FileText, Filter, Search, Package, ChevronDown } from "lucide-react";
+import { FileText, Filter, Search, Package, ChevronDown, X } from "lucide-react";
 import { Input } from "./ui/input";
 import EntriesList from "./EntriesList";
 import EntryChecker from "./EntryChecker";
@@ -14,11 +14,14 @@ const EntriesPage = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [editing,setEditing] = useState(null);
 
   const handleDeleteEntry = (id) => {
     if (navigator.vibrate) navigator.vibrate([10, 50, 10]);
     updateLogs((logs || []).filter((log) => log.id !== id));
   };
+
+  const saveEdit=async()=>{if(!editing)return;await updateLogs((logs||[]).map(l=>l.id===editing.id?{...l,date:editing.date,stops:Number(editing.stops)||0,notes:editing.notes||""}:l));setEditing(null);};
 
   const filteredLogs = (logs || []).filter((log) => {
     const matchesSearch =
@@ -75,8 +78,10 @@ const EntriesPage = () => {
           </CardContent>
         </Card>
       ) : (
-        <EntriesList logs={filteredLogs} onDeleteEntry={handleDeleteEntry} />
+        <><p className="mb-2 px-1 text-[11px] text-muted-foreground">Swipe an entry to the right to edit its date, stops or notes.</p><EntriesList logs={filteredLogs} onDeleteEntry={handleDeleteEntry} onEditEntry={setEditing} /></>
       )}
+
+      {editing&&<div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/65 p-3"><div className="w-full max-w-md rounded-[24px] border border-[#2a3550] bg-[#111827] p-5"><div className="flex items-center justify-between"><h2 className="text-lg font-bold">Edit entry</h2><button onClick={()=>setEditing(null)} className="p-2 text-muted-foreground"><X/></button></div><div className="mt-4 grid grid-cols-2 gap-3"><label className="text-xs text-muted-foreground">Date<input type="date" value={editing.date} onChange={e=>setEditing({...editing,date:e.target.value})} className="mt-1 h-11 w-full rounded-xl border border-[#34415f] bg-[#0a101b] px-3 text-white"/></label><label className="text-xs text-muted-foreground">Stops<input inputMode="numeric" type="number" value={editing.stops} onChange={e=>setEditing({...editing,stops:e.target.value})} className="mt-1 h-11 w-full rounded-xl border border-[#34415f] bg-[#0a101b] px-3 text-white"/></label></div><label className="mt-3 block text-xs text-muted-foreground">Notes<input value={editing.notes||""} onChange={e=>setEditing({...editing,notes:e.target.value})} placeholder="Add a note…" className="mt-1 h-11 w-full rounded-xl border border-[#34415f] bg-[#0a101b] px-3 text-white"/></label><button onClick={saveEdit} className="mt-4 h-12 w-full rounded-xl bg-[#7567ff] font-bold text-white">Save changes</button></div></div>}
 
       {/* Search & filter, secondary, below the list */}
       {(logs || []).length > 0 && (
