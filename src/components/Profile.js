@@ -8,6 +8,7 @@ import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { updateProfile } from "firebase/auth";
 import { db, auth } from "../services/firebase";
+import { subscribeToEntitlement, openBillingPortal } from "../services/billing";
 import { useTheme } from "../contexts/ThemeContext";
 import {
   User,
@@ -37,6 +38,7 @@ const Profile = ({ userId, user, onLogout }) => {
   const [editMode, setEditMode] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [formData, setFormData] = useState({ displayName: "", email: "", bio: "" });
+  const [entitlement, setEntitlement] = useState({ isPro: false });
 
   const storage = getStorage();
   const navigate = useNavigate();
@@ -75,6 +77,11 @@ const Profile = ({ userId, user, onLogout }) => {
     };
     fetchUserData();
   }, [userId, isGuest, user]);
+
+  useEffect(() => {
+    if (isGuest || !userId) return;
+    return subscribeToEntitlement(userId, setEntitlement);
+  }, [userId, isGuest]);
 
   useEffect(() => {
     if (success) {
@@ -164,7 +171,7 @@ const Profile = ({ userId, user, onLogout }) => {
     }
   };
 
-  const isPro = userData?.role === "pro";
+  const isPro = entitlement.isPro;
   const initial = (userData?.displayName || "U").charAt(0).toUpperCase();
   const achievements = [
     { name: "Delivery Expert", icon: <Trophy className="w-5 h-5" /> },
@@ -217,6 +224,23 @@ const Profile = ({ userId, user, onLogout }) => {
           <span className="text-xs font-medium text-muted-foreground">{isPro ? "Pro plan" : "Free plan"}</span>
         </div>
       </div>
+
+      {!isGuest && (
+        <button
+          onClick={async () => {
+            if (!isPro) return navigate("/app/upgrade");
+            setUpdating(true); setError(null);
+            try { await openBillingPortal(); } catch (e) { setError(e?.message || "Could not open subscription management."); setUpdating(false); }
+          }}
+          className="w-full rounded-[14px] border border-[#786cff]/30 bg-[#786cff]/10 px-4 py-4 text-left transition-all active:scale-[0.99]"
+        >
+          <div className="flex items-center justify-between">
+            <div><div className="font-semibold">{isPro ? "Stop Tracker Pro" : "Upgrade to Pro"}</div>
+            <div className="mt-1 text-xs text-muted-foreground">{isPro ? "Manage billing, payment method or cancellation" : "AI checks, full route optimisation and premium tools"}</div></div>
+            <ChevronRight className="h-5 w-5 text-[#8f83ff]" />
+          </div>
+        </button>
+      )}
 
       {/* Guest → sign in to save data */}
       {isGuest && (
