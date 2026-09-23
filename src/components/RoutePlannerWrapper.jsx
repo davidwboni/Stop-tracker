@@ -2,7 +2,6 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import RoutePlanner from './RoutePlanner';
-import TabCoach from './TabCoach';
 
 const RoutePlannerWrapper = () => {
   const { user, loading } = useAuth();
@@ -21,16 +20,7 @@ const RoutePlannerWrapper = () => {
     return null;
   }
 
-  return (
-    <>
-      <TabCoach
-        id="routes"
-        title="Plan your round"
-        body="Add your stops by address or postcode and we'll map them in order. Handy for working out the quickest way round your route."
-      />
-      <RoutePlanner />
-    </>
-  );
+  return <RoutePlanner />;
 };
 
 export default RoutePlannerWrapper;
