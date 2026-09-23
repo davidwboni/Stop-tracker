@@ -74,7 +74,15 @@ export const extractStatement = async (file) => {
     images = [{ fileBase64: await fileToBase64(file), mimeType: file.type }];
   }
 
-  const { data } = await httpsCallable(functions, "extractStatement")({ images });
+  const payload = {
+    images,
+    // Keep the first page in the legacy fields as well. This preserves normal
+    // photo uploads during a rolling deploy while the updated callable reaches
+    // every Firebase instance.
+    fileBase64: images[0].fileBase64,
+    mimeType: images[0].mimeType,
+  };
+  const { data } = await httpsCallable(functions, "extractStatement")(payload);
   return data;
 };
 
