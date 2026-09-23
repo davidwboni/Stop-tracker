@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Check, ArrowRight, Package } from "lucide-react";
+import { Check, ArrowRight, Package, CalendarDays } from "lucide-react";
 import PayStructureAISetup from "./PayStructureAISetup";
 import { useAuth } from "../contexts/AuthContext";
 import { describePayStructure } from "../features/payperiod/payStructure";
@@ -8,6 +8,11 @@ import { describePayStructure } from "../features/payperiod/payStructure";
 // Completion beat shown after the user confirms their pay setup: a spring-in
 // check-mark, then a staggered welcome + pay summary + "Start tracking".
 const WelcomeStep = ({ firstName, config, payPeriodAnchor, setPayPeriodAnchor, onStart }) => {
+  const formattedPayPeriodAnchor = new Date(`${payPeriodAnchor}T12:00:00`).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
   const rise = {
     hidden: { opacity: 0, y: 12 },
     show: (i) => ({ opacity: 1, y: 0, transition: { delay: 0.5 + i * 0.18, duration: 0.4 } }),
@@ -59,7 +64,35 @@ const WelcomeStep = ({ firstName, config, payPeriodAnchor, setPayPeriodAnchor, o
         <span className="text-sm font-medium text-primary">{describePayStructure(config)}</span>
       </motion.div>
 
-      <motion.div variants={rise} custom={3} initial="hidden" animate="show" className="mx-auto w-full min-w-0 max-w-full overflow-hidden box-border rounded-[16px] border border-[#302a5b] bg-[#111827] p-4 text-left"><label className="block min-w-0 text-xs font-bold uppercase tracking-wider text-[#8f83ff]">Current 4-week period started<div className="mt-2 w-full min-w-0 overflow-hidden rounded-xl"><input type="date" value={payPeriodAnchor} onChange={(e)=>setPayPeriodAnchor(e.target.value)} className="ios-date-input h-11 rounded-xl border border-[#26314a] bg-[#090f1a] px-3 text-white"/></div></label><p className="mt-2 text-xs text-muted-foreground">Use the first day of your current invoice/pay cycle. Stop Tracker will keep future 28-day periods aligned automatically.</p></motion.div>
+      <motion.div
+        variants={rise}
+        custom={3}
+        initial="hidden"
+        animate="show"
+        className="mx-auto w-full min-w-0 max-w-full box-border rounded-[16px] border border-[#302a5b] bg-[#111827] p-4 text-left"
+      >
+        <div className="text-xs font-bold uppercase tracking-wider text-[#8f83ff]">
+          Current 4-week period started
+        </div>
+
+        <label className="relative mt-2 block w-full cursor-pointer">
+          <div className="flex h-12 w-full items-center justify-between rounded-xl border border-[#26314a] bg-[#090f1a] px-4 text-base font-semibold text-white">
+            <span>{formattedPayPeriodAnchor}</span>
+            <CalendarDays className="h-5 w-5 shrink-0 text-[#8f83ff]" />
+          </div>
+          <input
+            type="date"
+            value={payPeriodAnchor}
+            onChange={(e) => setPayPeriodAnchor(e.target.value)}
+            aria-label="Current 4-week period start date"
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          />
+        </label>
+
+        <p className="mt-3 text-xs leading-5 text-muted-foreground">
+          Use the first day of your current invoice/pay cycle. Stop Tracker will keep future 28-day periods aligned automatically.
+        </p>
+      </motion.div>
 
       <motion.button
         variants={rise}
