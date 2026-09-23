@@ -257,3 +257,25 @@ input, textarea, select { font-size: max(16px, 1em); }
     animation-iteration-count: 1 !important;
   }
 }
+
+
+/* iOS Safari gives date inputs an intrinsic width that can escape narrow
+   cards. Force the control to respect its parent's inline size. */
+.ios-date-input {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  inline-size: 100% !important;
+  max-inline-size: 100% !important;
+  min-inline-size: 0 !important;
+  box-sizing: border-box !important;
+  -webkit-appearance: none;
+  appearance: none;
+  overflow: hidden;
+}
+
+.ios-date-input::-webkit-date-and-time-value {
+  min-width: 0;
+  text-align: left;
+}
