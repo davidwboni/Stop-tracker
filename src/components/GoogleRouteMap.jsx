@@ -22,7 +22,7 @@ function numberedIcon(index) {
   };
 }
 
-const GoogleRouteMap = ({ addresses = [] }) => {
+const GoogleRouteMap = ({ addresses = [], fallback = null }) => {
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'stop-tracker-google-maps',
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '',
@@ -47,6 +47,8 @@ const GoogleRouteMap = ({ addresses = [] }) => {
   }, [addresses, isLoaded]);
 
   if (loadError) {
+    console.error("Google Maps failed to load:", loadError);
+    if (fallback) return fallback;
     return (
       <div className="w-full h-full rounded-lg border-2 border-border flex items-center justify-center p-4 text-center">
         <p className="text-sm text-muted-foreground">Couldn't load the map. Check your connection.</p>
