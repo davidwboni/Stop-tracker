@@ -30,6 +30,7 @@
     "leaflet": "^1.9.4",
     "lodash": "^4.17.21",
     "lucide-react": "^0.284.0",
+    "pdfjs-dist": "3.11.174",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-leaflet": "^4.2.1",
