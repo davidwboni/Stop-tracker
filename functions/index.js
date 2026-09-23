@@ -351,48 +351,109 @@ exports.extractStatement = onCall(
   { secrets: [DEEPSEEK_API_KEY], cors: true, invoker: "public", memory: "512MiB", timeoutSeconds: 120 },
   async request => {
     if (!request.auth) throw new HttpsError("unauthenticated", "You must be signed in.");
-    const { fileBase64, mimeType } = request.data || {};
+
     const imageTypes = new Set(["image/jpeg","image/png","image/webp"]);
-    if (!imageTypes.has(mimeType) || typeof fileBase64 !== "string" || fileBase64.length > 12_000_000) {
-      throw new HttpsError("invalid-argument", "Upload a JPEG, PNG or WebP image under the supported size limit.");
+    const legacyImage = request.data?.fileBase64
+      ? [{ fileBase64: request.data.fileBase64, mimeType: request.data?.mimeType }]
+      : [];
+    const images = Array.isArray(request.data?.images) ? request.data.images : legacyImage;
+
+    if (!images.length || images.length > 10) {
+      throw new HttpsError("invalid-argument", "Upload between 1 and 10 statement pages.");
     }
+
+    let totalEncodedSize = 0;
+    for (const image of images) {
+      if (!imageTypes.has(image?.mimeType) || typeof image?.fileBase64 !== "string") {
+        throw new HttpsError("invalid-argument", "Statement pages must be JPEG, PNG or WebP.");
+      }
+      if (image.fileBase64.length > 12_000_000) {
+        throw new HttpsError("invalid-argument", "One of the statement pages is too large.");
+      }
+      totalEncodedSize += image.fileBase64.length;
+    }
+    if (totalEncodedSize > 20_000_000) {
+      throw new HttpsError("invalid-argument", "This statement is too large to process in one check.");
+    }
+
     const ent = await getEntitlement(request.auth.uid);
     const usageRef = admin.firestore().collection("usage").doc(request.auth.uid);
     const usage = (await usageRef.get()).data() || {};
-    if (!ent.isPro && Number(usage.statementAiUses || 0) >= 3) throw new HttpsError("permission-denied", "Your 3 free AI checks are used. Upgrade to Pro.");
+    if (!ent.isPro && Number(usage.statementAiUses || 0) >= 3) {
+      throw new HttpsError("permission-denied", "Your 3 free AI checks are used. Upgrade to Pro.");
+    }
 
     let data;
     try {
+      const content = [
+        {
+          type: "text",
+          text: images.length > 1
+            ? `These ${images.length} images are pages of the same delivery pay statement, in page order. Extract the entire statement into the requested JSON and combine the figures across all pages.`
+            : "Extract this delivery pay statement into the requested JSON."
+        },
+        ...images.map((image) => ({
+          type: "image_url",
+          image_url: {
+            url: `data:${image.mimeType};base64,${image.fileBase64}`,
+            detail: "original"
+          }
+        }))
+      ];
+
       const response = await fetch(DEEPSEEK_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${DEEPSEEK_API_KEY.value()}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${DEEPSEEK_API_KEY.value()}`
+        },
         body: JSON.stringify({
-          model: "deepseek-flash", temperature: 0, max_tokens: 4000,
+          model: "deepseek-flash",
+          temperature: 0,
+          max_tokens: 6000,
           response_format: { type: "json_object" },
           messages: [
             { role: "system", content: STATEMENT_SYSTEM_PROMPT },
-            { role: "user", content: [
-              { type: "text", text: "Extract this delivery pay statement into the requested JSON." },
-              { type: "image_url", image_url: { url: `data:${mimeType};base64,${fileBase64}`, detail: "original" } }
-            ] }
+            { role: "user", content }
           ]
         })
       });
-      if (!response.ok) throw new Error(`DeepSeek status ${response.status}`);
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => "");
+        console.error("DeepSeek statement request failed:", response.status, errorText.slice(0, 500));
+        throw new Error(`DeepSeek status ${response.status}`);
+      }
+
       const payload = await response.json();
-      data = JSON.parse(String(payload?.choices?.[0]?.message?.content || "{}").replace(/^\`\`\`(?:json)?\\s*/i,"").replace(/\`\`\`\\s*$/,""));
+      data = JSON.parse(
+        String(payload?.choices?.[0]?.message?.content || "{}")
+          .replace(/^\`\`\`(?:json)?\\s*/i, "")
+          .replace(/\`\`\`\\s*$/, "")
+      );
     } catch (err) {
       console.error("Statement extraction failed:", err?.message || "unknown");
-      throw new HttpsError("internal", "Could not read this statement. Try a clearer image or enter it manually.");
+      throw new HttpsError("internal", "Could not read this statement. Try a clearer file or enter it manually.");
     }
+
     if (!Number.isFinite(Number(data.statementStops)) && !Number.isFinite(Number(data.statementAmount))) {
       throw new HttpsError("failed-precondition", "No usable statement totals were found.");
     }
+
     if (!ent.isPro) {
       const consumed = await consumeFreeUse(request.auth.uid, "statementAiUses");
-      if (!consumed.allowed) throw new HttpsError("permission-denied", "Your 3 free AI checks are used. Upgrade to Pro.");
+      if (!consumed.allowed) {
+        throw new HttpsError("permission-denied", "Your 3 free AI checks are used. Upgrade to Pro.");
+      }
     }
-    return { statementStops: data.statementStops, statementAmount: data.statementAmount, daily: Array.isArray(data.daily) ? data.daily : [], confidence: Number(data.confidence || 0), notes: Array.isArray(data.notes) ? data.notes : [] };
+
+    return {
+      statementStops: data.statementStops,
+      statementAmount: data.statementAmount,
+      daily: Array.isArray(data.daily) ? data.daily : [],
+      confidence: Number(data.confidence || 0),
+      notes: Array.isArray(data.notes) ? data.notes : []
+    };
   }
 );
 
