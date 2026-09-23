@@ -24,7 +24,7 @@ const Layout = () => {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-[#080c14] text-[#f5f7fb] flex flex-col pt-safe">
+    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col pt-safe">
       <SyncStatus />
       <AppWalkthrough />
 
