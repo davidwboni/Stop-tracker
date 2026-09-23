@@ -5,12 +5,8 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Alert, AlertDescription } from "./ui/alert";
 import RouteMap from "./RouteMap";
-import GoogleRouteMap from "./GoogleRouteMap";
 import AddressMiniMap from "./AddressMiniMap";
 
-// One Maps key drives Places, Routes and the map tiles. Without it we fall back
-// to the free Leaflet/OpenStreetMap map so the planner still works.
-const HAS_GOOGLE_MAPS = Boolean(process.env.REACT_APP_GOOGLE_MAPS_API_KEY);
 import {
   MapPin,
   Navigation,
@@ -591,11 +587,7 @@ ${routeText}`,
             </CardHeader>
             <CardContent className="p-4">
               <div className="h-[42vh] min-h-[300px] max-h-[520px]">
-                {HAS_GOOGLE_MAPS ? (
-                  <GoogleRouteMap addresses={addresses} />
-                ) : (
-                  <RouteMap addresses={addresses} />
-                )}
+                <RouteMap addresses={addresses} />
               </div>
 
               {/* Navigation Buttons */}
