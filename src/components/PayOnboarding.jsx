@@ -59,7 +59,7 @@ const WelcomeStep = ({ firstName, config, payPeriodAnchor, setPayPeriodAnchor, o
         <span className="text-sm font-medium text-primary">{describePayStructure(config)}</span>
       </motion.div>
 
-      <motion.div variants={rise} custom={3} initial="hidden" animate="show" className="mx-auto w-full min-w-0 max-w-full box-border rounded-[16px] border border-[#302a5b] bg-[#111827] p-4 text-left"><label className="text-xs font-bold uppercase tracking-wider text-[#8f83ff]">Current 4-week period started</label><input type="date" value={payPeriodAnchor} onChange={(e)=>setPayPeriodAnchor(e.target.value)} className="mt-2 block h-11 w-full min-w-0 max-w-full box-border rounded-xl border border-[#26314a] bg-[#090f1a] px-3 text-white"/><p className="mt-2 text-xs text-muted-foreground">Use the first day of your current invoice/pay cycle. Stop Tracker will keep future 28-day periods aligned automatically.</p></motion.div>
+      <motion.div variants={rise} custom={3} initial="hidden" animate="show" className="mx-auto w-full min-w-0 max-w-full overflow-hidden box-border rounded-[16px] border border-[#302a5b] bg-[#111827] p-4 text-left"><label className="block min-w-0 text-xs font-bold uppercase tracking-wider text-[#8f83ff]">Current 4-week period started<div className="mt-2 w-full min-w-0 overflow-hidden rounded-xl"><input type="date" value={payPeriodAnchor} onChange={(e)=>setPayPeriodAnchor(e.target.value)} className="ios-date-input h-11 rounded-xl border border-[#26314a] bg-[#090f1a] px-3 text-white"/></div></label><p className="mt-2 text-xs text-muted-foreground">Use the first day of your current invoice/pay cycle. Stop Tracker will keep future 28-day periods aligned automatically.</p></motion.div>
 
       <motion.button
         variants={rise}
