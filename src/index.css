@@ -279,3 +279,56 @@ input, textarea, select { font-size: max(16px, 1em); }
   min-width: 0;
   text-align: left;
 }
+
+
+/* Light-theme compatibility for legacy dark utility classes.
+   New components should use theme tokens directly; these rules keep older
+   screens readable while they are migrated away from fixed dark colours. */
+html.light [class~="bg-[#080c14]"] {
+  background-color: var(--background) !important;
+}
+html.light [class~="bg-[#090f1a]"],
+html.light [class~="bg-[#0a101b]"],
+html.light [class~="bg-[#0b111d]"],
+html.light [class~="bg-[#0c1320]"],
+html.light [class~="bg-[#0d1422]"],
+html.light [class~="bg-[#111827]"],
+html.light [class~="bg-[#17152b]"] {
+  background-color: var(--card) !important;
+}
+html.light [class~="from-[#1a1730]"] {
+  background-image: none !important;
+  background-color: var(--card) !important;
+}
+html.light [class~="border-[#202a3d]"],
+html.light [class~="border-[#20283a]"],
+html.light [class~="border-[#26314a]"],
+html.light [class~="border-[#293249]"],
+html.light [class~="border-[#2a3550]"],
+html.light [class~="border-[#302a5b]"],
+html.light [class~="border-[#343d57]"],
+html.light [class~="border-[#34415f]"] {
+  border-color: var(--border) !important;
+}
+html.light [class~="text-[#f5f7fb]"] {
+  color: var(--foreground) !important;
+}
+html.light [class~="text-[#a5afc0]"],
+html.light [class~="text-[#a9b3c6]"],
+html.light [class~="text-[#9aa6bd]"],
+html.light [class~="text-[#8e9ab2]"],
+html.light [class~="text-[#7f8ba3]"],
+html.light [class~="text-[#77839a]"],
+html.light [class~="text-[#69758d]"],
+html.light [class~="text-[#5f6a80]"] {
+  color: var(--muted-foreground) !important;
+}
+html.light input,
+html.light textarea,
+html.light select {
+  color: var(--foreground);
+}
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: var(--muted-foreground);
+}
