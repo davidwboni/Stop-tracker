@@ -11,22 +11,56 @@ const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 
+function stripeApiError(response, data) {
+  const error = new Error(data?.error?.message || "Stripe request failed");
+  error.status = response.status;
+  error.stripeType = data?.error?.type || "";
+  error.stripeCode = data?.error?.code || "";
+  return error;
+}
+
 async function stripePost(path, params = {}) {
   const body = new URLSearchParams();
-  Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null) body.append(k, String(v)); });
-  const response = await fetch(`https://api.stripe.com/v1/${path}`, { method: "POST", headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY.value()}`, "Content-Type": "application/x-www-form-urlencoded" }, body });
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== "") body.append(k, String(v));
+  });
+  const response = await fetch(`https://api.stripe.com/v1/${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${STRIPE_SECRET_KEY.value()}`,
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body
+  });
   const data = await response.json();
-  if (!response.ok) throw new Error(data?.error?.message || "Stripe request failed");
+  if (!response.ok) throw stripeApiError(response, data);
   return data;
 }
 
 async function stripeGet(path, params = {}) {
   const qs = new URLSearchParams();
-  Object.entries(params).forEach(([k, v]) => qs.append(k, String(v)));
-  const response = await fetch(`https://api.stripe.com/v1/${path}?${qs}`, { headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY.value()}` } });
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== "") qs.append(k, String(v));
+  });
+  const response = await fetch(`https://api.stripe.com/v1/${path}?${qs}`, {
+    headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY.value()}` }
+  });
   const data = await response.json();
-  if (!response.ok) throw new Error(data?.error?.message || "Stripe request failed");
+  if (!response.ok) throw stripeApiError(response, data);
   return data;
+}
+
+function trustedAppOrigin(value) {
+  const origin = String(value || "").replace(/\/$/, "");
+  const allowed = new Set([
+    "https://stop-tracker.vercel.app",
+    "https://stop-tracker-davidwbonis-projects.vercel.app",
+    "https://stop-tracker-git-main-davidwbonis-projects.vercel.app"
+  ]);
+  if (!allowed.has(origin)) {
+    throw new HttpsError("invalid-argument", "Invalid return URL.");
+  }
+  return origin;
 }
 
 // System prompt: describe the six pay models + the exact JSON we want back.
@@ -473,33 +507,81 @@ exports.createProCheckout = onCall(
   { secrets: [STRIPE_SECRET_KEY], cors: true, invoker: "public" },
   async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "You must be signed in.");
-    const plan = request.data?.plan === "annual" ? "annual" : request.data?.plan === "monthly" ? "monthly" : null;
+
+    const plan =
+      request.data?.plan === "annual" ? "annual" :
+      request.data?.plan === "monthly" ? "monthly" :
+      null;
     if (!plan) throw new HttpsError("invalid-argument", "Choose monthly or annual.");
-    const lookupKey = plan === "annual" ? "stop_tracker_pro_annual" : "stop_tracker_pro_monthly";
-    const prices = await stripeGet("prices", { "lookup_keys[]": lookupKey, active: true, limit: 1 });
-    const priceId = prices.data[0]?.id;
-    if (!priceId) throw new HttpsError("failed-precondition", "This Pro plan is not configured in Stripe.");
-    const userRef = admin.firestore().collection("users").doc(request.auth.uid);
-    const snap = await userRef.get();
-    const user = snap.data() || {};
-    let customerId = user.stripeCustomerId;
-    if (!customerId) {
-      const customer = await stripePost("customers", { email: request.auth.token.email || undefined, "metadata[firebaseUid]": request.auth.uid });
-      customerId = customer.id;
-      await userRef.set({ stripeCustomerId: customerId }, { merge: true });
+
+    const origin = trustedAppOrigin(request.data?.origin);
+    const lookupKey = plan === "annual"
+      ? "stop_tracker_pro_annual"
+      : "stop_tracker_pro_monthly";
+
+    try {
+      const prices = await stripeGet("prices", {
+        "lookup_keys[]": lookupKey,
+        active: true,
+        limit: 1
+      });
+      const priceId = prices.data?.[0]?.id;
+      if (!priceId) {
+        throw new HttpsError("failed-precondition", "This Pro plan is not configured in Stripe.");
+      }
+
+      const userRef = admin.firestore().collection("users").doc(request.auth.uid);
+      const snap = await userRef.get();
+      const user = snap.data() || {};
+      const customerId = typeof user.stripeCustomerId === "string" ? user.stripeCustomerId : "";
+      const email = request.auth.token.email || user.email || "";
+
+      const baseParams = {
+        mode: "subscription",
+        "line_items[0][price]": priceId,
+        "line_items[0][quantity]": 1,
+        success_url: `${origin}/app/profile?billing=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/app/profile?billing=cancelled`,
+        client_reference_id: request.auth.uid,
+        "metadata[firebaseUid]": request.auth.uid,
+        "subscription_data[metadata][firebaseUid]": request.auth.uid,
+      };
+
+      let session;
+      try {
+        session = await stripePost("checkout/sessions", {
+          ...baseParams,
+          ...(customerId ? { customer: customerId } : { customer_email: email })
+        });
+      } catch (firstError) {
+        // A stale customer ID should never strand a user. Retry once and let
+        // Checkout create/attach the customer from the authenticated email.
+        if (!customerId) throw firstError;
+        console.warn("Retrying Stripe Checkout without saved customer:", firstError.stripeCode || firstError.status || "unknown");
+        session = await stripePost("checkout/sessions", {
+          ...baseParams,
+          customer_email: email
+        });
+      }
+
+      if (!session?.url) {
+        throw new Error("Stripe Checkout did not return a URL.");
+      }
+      return { url: session.url };
+    } catch (err) {
+      if (err instanceof HttpsError) throw err;
+      console.error("Stripe Checkout failed:", {
+        status: err?.status || null,
+        type: err?.stripeType || null,
+        code: err?.stripeCode || null,
+        message: err?.message || "unknown"
+      });
+
+      if (err?.status === 401 || err?.stripeType === "invalid_request_error" && /api key/i.test(err?.message || "")) {
+        throw new HttpsError("failed-precondition", "Stripe test billing is not configured correctly yet.");
+      }
+      throw new HttpsError("internal", "Could not open Stripe Checkout. Please try again.");
     }
-    const origin = String(request.data?.origin || "").replace(/\/$/, "");
-    if (!/^https:\/\//.test(origin)) throw new HttpsError("invalid-argument", "Invalid return URL.");
-    const session = await stripePost("checkout/sessions", {
-      mode: "subscription", customer: customerId,
-      "line_items[0][price]": priceId, "line_items[0][quantity]": 1,
-      success_url: `${origin}/app/profile?billing=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/app/profile?billing=cancelled`,
-      client_reference_id: request.auth.uid,
-      "metadata[firebaseUid]": request.auth.uid,
-      "subscription_data[metadata][firebaseUid]": request.auth.uid,
-    });
-    return { url: session.url };
   }
 );
 
@@ -554,8 +636,7 @@ exports.createBillingPortal = onCall(
     const user = await admin.firestore().collection("users").doc(request.auth.uid).get();
     const customerId = ent.data()?.stripeCustomerId || user.data()?.stripeCustomerId;
     if (!customerId) throw new HttpsError("failed-precondition", "No Stripe customer exists for this account.");
-    const origin = String(request.data?.origin || "").replace(/\/$/, "");
-    if (!/^https:\/\//.test(origin)) throw new HttpsError("invalid-argument", "Invalid return URL.");
+    const origin = trustedAppOrigin(request.data?.origin);
     const session = await stripePost("billing_portal/sessions", { customer: customerId, return_url: `${origin}/app/profile` });
     return { url: session.url };
   }
