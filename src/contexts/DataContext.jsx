@@ -29,6 +29,8 @@ export const DataProvider = ({ children }) => {
   const [logs, setLogs] = useState([]); // Initialize with empty array
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [lastSaveStatus, setLastSaveStatus] = useState('');
   const [isNewUser, setIsNewUser] = useState(false);
   const [paymentConfig, setPaymentConfig] = useState(normalizePayStructure(null));
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
@@ -45,6 +47,10 @@ export const DataProvider = ({ children }) => {
     
     const loadData = async () => {
       setLoading(true);
+      setLoadError('');
+      setLogs([]);
+      setPaymentConfig(normalizePayStructure(null));
+      setLastSaveStatus('');
       try {
         console.log("Loading user data...");
         
@@ -56,53 +62,20 @@ export const DataProvider = ({ children }) => {
             const guestAnchor = localStorage.getItem(`payPeriodAnchor_${user.uid}`);
             const guestPeriods = localStorage.getItem(`periodRecords_${user.uid}`);
             
-            // Create demo data if it doesn't exist
-            const demoLogs = guestLogs ? JSON.parse(guestLogs) : [
-              {
-                id: 'demo_1',
-                date: new Date().toISOString().split('T')[0],
-                stops: 25,
-                extra: 7.50,
-                total: 54.50,
-                notes: "Busy day with lots of packages",
-                timestamp: new Date(Date.now() - 86400000).toISOString()
-              },
-              {
-                id: 'demo_2', 
-                date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-                stops: 32,
-                extra: 8.75,
-                total: 68.75,
-                notes: "Peak time deliveries",
-                timestamp: new Date(Date.now() - 172800000).toISOString()
-              },
-              {
-                id: 'demo_3',
-                date: new Date(Date.now() - 172800000).toISOString().split('T')[0],
-                stops: 28,
-                extra: 8.00,
-                total: 61.20,
-                notes: "Smooth delivery route",
-                timestamp: new Date(Date.now() - 259200000).toISOString()
-              }
-            ];
-            
+            // Real guest ledgers start empty. Tour examples are UI-only.
+            const demoLogs = guestLogs ? JSON.parse(guestLogs) : [];
             setLogs(demoLogs);
-            
-            // Save demo data for future sessions
-            if (!guestLogs) {
-              localStorage.setItem(`guestLogs_${user.uid}`, JSON.stringify(demoLogs));
-            }
             setPaymentConfig(normalizePayStructure(guestConfig ? JSON.parse(guestConfig) : null));
             setPayPeriodAnchor(guestAnchor || null);
             setPayPeriodNeedsConfirmation(!guestAnchor && demoLogs.length > 0);
             setPeriodRecords(guestPeriods ? JSON.parse(guestPeriods) : {});
-            setIsNewUser(true); // Guest users are always "new" for demo purposes
+            setIsNewUser(demoLogs.length === 0);
             // First-run pay setup for guests too, survives reload via localStorage.
             setNeedsOnboarding(!localStorage.getItem(`onboarded_${user.uid}`) && !guestConfig);
           } catch (err) {
             console.error("Error loading guest data:", err);
             setLogs([]);
+            setLoadError("Your saved work could not be loaded. Please retry.");
           }
           setLoading(false);
           return;
@@ -161,9 +134,13 @@ export const DataProvider = ({ children }) => {
           while (!data && retries < maxRetries) {
             try {
               data = await syncData.forceRefreshAllData(user.uid);
+              if (!data || data.success === false) throw new Error("Refresh failed");
+              if (data.logs) setLogs(data.logs);
+              if (data.paymentConfig) setPaymentConfig(normalizePayStructure(data.paymentConfig));
               break;
             } catch (fetchErr) {
               console.warn(`Fetch attempt ${retries + 1} failed:`, fetchErr);
+              data = null;
               retries++;
               if (retries < maxRetries) {
                 await new Promise(r => setTimeout(r, 1000 * retries));
@@ -172,13 +149,15 @@ export const DataProvider = ({ children }) => {
           }
           
           // If still no data, set empty
-          if (!data) {
+          if (!data || data.success === false) {
+            setLoadError("Your saved work could not be loaded. Please retry.");
             console.warn("Could not fetch fresh data, using fallback");
             setLogs([]);
           }
         }
       } catch (err) {
         console.error("Error loading data:", err);
+        setLoadError("Your saved work could not be loaded. Please retry.");
         // Set empty logs as fallback
         setLogs([]);
       } finally {
@@ -191,20 +170,25 @@ export const DataProvider = ({ children }) => {
 
   // Update logs and sync to backend
   const updateLogs = async (newLogs) => {
-    setLogs(newLogs);
-    if (user?.uid) {
-      try {
-        if (user.isGuest) {
-          // Save guest data to localStorage
-          localStorage.setItem(`guestLogs_${user.uid}`, JSON.stringify(newLogs));
-        } else {
-          // Save regular user data to Firebase
-          await syncData.saveDeliveryLogs(user.uid, newLogs);
-        }
-      } catch (err) {
-        console.error("Error updating logs:", err);
-      }
+    if (!user?.uid) throw new Error('Sign in before saving.');
+    let result;
+    if (user.isGuest) {
+      localStorage.setItem(`guestLogs_${user.uid}`, JSON.stringify(newLogs));
+      result = { success: true, isOnline: false };
+      setLastSaveStatus('guest');
+    } else {
+      result = await syncData.saveDeliveryLogs(user.uid, newLogs);
+      if (!result?.success) throw new Error('Could not save your work.');
+      setLastSaveStatus(result.isOnline ? 'synced' : 'local');
     }
+    setLogs(newLogs);
+    setIsNewUser(false);
+    return result;
+  };
+
+  const adoptPaymentConfig = config => {
+    setPaymentConfig(normalizePayStructure(config));
+    if (user?.isGuest) localStorage.setItem(`guestConfig_${user.uid}`, JSON.stringify(config));
   };
 
   // Complete first-run onboarding: optionally save the chosen pay config, mark
@@ -265,11 +249,13 @@ export const DataProvider = ({ children }) => {
         
         if (guestLogs) setLogs(JSON.parse(guestLogs));
         if (guestConfig) setPaymentConfig(normalizePayStructure(JSON.parse(guestConfig)));
+        setLoadError('');
         return true;
       } else {
         // For regular users, sync with Firebase
         await syncData.processPendingTransactions(user.uid);
         const refreshedData = await syncData.forceRefreshAllData(user.uid);
+        if (!refreshedData || refreshedData.success === false) throw new Error("Could not refresh");
         
         if (refreshedData && refreshedData.logs) {
           setLogs(refreshedData.logs);
@@ -279,6 +265,8 @@ export const DataProvider = ({ children }) => {
           setPaymentConfig(normalizePayStructure(refreshedData.paymentConfig));
         }
         
+        setLoadError('');
+        setLastSaveStatus('synced');
         return true;
       }
     } catch (err) {
@@ -291,6 +279,9 @@ export const DataProvider = ({ children }) => {
 
   const value = {
     logs,
+    loadError,
+    lastSaveStatus,
+    adoptPaymentConfig,
     updateLogs,
     loading,
     syncing,

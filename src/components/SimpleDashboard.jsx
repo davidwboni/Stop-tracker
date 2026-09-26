@@ -1,110 +1,121 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
-import { useData } from "../contexts/DataContext";
-import { Card, CardContent } from "./ui/card";
-import DailyQuickEntry from "./DailyQuickEntry";
-import { Money } from "./ui/money";
-import { ArrowRight, Plus, UserCircle } from "lucide-react";
-import { getPeriodForDate, summarizePeriod } from "../features/payperiod/periods";
+import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Eye, EyeOff, Package, Plus, History, ChevronRight, ChevronDown } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { useData } from '../contexts/DataContext';
+import DailyQuickEntry from './DailyQuickEntry';
+import HomeExpenseDialog from './HomeExpenseDialog';
+import useExpenses from '../hooks/useExpenses';
+import { getPeriodForDate, isoDate } from '../features/payperiod/periods';
+import { money, pennies, summarizeDay, weekFor } from '../features/home/homeModel';
+import { trackProductEvent as track } from '../services/productAnalytics';
+import '../styles/home.css';
 
-const dateKey = (d) => d.toISOString().split("T")[0];
-const SimpleDashboard = () => {
+const shortDate = value => new Date(`${value}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+const readHidden = () => { try { return localStorage.getItem('home-hide-money') === '1'; } catch (_) { return false; } };
+export default function SimpleDashboard() {
   const { user } = useAuth();
-  const { logs = [], loading, payPeriodAnchor, isNewUser } = useData();
-  const [quickOpen,setQuickOpen] = useState(false);
+  const { logs = [], loading, loadError, forceSync, paymentConfig, payPeriodAnchor, periodRecords = {}, isNewUser, lastSaveStatus } = useData();
+  const costs = useExpenses();
   const navigate = useNavigate();
-  const today = dateKey(new Date());
-  const [entryDate,setEntryDate] = useState(today);
+  const location = useLocation();
+  const [now, setNow] = useState(() => new Date());
+  const [hidden, setHidden] = useState(readHidden);
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [expenseOpen, setExpenseOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [online, setOnline] = useState(navigator.onLine);
+  const [notice, setNotice] = useState('');
+  const today = isoDate(now);
+  const [entryDate, setEntryDate] = useState(today);
+  const todayRows = logs.filter(l => l.date === today);
+  const todayLog = todayRows[0];
+  const day = summarizeDay(todayLog, costs.expenses);
+  const week = weekFor(now);
+  const weekRows = logs.filter(l => l.date >= week.start && l.date <= today);
+  const weekKnown = weekRows.every(l => l.total != null && Number.isFinite(Number(l.total)));
+  const weekGross = weekRows.reduce((sum, l) => sum + pennies(l.total || 0), 0) / 100;
+  const period = useMemo(() => payPeriodAnchor ? getPeriodForDate(payPeriodAnchor, now) : null, [payPeriodAnchor, now]);
+  const periodRecord = period ? periodRecords[period.id] : null;
+  const hasDifference = periodRecord && (Number(periodRecord.differenceAmount) !== 0 || Number(periodRecord.differenceStops) !== 0) && (periodRecord.differenceAmount != null || periodRecord.differenceStops != null);
+  const periodStatus = hasDifference ? 'Difference found' : periodRecord?.status === 'reconciled' ? 'Checked' : 'Tracking';
+  const cash = value => hidden ? '••••' : money(value);
+  const model = day?.model || paymentConfig?.model;
+  const primaryMetric = model === 'per_day' ? ['Yes', 'Worked today'] : model === 'hourly' ? [todayLog?.quantity ?? todayLog?.hours ?? '—', 'Hours'] : model === 'per_mile' ? [todayLog?.quantity ?? todayLog?.miles ?? '—', 'Miles'] : [todayLog?.stops ?? '—', 'Stops'];
+  const parcelRelevant = ['flat_stops', 'tiered_stops', 'sliding_scale'].includes(model) && Number((day?.config || paymentConfig)?.excessParcelRate) > 0;
+  const prompt = model === 'per_day' ? 'Did you work today?' : model === 'hourly' ? 'How many hours did you work today?' : model === 'per_mile' ? 'How many miles did you drive today?' : 'How many stops did you do today?';
+  const hour = now.getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 
-  const todayLog = useMemo(() => logs.find((l) => l.date === today), [logs, today]);
-  const periodDef = useMemo(() => getPeriodForDate(payPeriodAnchor || today, new Date()), [payPeriodAnchor, today]);
-  const period = useMemo(() => summarizePeriod(logs, periodDef), [logs, periodDef]);
+  useEffect(() => {
+    const refresh = () => { setNow(new Date()); setOnline(navigator.onLine); };
+    const timer = setInterval(refresh, 60000);
+    window.addEventListener('focus', refresh); window.addEventListener('online', refresh); window.addEventListener('offline', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => { clearInterval(timer); window.removeEventListener('focus', refresh); window.removeEventListener('online', refresh); window.removeEventListener('offline', refresh); document.removeEventListener('visibilitychange', refresh); };
+  }, []);
+  useEffect(() => { if (!loading) track('home_viewed', { state: loadError ? 'error' : todayLog ? 'saved' : 'empty' }); }, [loading, loadError, todayLog]);
+  useEffect(() => {
+    if (loading || loadError || todayLog || isNewUser || location.state?.walkthrough || hour < 13) return;
+    try {
+      if (!localStorage.getItem(`daily-quick-entry-dismissed-${user?.uid}-${today}`)) {
+        localStorage.setItem(`daily-quick-entry-dismissed-${user?.uid}-${today}`, '1');
+        setEntryDate(today); setQuickOpen(true); track('quick_entry_opened', { mode: 'new', source: 'home' });
+      }
+    } catch (_) { /* Explicit Quick Entry remains available without browser storage. */ }
+  }, [loading, loadError, todayLog, isNewUser, location.state?.walkthrough, hour, user?.uid, today]);
+  function openEntry(date = today) {
+    setEntryDate(date); setQuickOpen(true);
+    track('quick_entry_opened', { mode: logs.some(l => l.date === date) ? 'edit' : 'new', source: 'home' });
+  }
+  function toggleHidden() { const next = !hidden; setHidden(next); try { localStorage.setItem('home-hide-money', next ? '1' : '0'); } catch (_) {} }
+  const records = () => { track('records_opened', { source: 'home' }); navigate('/app/entries'); };
+  const goMoney = range => { track('money_overview_viewed', { source: 'home' }); navigate('/app/money', { state: range }); };
 
-  const recent = useMemo(() => [...logs].filter(l => l.date <= today).sort((a,b) => b.date.localeCompare(a.date)).slice(0,3), [logs, today]);
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-  const startLabel = new Date(period.start+"T12:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short"});
-  const endLabel = new Date(period.end+"T12:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short"});
-
-  useEffect(()=>{
-    if(loading || todayLog || isNewUser) return;
-    const dismissed=localStorage.getItem(`daily-quick-entry-dismissed-${today}`);
-    if(new Date().getHours()>=13 && !dismissed) setQuickOpen(true);
-  },[loading,todayLog,today,isNewUser]);
-  const dismissQuick=()=>{localStorage.setItem(`daily-quick-entry-dismissed-${today}`,"1");setQuickOpen(false);};
-
-  if (loading) return <div className="flex min-h-[60vh] items-center justify-center"><div className="h-10 w-10 animate-spin rounded-full border-2 border-[#7567ff] border-t-transparent"/></div>;
-
-  return (
-    <div className="mx-auto max-w-2xl space-y-5 pb-24">
-      <header className="-mt-2 flex items-center justify-between">
-        <div>
-          <p className="text-xs text-[#8e9ab2]">{greeting}</p>
-          <h1 className="text-2xl font-bold tracking-tight">{user?.displayName?.split(" ")[0] || "Driver"}</h1>
-        </div>
-        <button onClick={() => navigate("/app/profile")} aria-label="Open profile" className="rounded-2xl border border-[#202a3d] bg-[#111827] p-3 text-[#9aa6bd] active:scale-95">
-          <UserCircle className="h-6 w-6"/>
-        </button>
-      </header>
-
-      <section>
-        <p className="mb-2 text-xs font-bold tracking-[0.18em] text-[#69758d]">TODAY</p>
-        {todayLog ? (
-          <Card className="border-[#2a3450] bg-gradient-to-br from-[#151c2c] to-[#101624]">
-            <CardContent className="p-5">
-              <div className="mb-4 flex items-center justify-between">
-                <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400">LOGGED ✓</span>
-                <button onClick={() => navigate("/app/entries")} className="text-xs font-semibold text-[#8f83ff]">Edit entry</button>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><div className="text-3xl font-bold">{todayLog.stops || 0}</div><div className="mt-1 text-xs text-[#8e9ab2]">stops</div></div>
-                <div><div className="text-3xl font-bold text-[#8f83ff]"><Money amount={todayLog.total || 0}/></div><div className="mt-1 text-xs text-[#8e9ab2]">expected</div></div>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="border-[#302a5b] bg-gradient-to-br from-[#18152d] via-[#12182a] to-[#101624]">
-            <CardContent className="p-5">
-              <h2 className="text-xl font-bold">Ready when you are</h2>
-              <p className="mt-1 text-sm text-[#929db2]">Log today's deliveries in a few seconds.</p>
-              <button onClick={()=>{setEntryDate(today);setQuickOpen(true)}} className="mt-4 h-14 w-full rounded-2xl bg-[#7567ff] text-sm font-bold text-white">Log today's work</button>
-            </CardContent>
-          </Card>
-        )}
-      </section>
-
-      <section>
-        <div className="mb-2 flex items-end justify-between">
-          <div><p className="text-xs font-bold tracking-[0.18em] text-[#69758d]">CURRENT PAY PERIOD</p><p className="mt-1 text-xs text-[#8e9ab2]">{startLabel} — {endLabel}</p></div>
-          <button onClick={() => navigate("/app/periods")} className="flex items-center gap-1 text-xs font-semibold text-[#8f83ff]">View periods <ArrowRight className="h-3.5 w-3.5"/></button>
-        </div>
-        <Card className="border-[#202a3d] bg-[#111827]">
-          <CardContent className="p-5">
-            <div className="grid grid-cols-2 gap-5">
-              <div><div className="text-3xl font-bold">{period.stops.toLocaleString("en-GB")}</div><div className="mt-1 text-xs text-[#8e9ab2]">stops recorded</div></div>
-              <div><div className="text-3xl font-bold text-[#8f83ff]"><Money amount={period.expected}/></div><div className="mt-1 text-xs text-[#8e9ab2]">expected earnings</div></div>
-            </div>
-            <div className="mt-5 border-t border-[#202a3d] pt-4 text-sm text-[#9aa6bd]">{period.daysLogged} work {period.daysLogged === 1 ? "day" : "days"} logged in this 4-week period</div>
-          </CardContent>
-        </Card>
-      </section>
-
-      {recent.length > 0 && <section>
-        <div className="mb-2 flex items-center justify-between"><p className="text-xs font-bold tracking-[0.18em] text-[#69758d]">RECENT</p><button onClick={() => navigate("/app/entries")} className="text-xs font-semibold text-[#8f83ff]">View all</button></div>
-        <div className="overflow-hidden rounded-2xl border border-[#202a3d] bg-[#111827]">
-          {recent.map((log,i) => <button key={log.id || log.date} onClick={() => navigate("/app/entries")} className={`flex w-full items-center justify-between p-4 text-left active:bg-[#151d2d] ${i ? "border-t border-[#202a3d]" : ""}`}>
-            <div><div className="text-sm font-semibold">{new Date(log.date+"T12:00:00").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})}</div><div className="mt-1 text-xs text-[#8e9ab2]">{log.stops || 0} stops</div></div>
-            <div className="text-sm font-bold text-[#8f83ff]"><Money amount={log.total || 0}/></div>
-          </button>)}
-        </div>
-      </section>}
-
-      <div className="grid grid-cols-[1fr_auto] gap-2"><button onClick={()=>{setEntryDate(today);setQuickOpen(true)}} data-tour="log-work" className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#5f50e8] to-[#7866ff] px-4 text-sm font-bold text-white shadow-lg shadow-[#7567ff]/10"><Plus className="h-5 w-5"/> {todayLog?"Update today":"Log today’s work"}</button><button onClick={()=>{const d=new Date();d.setDate(d.getDate()-1);setEntryDate(dateKey(d));setQuickOpen(true)}} data-tour="past-entry" className="h-14 rounded-2xl border border-[#303b55] bg-[#111827] px-4 text-sm font-semibold text-[#aeb8ca]">+ Past entry</button></div>
-      <p className="px-2 pt-2 text-center text-xs text-[#5f6a80]">Your work. Your records. Your pay.</p>
-      <DailyQuickEntry open={quickOpen} initialDate={entryDate} onDateChange={setEntryDate} onClose={dismissQuick} onSaved={()=>setQuickOpen(false)}/>
+  return <div className="home-screen home-layout">
+    <header className="home-header">
+      <div className="home-row"><div className="home-brand"><Package aria-hidden="true" /><span>STOP TRACKER</span></div><div className="flex gap-2"><button className="home-icon" onClick={toggleHidden} aria-label={hidden ? 'Show monetary amounts' : 'Hide monetary amounts'} aria-pressed={hidden}>{hidden ? <EyeOff /> : <Eye />}</button><button className="home-icon" aria-label="Open profile" onClick={() => navigate('/app/profile')}>{user?.displayName?.[0]?.toUpperCase() || 'D'}</button></div></div>
+      <h1>{greeting}, {user?.displayName?.split(' ')[0] || 'Driver'}</h1>
+      <p className="home-muted">{now.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}</p>
+    </header>
+    {(!online || lastSaveStatus === 'local' || costs.pending) && <p role="status" className="home-banner">{!online ? 'Offline · showing available records' : 'Changes on this device · waiting to sync'}</p>}
+    {notice && <p role="status" className="home-banner">{notice}</p>}
+    <div className="home-columns">
+      <div className="space-y-3">
+        <section className="home-card" aria-labelledby="today-title" aria-busy={loading}>
+          <div className="home-row"><h2 id="today-title">Today</h2><span className="home-badge">Estimated</span></div>
+          {loading ? <div role="status" aria-label="Loading today's work" className="home-skeleton" /> : loadError ? <div role="alert" className="space-y-3 py-5"><p>{loadError}</p><button className="home-secondary" onClick={forceSync}>Retry loading records</button></div> : todayLog && !day?.unavailable ? <>
+            <div className="home-metrics"><div><strong>{primaryMetric[0]}</strong><span>{primaryMetric[1]}</span></div>{parcelRelevant && <div><strong>{day.excess ?? '—'}</strong><span>Excess parcels{day.excess == null ? ' · not recorded' : ''}</span></div>}</div>
+            <div className="home-hero"><h3>{day.takeHome == null ? 'Recorded gross earnings' : 'Estimated take-home'}</h3><div className={`home-money ${day.takeHome < 0 ? 'home-negative' : ''}`} aria-live="polite">{costs.loading && day.takeHome != null ? '…' : costs.error && day.takeHome != null ? 'Unavailable' : cash(day.takeHome ?? day.gross)}</div><p className="home-muted text-sm">Recorded costs only<br />Before personal tax</p></div>
+            {day.feeRate == null && <p className="home-banner">No contractor fee was recorded with this entry. Its original gross is preserved; take-home cannot be verified.</p>}
+            {todayRows.length > 1 && <p className="home-banner">Multiple records exist for today. <button onClick={records} className="underline">Review records</button> before editing.</p>}
+            <dl className="home-breakdown"><div><dt>Gross earnings</dt><dd>{cash(day.gross)}</dd></div><div><dt>After contractor fee{day.feeRate != null ? ` (${day.feeRate}%)` : ''}</dt><dd>{day.afterFee == null ? 'Not recorded' : cash(day.afterFee)}</dd></div><div><dt><button className="home-text-button" onClick={() => goMoney({ start: today, end: today })}>Expenses today</button></dt><dd>{costs.loading ? 'Loading…' : costs.error ? 'Unavailable' : cash(-day.expenses)}</dd></div></dl>
+            {costs.error && <p role="alert" className="home-error">{costs.error} <button className="home-text-button underline" onClick={costs.retry}>Retry</button></p>}
+            {costs.expenses.some(e => e.periodOnly) && <p className="home-muted text-sm">Period-wide charges are not included in today’s estimate.</p>}
+            <button className="home-link-row" aria-expanded={expanded} aria-controls="home-calculation" onClick={() => { setExpanded(!expanded); if (!expanded) track('home_calculation_expanded'); }}>View calculation<ChevronDown className={expanded ? 'rotate-180' : ''} /></button>
+            {expanded && <div id="home-calculation" className="home-detail">
+              {day.config?.model === 'flat_stops' && <p>{todayLog.stops} stops × {cash(day.config.ratePerStop)}</p>}
+              {day.config?.model === 'per_day' && <p>Day rate: {cash(day.config.ratePerDay)}</p>}
+              {day.config && parcelRelevant && day.excess != null && <p>{day.excess} excess parcels × {cash(day.config.excessParcelRate)}</p>}
+              <p>Extra work: {cash(Number(todayLog.extra) || 0)}</p>
+              {day.fee != null && <p>Contractor fee: {cash(-day.fee)}</p>}
+              <p>Contractor charges: {cash(-day.dailyExpenses.filter(e => e.source === 'contractor_charge').reduce((s, e) => s + Number(e.amount), 0))}</p>
+              <p>My expenses: {cash(-day.dailyExpenses.filter(e => e.source === 'my_expense').reduce((s, e) => s + Number(e.amount), 0))}</p>
+              <p className="home-muted">Uses the earnings saved with this record. Period reconciliation is separate from payment received.</p>
+            </div>}
+          </> : <div className="home-empty"><h3>{todayLog ? 'This entry needs checking' : prompt}</h3><p className="home-muted">{todayLog ? 'The saved earnings could not be read. Review the record before relying on a total.' : 'Use Quick Entry below. Your estimate appears after saving.'}</p><button className="home-text-button" onClick={() => navigate('/app/settings')}>Review pay structure <ChevronRight size={16} /></button></div>}
+        </section>
+        <div className="home-secondary-actions"><button className="home-secondary" onClick={() => { track('expense_opened', { source: 'home' }); setExpenseOpen(true); }}><Plus size={20} />Add expense</button><button className="home-secondary" onClick={records}><History size={20} />View records</button></div>
+      </div>
+      <aside className="space-y-3">
+        <section className="home-card"><div className="home-row"><h2>This week so far</h2><span className="home-badge">Estimated</span></div><p className="home-muted text-sm mt-2">{shortDate(week.start)}–{shortDate(week.end)}</p><p className="home-week-money">{loading ? '…' : loadError || !weekKnown ? 'Unavailable' : weekRows.length ? cash(weekGross) : 'No work logged'}</p><p className="home-muted text-sm">Gross earnings</p><button className="home-link-row" onClick={() => goMoney(week)}>View week<ChevronRight /></button></section>
+        <button className="home-card home-period" onClick={() => period ? goMoney(period) : navigate('/app/periods')}><span><strong>Current pay period</strong><span className="home-muted block mt-1">{period ? `${shortDate(period.start)}–${shortDate(period.end)} · ${periodStatus}` : 'Set your pay-period dates'}</span></span><ChevronRight /></button>
+        <button data-tour="past-entry" className="home-text-button" onClick={() => { const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1); openEntry(isoDate(yesterday)); }}>Log another day<ChevronRight size={16} /></button>
+      </aside>
     </div>
-  );
-};
-export default SimpleDashboard;
+    {!quickOpen && <div className="home-entry-dock"><p className="home-muted text-xs mb-2">{todayLog ? 'Today saved · Tap to edit' : 'Your work. Your records. Your pay.'}</p><button data-tour="log-work" className="home-primary w-full" disabled={loading || !!loadError} onClick={() => todayRows.length > 1 ? records() : openEntry()}><Plus size={22} />Quick Entry</button></div>}
+    {createPortal(<DailyQuickEntry open={quickOpen} initialDate={entryDate} onDateChange={setEntryDate} onClose={() => setQuickOpen(false)} onSaved={() => { setQuickOpen(false); setNotice('Work saved'); }} />, document.body)}
+    {expenseOpen && <HomeExpenseDialog open onClose={() => setExpenseOpen(false)} save={costs.save} isGuest={user?.isGuest} />}
+  </div>;
+}

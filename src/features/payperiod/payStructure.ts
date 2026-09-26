@@ -12,6 +12,7 @@ export interface PayStructure {
   model: PayModel;
   thresholds?: PaymentTier[];
   excessParcelRate?: number;
+  contractorFeePercent?: number;
   ratePerStop?: number;
   ratePerMile?: number;
   baseFee?: number;

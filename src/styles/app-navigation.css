@@ -1,0 +1,7 @@
+@media (min-width:1024px) {
+  .st-app-shell { padding-left:104px; }
+  .st-app-navigation { top:0; right:auto; bottom:0; width:104px; border-top:0; border-right:1px solid var(--border); padding-top:max(24px,env(safe-area-inset-top)); }
+  .st-app-navigation > div { flex-direction:column; gap:12px; }
+  .st-app-navigation button { flex:none; width:88px; min-height:68px; }
+}
+@media(prefers-reduced-motion:reduce) { .st-app-navigation * { transition:none!important; } }

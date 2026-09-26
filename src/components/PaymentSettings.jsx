@@ -58,7 +58,7 @@ const PaymentSettings = ({ userId, user, onSettingsSaved }) => {
 
   const selectModel = (id) => {
     if (id === config.model) return;
-    setConfig({ model: id, ...SEED[id] });
+    setConfig({ model: id, ...SEED[id], contractorFeePercent: config.contractorFeePercent ?? 0 });
     setSuccess(null);
     setError(null);
   };
@@ -102,7 +102,11 @@ const PaymentSettings = ({ userId, user, onSettingsSaved }) => {
     }
   };
 
-  const handleSave = () => saveConfig(config);
+  const handleSave = () => {
+    const fee = Number(config.contractorFeePercent ?? 0);
+    if (!Number.isFinite(fee) || fee < 0 || fee > 100) { setError('Contractor fee must be between 0% and 100%.'); return; }
+    saveConfig({ ...config, contractorFeePercent: fee });
+  };
 
   // AI confirmed a config: adopt it, show it in the manual editor, and save.
   const handleAIConfirm = (cfg) => {
@@ -243,6 +247,11 @@ const PaymentSettings = ({ userId, user, onSettingsSaved }) => {
               <>{field("ratePerDay", "Rate per day", config.ratePerDay ?? 0, (v) => setParam("ratePerDay", v), "A fixed amount for each day worked")}</>
             )}
 
+            <div className="space-y-2">
+              <Label htmlFor="contractorFeePercent">Contractor / franchise fee (%)</Label>
+              <p className="text-sm text-muted-foreground">Percentage of gross work earnings, including extras. Enter 0 if none. Applies to new entries; existing records retain their saved rates.</p>
+              <Input id="contractorFeePercent" type="number" min="0" max="100" step="0.01" value={config.contractorFeePercent ?? 0} onChange={e => setParam('contractorFeePercent', e.target.value)} />
+            </div>
             {/* Worked example */}
             <div className="mt-4 p-4 rounded-[14px] bg-primary/5 border border-primary/20">
               <p className="text-xs font-semibold text-primary mb-1">QUICK CHECK</p>

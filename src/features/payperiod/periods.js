@@ -14,7 +14,9 @@ const localDate = (value) => {
 
 export const getPeriodForDate = (anchorDate, targetDate = new Date(), lengthDays = 28) => {
   const anchor=localDate(anchorDate), target=localDate(targetDate);
-  const days=Math.floor((target-anchor)/DAY_MS);
+  // Compare calendar dates, not elapsed local hours across daylight-saving changes.
+  const utcDay=d=>Date.UTC(d.getFullYear(),d.getMonth(),d.getDate());
+  const days=Math.floor((utcDay(target)-utcDay(anchor))/DAY_MS);
   const index=Math.floor(days/lengthDays);
   const start=new Date(anchor); start.setDate(start.getDate()+index*lengthDays);
   const end=new Date(start); end.setDate(end.getDate()+lengthDays-1);

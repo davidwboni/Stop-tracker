@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import ErrorBoundary from './ErrorBoundary';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import SyncStatus from './SyncStatus';
@@ -11,6 +11,7 @@ import { useData } from '../contexts/DataContext';
 
 const Layout = () => {
   useAuth();
+  const reducedMotion = useReducedMotion();
   const { needsOnboarding, completeOnboarding } = useData();
   const location = useLocation();
   useEffect(() => {
@@ -24,7 +25,7 @@ const Layout = () => {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col pt-safe">
+    <div className="st-app-shell min-h-[100dvh] bg-background text-foreground flex flex-col pt-safe">
       <SyncStatus />
       <AppWalkthrough />
 
@@ -38,10 +39,9 @@ const Layout = () => {
           <ErrorBoundary>
             <motion.div
               key={location.pathname}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0, transitionEnd: { transform: "none" } }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
-              style={{ willChange: 'opacity, transform' }}
             >
               <Outlet />
             </motion.div>

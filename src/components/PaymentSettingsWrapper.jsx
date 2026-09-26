@@ -5,11 +5,11 @@ import PaymentSettings from "./PaymentSettings";
 
 const PaymentSettingsWrapper = () => {
   const { user } = useAuth();
-  const { updateLogs } = useData();
+  const { adoptPaymentConfig } = useData();
 
   const handleSettingsSaved = (config) => {
     // Callback when settings are saved
-    console.log("Payment settings updated:", config);
+    adoptPaymentConfig(config);
   };
 
   return (

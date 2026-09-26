@@ -15,9 +15,9 @@ const steps=[
  {path:"/app/routes",target:'[data-tour="route-search"]',title:"Build a route",body:"Start here by searching an address. Address checking stays separate from your daily work log.",action:"Tap address search"},
  {path:"/app/routes",target:'[data-tour="nav-check-pay"]',title:"Check Pay",body:"At the end of the pay period, move to Check Pay when your contractor statement arrives.",action:"Tap Check Pay",nextPath:"/app/check-pay"},
  {path:"/app/check-pay",target:'[data-tour="check-manual"]',title:"Compare the statement",body:"You can compare the contractor statement with your own records manually. AI upload will be the faster Pro option.",action:"Tap manual check"},
- {path:"/app/check-pay",target:'[data-tour="nav-invoice"]',title:"Invoice",body:"After the statement is checked, Invoice uses the confirmed amount you need to bill.",action:"Tap Invoice",nextPath:"/app/invoice"},
+ {path:"/app/check-pay",target:'[data-tour="nav-documents"]',title:"Documents",body:"Open your invoice tools here when you need to create or review an invoice.",action:"Tap Documents",nextPath:"/app/invoice"},
  {path:"/app/invoice",target:'[data-tour="invoice-generate"]',title:"Create the invoice",body:"This is the final step after reconciliation. Your real invoice details and amount will be used here.",action:"Tap Generate Invoice"},
- {path:"/app/invoice",target:'[data-tour="nav-insights"]',title:"Insights",body:"Insights keeps the bigger picture together across your work periods.",action:"Tap Insights",nextPath:"/app/stats"},
+ {path:"/app/invoice",target:'[data-tour="nav-money"]',title:"Money",body:"Money connects your totals, expenses and insights.",action:"Tap Money",nextPath:"/app/stats"},
  {path:"/app/stats",target:'[data-tour="insights-period"]',title:"Review each period",body:"Use the period selector to look back at stops, expected earnings and workload trends.",action:"Tap the period selector"},
  {path:"/app/stats",target:'[data-tour="nav-home"]',title:"Back to Home",body:"You now know the main workflow. Tap Home to return to your starting point.",action:"Tap Home",nextPath:"/app/dashboard"},
  {path:"/app/dashboard",title:"You’re ready",body:"The walkthrough did not create or save any work. Your ledger is still blank and ready for your first real entry.",action:"Ready"}

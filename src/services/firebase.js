@@ -1131,7 +1131,7 @@ export const syncData = {
         } catch (err) {
           console.error(`Error saving ${collection} to Firestore:`, err);
           // Continue with offline handling - data is already in localStorage
-          return { success: true, isOnline: false, error: err.message };
+          // Queue the cached change below when the server write fails.
         }
       }
       
@@ -1155,6 +1155,7 @@ export const syncData = {
         localStorage.setItem(pendingKey, JSON.stringify(pendingTransactions));
       } catch (e) {
         console.error('Error queueing transaction:', e);
+        return { success: false, isOnline: false };
       }
       
       return { success: true, isOnline: false };
