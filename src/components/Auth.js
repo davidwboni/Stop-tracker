@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInAnonymously } from "firebase/auth";
-import { auth, signInWithGoogle } from "../services/firebase";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { auth, signInWithGoogle, signInAsGuest } from "../services/firebase";
 import { Loader2, Mail, ArrowLeft, AlertCircle } from "lucide-react";
 
 const GoogleMark = () => (
@@ -45,7 +45,7 @@ export default function Auth(){
       <div className="my-6 flex items-center gap-3 text-xs text-[#5f6a80]"><span className="h-px flex-1 bg-[#202a3d]"/><span>or</span><span className="h-px flex-1 bg-[#202a3d]"/></div>
       <div className="space-y-3">
         <button onClick={()=>run("google",signInWithGoogle)} disabled={!!loading} className="flex h-13 w-full items-center justify-center gap-3 rounded-xl border border-[#2a3550] bg-[#111827] py-3 text-sm font-semibold"><GoogleMark/>{loading==="google"?"Signing in…":"Continue with Google"}</button>
-        <button onClick={()=>run("guest",()=>signInAnonymously(auth))} disabled={!!loading} className="h-13 w-full rounded-xl border border-[#2a3550] py-3 text-sm font-semibold text-[#a9b3c6]">{loading==="guest"?"Opening preview…":"Have a look around first"}</button>
+        <button onClick={()=>run("guest",signInAsGuest)} disabled={!!loading} className="h-13 w-full rounded-xl border border-[#2a3550] py-3 text-sm font-semibold text-[#a9b3c6]">{loading==="guest"?"Opening preview…":"Have a look around first"}</button>
       </div>
       <p className="mt-8 text-center text-[11px] leading-5 text-[#5f6a80]">Your work. Your records. Your pay.</p>
     </motion.div>
