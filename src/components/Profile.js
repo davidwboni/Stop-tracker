@@ -225,22 +225,28 @@ const Profile = ({ userId, user, onLogout }) => {
         </div>
       </div>
 
-      {!isGuest && (
-        <button
-          onClick={async () => {
-            if (!isPro) return navigate("/app/upgrade");
-            setUpdating(true); setError(null);
-            try { await openBillingPortal(); } catch (e) { setError(e?.message || "Could not open subscription management."); setUpdating(false); }
-          }}
-          className="w-full rounded-[14px] border border-[#786cff]/30 bg-[#786cff]/10 px-4 py-4 text-left transition-all active:scale-[0.99]"
-        >
-          <div className="flex items-center justify-between">
-            <div><div className="font-semibold">{isPro ? "Stop Tracker Pro" : "Upgrade to Pro"}</div>
-            <div className="mt-1 text-xs text-muted-foreground">{isPro ? "Manage billing, payment method or cancellation" : "AI checks, full route optimisation and premium tools"}</div></div>
-            <ChevronRight className="h-5 w-5 text-[#8f83ff]" />
+      <button
+        onClick={async () => {
+          if (!isPro) return navigate("/app/upgrade");
+          setUpdating(true); setError(null);
+          try { await openBillingPortal(); } catch (e) { setError(e?.message || "Could not open subscription management."); setUpdating(false); }
+        }}
+        className="w-full rounded-[14px] border border-[#786cff]/30 bg-[#786cff]/10 px-4 py-4 text-left transition-all active:scale-[0.99]"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="font-semibold">{isPro ? "Stop Tracker Pro" : "Upgrade to Pro"}</div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              {isPro
+                ? "Manage billing, payment method or cancellation"
+                : isGuest
+                  ? "See Pro features · sign in before subscribing"
+                  : "AI checks, full route optimisation and premium tools"}
+            </div>
           </div>
-        </button>
-      )}
+          <ChevronRight className="h-5 w-5 shrink-0 text-[#8f83ff]" />
+        </div>
+      </button>
 
       {/* Guest → sign in to save data */}
       {isGuest && (
