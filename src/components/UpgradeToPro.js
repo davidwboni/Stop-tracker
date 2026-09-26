@@ -1,7 +1,10 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { Check, Loader2, ShieldCheck } from "lucide-react";
 import { startProCheckout } from "../services/billing";
+import { useAuth } from "../contexts/AuthContext";
+import { auth } from "../services/firebase";
 
 const plans = [
   { id: "monthly", label: "Monthly", price: "£4.99", suffix: "/month" },
@@ -12,10 +15,35 @@ export default function UpgradeToPro() {
   const [plan, setPlan] = useState("annual");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const isGuest = !!user?.isGuest || !!auth.currentUser?.isAnonymous;
+
   const checkout = async () => {
-    setLoading(true); setError("");
-    try { await startProCheckout(plan); }
-    catch (e) { setError(e?.message || "Could not open secure checkout."); setLoading(false); }
+    if (isGuest) {
+      setError("");
+      sessionStorage.setItem("stopTrackerReturnAfterAuth", "/app/upgrade");
+      await auth.signOut();
+      navigate("/login?returnTo=%2Fapp%2Fupgrade");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    try {
+      await startProCheckout(plan);
+    } catch (e) {
+      const code = String(e?.code || "");
+      const message = String(e?.message || "");
+      if (code.includes("unauthenticated")) {
+        setError("Please sign in to your Stop Tracker account before subscribing.");
+      } else if (code.includes("failed-precondition")) {
+        setError(message.replace(/^Firebase:\s*/i, "") || "Stripe billing is not configured correctly yet.");
+      } else {
+        setError(message.replace(/^Firebase:\s*/i, "") || "Could not open secure checkout.");
+      }
+      setLoading(false);
+    }
   };
   return <div className="mx-auto max-w-xl pb-28 pt-3">
     <motion.div initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} className="space-y-5">
@@ -27,7 +55,13 @@ export default function UpgradeToPro() {
         <div className="text-sm font-semibold">{p.label}</div><div className="mt-2 text-2xl font-bold">{p.price}<span className="text-xs font-normal text-muted-foreground">{p.suffix}</span></div>
       </button>)}</div>
       <div className="rounded-2xl border border-border bg-card p-5 space-y-3">{["AI-assisted statement checking","Full route optimisation","Premium tools as they are released","Core work and earnings ledger stays free"].map(x=><div key={x} className="flex gap-3 text-sm"><Check className="h-5 w-5 shrink-0 text-emerald-500"/><span>{x}</span></div>)}</div>
-      <button onClick={checkout} disabled={loading} className="h-13 w-full rounded-2xl bg-[#786cff] px-4 py-4 font-bold text-white disabled:opacity-60">{loading?<span className="flex items-center justify-center gap-2"><Loader2 className="h-5 w-5 animate-spin"/>Opening secure checkout…</span>:`Continue with ${plan==="annual"?"£49.99/year":"£4.99/month"}`}</button>
+      {isGuest && (
+        <div className="rounded-2xl border border-[#786cff]/30 bg-[#786cff]/10 p-4 text-sm text-muted-foreground">
+          <div className="font-semibold text-foreground">Sign in before subscribing</div>
+          <p className="mt-1 leading-5">Pro is linked to your Stop Tracker account so your subscription follows you across devices.</p>
+        </div>
+      )}
+      <button onClick={checkout} disabled={loading} className="h-13 w-full rounded-2xl bg-[#786cff] px-4 py-4 font-bold text-white disabled:opacity-60">{loading?<span className="flex items-center justify-center gap-2"><Loader2 className="h-5 w-5 animate-spin"/>Opening secure checkout…</span>:isGuest?"Sign in to continue":`Continue with ${plan==="annual"?"£49.99/year":"£4.99/month"}`}</button>
       {error&&<p className="text-center text-sm text-red-400">{error}</p>}
       <p className="flex items-center justify-center gap-2 text-xs text-muted-foreground"><ShieldCheck className="h-4 w-4"/>Payments and subscription management are handled securely by Stripe.</p>
     </motion.div>
