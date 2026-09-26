@@ -43,7 +43,7 @@ const Profile = ({ userId, user, onLogout }) => {
   const storage = getStorage();
   const navigate = useNavigate();
   const { themePreference, setThemePreference } = useTheme();
-  const isGuest = !!user?.isGuest;
+  const isGuest = !!user?.isGuest || !!auth.currentUser?.isAnonymous;
 
   useEffect(() => {
     const fetchUserData = async () => {
