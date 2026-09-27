@@ -36,13 +36,13 @@ describe('Money screen',()=>{
 describe('Money to Check Pay integration',()=>{
  const open=()=>render(<MemoryRouter initialEntries={[{pathname:'/app/check-pay',state:{...period,comparisonScope:'contractor_payout'}}]}><CheckPayV4/></MemoryRouter>);
  it('requires basis confirmation and saves a checked payout without auto-reconciliation',async()=>{
-  open();fireEvent.change(screen.getByLabelText('Statement contractor payout (£)'),{target:{value:'4217.69'}});
+  open();fireEvent.click(screen.getByRole('button',{name:'Enter manually'}));fireEvent.change(screen.getByLabelText('Statement contractor payout (£)'),{target:{value:'4217.69'}});
   expect(screen.getByRole('button',{name:'Compare with my records'})).toBeDisabled();
   fireEvent.click(screen.getByRole('checkbox'));
-  fireEvent.click(screen.getByRole('button',{name:'Compare with my records'}));
+  fireEvent.click(screen.getByRole('button',{name:'Compare with my records'}));fireEvent.click(screen.getByRole('button',{name:'Confirm and save check'}));
   await waitFor(()=>expect(f.save).toHaveBeenCalledTimes(1));
   expect(f.save.mock.calls[0]).toEqual([period.id,expect.objectContaining({status:'checked',payoutComparison:expect.objectContaining({statementPence:421769,expectedPence:426412,scope:'contractor_payout'})}),true]);
   await screen.findByText('Difference found');
  });
- it('retains the form when saving the check fails',async()=>{f.save.mockRejectedValue(new Error('offline'));open();fireEvent.change(screen.getByLabelText('Statement contractor payout (£)'),{target:{value:'4217.69'}});fireEvent.click(screen.getByRole('checkbox'));fireEvent.click(screen.getByRole('button',{name:'Compare with my records'}));await screen.findByText(/Could not save this check/);expect(screen.getByLabelText('Statement contractor payout (£)')).toHaveValue('4217.69');expect(screen.queryByText('Difference found')).not.toBeInTheDocument();});
+ it('retains the form when saving the check fails',async()=>{f.save.mockRejectedValue(new Error('offline'));open();fireEvent.click(screen.getByRole('button',{name:'Enter manually'}));fireEvent.change(screen.getByLabelText('Statement contractor payout (£)'),{target:{value:'4217.69'}});fireEvent.click(screen.getByRole('checkbox'));fireEvent.click(screen.getByRole('button',{name:'Compare with my records'}));fireEvent.click(screen.getByRole('button',{name:'Confirm and save check'}));await screen.findByText(/Could not save this check/);expect(screen.getByText('Comparison preview · Not saved')).toBeInTheDocument();fireEvent.click(screen.getByRole('button',{name:'Edit statement figures'}));expect(screen.getByLabelText('Statement contractor payout (£)')).toHaveValue('4217.69');});
 });

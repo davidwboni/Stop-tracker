@@ -1,0 +1,9 @@
+.check-pay-page{max-width:860px;margin:0 auto;padding-bottom:calc(100px + env(safe-area-inset-bottom));display:grid;gap:20px}
+.check-pay-page h1{font-size:28px;font-weight:750;letter-spacing:-.03em}.check-pay-page h2{font-size:20px;font-weight:700;line-height:1.35}
+.check-period{display:grid;gap:16px}.check-period>.money-badge{justify-self:start}.check-expected strong{display:block;font-size:clamp(28px,8vw,40px);font-weight:750;color:var(--home-money);margin:8px 0;overflow-wrap:anywhere}
+.check-expected p{font-size:14px;line-height:1.6}.check-question{margin:4px 0 0}.check-actions{display:grid;gap:14px}.check-action{display:flex;flex-direction:column;gap:14px}.check-action>.home-row>svg{color:var(--home-purple)}.check-action>button,.check-action>.check-file{margin-top:auto;width:100%}
+.check-file{position:relative;overflow:hidden;cursor:pointer}.check-file input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}.check-file:focus-within{outline:3px solid var(--home-purple);outline-offset:3px}.check-disabled{opacity:.5;cursor:default}
+.check-privacy{font-size:13px;line-height:1.6}.check-draft{display:grid;gap:16px;animation:home-reveal .2s ease-out}.check-basis{display:flex;gap:12px;align-items:flex-start;line-height:1.6;padding:10px 0;cursor:pointer}.check-basis input{min-width:24px;width:24px;height:24px;margin-top:3px}.check-filename{overflow-wrap:anywhere}.check-skeleton{height:145px}.check-pay-page button:disabled{opacity:.5}
+@media(min-width:700px){.check-actions{grid-template-columns:1fr 1fr}.check-pay-page{padding-bottom:36px}}@media(prefers-reduced-motion:reduce){.check-draft{animation:none}}
+
+.check-work-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0}.check-work-day{padding:14px 0;border-top:1px solid var(--border)}.check-work-day h3{font-weight:650}@media(max-width:370px){.check-work-fields{grid-template-columns:1fr}}

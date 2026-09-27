@@ -1,0 +1,24 @@
+import React from 'react';
+import {beforeEach,describe,it,expect,vi} from 'vitest';
+import {render,screen,fireEvent,waitFor} from '@testing-library/react';
+import {MemoryRouter} from 'react-router-dom';
+import {webcrypto} from 'node:crypto';
+import CheckPayV4 from '../components/CheckPayV4';
+const f=vi.hoisted(()=>({data:{},costs:{},status:vi.fn(),extract:vi.fn(),save:vi.fn(),anchor:vi.fn()}));
+vi.mock('../contexts/DataContext',()=>({useData:()=>f.data}));
+vi.mock('../hooks/useExpenses',()=>({default:()=>f.costs}));
+vi.mock('../services/premium',()=>({getPremiumStatus:(...a)=>f.status(...a),extractStatement:(...a)=>f.extract(...a)}));
+vi.stubGlobal('crypto',webcrypto);
+const period={start:'2026-08-17',end:'2026-09-13'};
+const open=()=>render(<MemoryRouter initialEntries={[{pathname:'/app/check-pay',state:period}]}><CheckPayV4/></MemoryRouter>);
+beforeEach(()=>{vi.clearAllMocks();localStorage.clear();f.data={logs:[{date:period.start,total:100,payStructureSnapshot:{contractorFeePercent:6}}],payPeriodAnchor:period.start,periodRecords:{},updatePeriodRecord:f.save,updatePayPeriodAnchor:f.anchor};f.costs={expenses:[{date:period.start,amount:10,source:'my_expense'}],loading:false};f.status.mockResolvedValue({isPro:false,statementAiUses:1});});
+describe('Check Pay entry',()=>{
+ it('shows payout before own expenses, free manual first, and server trial count',async()=>{open();expect(screen.getByText('£94.00')).toBeInTheDocument();expect(screen.queryByText('£84.00')).not.toBeInTheDocument();await screen.findByText('2 free AI checks left');expect(screen.getByRole('button',{name:'Enter manually'})).toBeEnabled();});
+ it('does not invent trial counts when status fails and leaves manual free',async()=>{f.status.mockRejectedValue(new Error('offline'));open();await screen.findByRole('button',{name:'Retry AI availability'});expect(screen.queryByText(/3 free AI checks left/)).not.toBeInTheDocument();expect(screen.getByRole('button',{name:'Enter manually'})).toBeEnabled();});
+ it('switches displayed period without changing pay setup',()=>{open();const select=screen.getByLabelText('Check Pay period');fireEvent.change(select,{target:{value:select.options[0].value}});expect(f.anchor).not.toHaveBeenCalled();});
+ it('shows an empty state instead of a zero expected payout',()=>{f.data.logs=[];open();expect(screen.getByText('No work recorded this period')).toBeInTheDocument();expect(screen.queryByText('£0.00')).not.toBeInTheDocument();expect(screen.getByRole('button',{name:'Enter manually'})).toBeDisabled();});
+ it('shows loading and errors without interim amounts',()=>{f.costs.loading=true;open();expect(screen.getByLabelText('Loading expected payout')).toBeInTheDocument();expect(screen.queryByText('£94.00')).not.toBeInTheDocument();});
+ it('does not save on extraction or use gross earnings as payout',async()=>{f.extract.mockResolvedValue({statementAmount:100,contractorPayout:null,currency:'GBP'});open();await screen.findByText('2 free AI checks left');fireEvent.change(screen.getByLabelText('Choose statement file'),{target:{files:[new File(['image'],'statement.png',{type:'image/png'})]}});fireEvent.click(screen.getByRole('button',{name:'Read statement with AI'}));await screen.findByText('Review extracted payout');expect(screen.getByLabelText('Statement contractor payout (£)')).toHaveValue('');expect(f.save).not.toHaveBeenCalled();});
+ it('does not label foreign extracted money as GBP',async()=>{f.extract.mockResolvedValue({statementAmount:100,contractorPayout:94,currency:'EUR'});open();await screen.findByText('2 free AI checks left');fireEvent.change(screen.getByLabelText('Choose statement file'),{target:{files:[new File(['image'],'statement.png',{type:'image/png'})]}});fireEvent.click(screen.getByRole('button',{name:'Read statement with AI'}));await screen.findByText('Review extracted payout');expect(screen.getByLabelText('Statement contractor payout (£)')).toHaveValue('');expect(screen.getByLabelText('Gross work earnings (£)')).toHaveValue('');});
+ it('requires explicit confirmation after preview before saving',async()=>{open();fireEvent.click(screen.getByRole('button',{name:'Enter manually'}));fireEvent.change(screen.getByLabelText('Statement contractor payout (£)'),{target:{value:'90'}});fireEvent.click(screen.getByRole('checkbox'));fireEvent.click(screen.getByRole('button',{name:'Compare with my records'}));expect(f.save).not.toHaveBeenCalled();fireEvent.click(screen.getByRole('button',{name:'Confirm and save check'}));await waitFor(()=>expect(f.save).toHaveBeenCalledTimes(1));expect(f.save.mock.calls[0][1].payoutComparison.expectedPence).toBe(9400);});
+});

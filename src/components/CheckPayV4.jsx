@@ -1,144 +1,77 @@
-import React, { useEffect, useMemo, useState, useRef } from "react";
-import { useData } from "../contexts/DataContext";
-import { Money } from "./ui/money";
-import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Keyboard, ShieldCheck, Upload, Sparkles, Trash2 } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { getPeriodForDate, getPeriodLogs, listPeriods } from "../features/payperiod/periods";
-import { extractStatement, getPremiumStatus } from "../services/premium";
-
+import React, {useEffect, useMemo, useRef, useState} from 'react';
+import {Link, useLocation, useNavigate} from 'react-router-dom';
+import {Keyboard, Sparkles, ArrowRight, Eye, EyeOff} from 'lucide-react';
+import {useData} from '../contexts/DataContext';
 import useExpenses from '../hooks/useExpenses';
-import {moneySummary,moneyRevision,validRange} from '../features/money/moneyModel';
-import {pennies} from '../features/home/homeModel';
-
-const n = (v) => Number(v) || 0;
-const gbDate = (d) => new Date(d + "T12:00:00").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});
-
-const CheckPayV4 = () => {
-  const { logs = [], payPeriodAnchor, updatePayPeriodAnchor, updatePeriodRecord, periodRecords = {}, loading, loadError } = useData();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const costs = useExpenses();
-  const payoutMode = location.state?.comparisonScope === 'contractor_payout';
-  const [basisConfirmed,setBasisConfirmed] = useState(false);
-  const [saveError,setSaveError] = useState('');
-  const [saving,setSaving] = useState(false);
-  const saveLock = useRef(false);
-
-  const [mode,setMode] = useState("idle");
-  const [statementStops,setStatementStops] = useState("");
-  const [statementAmount,setStatementAmount] = useState("");
-  const [extraPayments,setExtraPayments] = useState("");
-  const [charges,setCharges] = useState("");
-  const [vat,setVat] = useState("");
-  const [finalInvoice,setFinalInvoice] = useState("");
-  const [daily,setDaily] = useState({});
-  const [showDates,setShowDates] = useState(true);
-  const [aiUses,setAiUses] = useState(0);
-  const [isPro,setIsPro] = useState(false);
-  const [aiFile,setAiFile] = useState(null);
-  const [aiLoading,setAiLoading] = useState(false);
-  const [aiError,setAiError] = useState("");
-  useEffect(()=>{ if(payoutMode)return; getPremiumStatus().then(s=>{setAiUses(s.statementAiUses||0);setIsPro(!!s.isPro)}).catch(()=>{}); },[payoutMode]);
-
-  const today = new Date().toISOString().split("T")[0];
-  const periodDef = useMemo(() => {
-    if (payoutMode && validRange(location.state)) return {start:location.state.start,end:location.state.end,id:location.state.start+'_'+location.state.end};
-    const all=listPeriods(logs,payPeriodAnchor || today,12);
-    return all.find(p=>p.id===location.state?.periodId) || getPeriodForDate(payPeriodAnchor || today, new Date());
-  }, [logs,payPeriodAnchor,today,location.state]);
-  const period = useMemo(() => getPeriodLogs(logs,periodDef).sort((a,b)=>a.date.localeCompare(b.date)), [logs,periodDef]);
-  const stops=period.reduce((s,l)=>s+n(l.stops),0);
-  const payoutSummary=moneySummary(logs,costs.expenses,periodDef);
-  const payoutUnavailable=loading||loadError||costs.loading||costs.error||payoutSummary.payout==null;
-  const expected=payoutMode?(payoutSummary.payout??0)/100:period.reduce((s,l)=>s+n(l.total),0);
-  useEffect(()=>{
-    if(!payoutMode)return;
-    const saved=periodRecords[periodDef.id]?.payoutComparison;
-    setStatementAmount(saved&&Number.isSafeInteger(saved.statementPence)?String(saved.statementPence/100):'');
-    setBasisConfirmed(false);setMode('manual');
-  },[payoutMode,periodDef.id]);
-  const dailyComplete = period.length > 0 && period.every(l => daily[l.date]?.stops !== "" && daily[l.date]?.stops != null && daily[l.date]?.amount !== "" && daily[l.date]?.amount != null);
-  const hasDaily = Object.keys(daily).length > 0;
-  const statementStopsNum = dailyComplete ? period.reduce((s,l)=>s+n(daily[l.date]?.stops),0) : n(statementStops);
-  const statementAmountNum = !payoutMode && dailyComplete ? period.reduce((s,l)=>s+n(daily[l.date]?.amount),0) : n(statementAmount);
-  const stopDiff = statementStopsNum - stops;
-  const moneyDiff = (pennies(statementAmountNum) - pennies(expected)) / 100;
-  const compared = mode === "result";
-  const matches = compared && (payoutMode || stopDiff === 0) && Math.abs(moneyDiff) < 0.01;
-  const discrepancies = period.filter(l => {
-    const d=daily[l.date]; if(!d) return false;
-    return n(d.stops)!==n(l.stops) || Math.abs(n(d.amount)-n(l.total))>=0.01;
-  });
-
-  const updateDaily=(date,key,value)=>setDaily(prev=>({...prev,[date]:{stops:prev[date]?.stops??"",amount:prev[date]?.amount??"",[key]:value}}));
-  const compare=async()=>{
-    if(saveLock.current)return;
-    if(payoutMode&&(!basisConfirmed||payoutUnavailable||! /^-?\d+(\.\d{1,2})?$/.test(statementAmount)||!Number.isSafeInteger(pennies(Number(statementAmount))))){setSaveError('Confirm the comparison basis and enter a valid GBP payout.');return;}
-    saveLock.current=true;setSaving(true);setSaveError('');
-    try {
-      if(payoutMode){
-        const revision=await moneyRevision(logs,costs.expenses,periodDef);
-        await updatePeriodRecord(periodDef.id,{status:'checked',needsReview:false,resolvedAt:null,checkedAt:new Date().toISOString(),payoutComparison:{scope:'contractor_payout',currency:'GBP',taxBasis:'same_as_records',basisConfirmed:true,start:periodDef.start,end:periodDef.end,statementPence:pennies(statementAmountNum),expectedPence:payoutSummary.payout,revision}},true);
-      } else await updatePeriodRecord(periodDef.id,{status:'checked',needsReview:false,statementStops:statementStopsNum,statementAmount:statementAmountNum,extraPayments:n(extraPayments),charges:n(charges),vat:n(vat),finalInvoiceAmount:n(finalInvoice)||statementAmountNum,differenceStops:stopDiff,differenceAmount:moneyDiff,checkedAt:new Date().toISOString()},true);
-      setMode('result');
-    }catch(_){setSaveError('Could not save this check. Your figures are still here; please retry.');}
-    finally{saveLock.current=false;setSaving(false);}
-  };
-  const reset=()=>{if(payoutMode){navigate('/app/money',{state:periodDef});return;}setMode("idle");setStatementStops("");setStatementAmount("");setExtraPayments("");setCharges("");setVat("");setFinalInvoice("");setDaily({});setAiFile(null);};
-  const chooseAiFile=(file)=>{if(!file)return;setAiFile(file);setMode("ai-review");};
-  const runAi=async()=>{setAiLoading(true);setAiError("");try{const result=await extractStatement(aiFile);if(result.statementStops!=null)setStatementStops(String(result.statementStops));if(result.statementAmount!=null)setStatementAmount(String(result.statementAmount));const nextDaily={};(result.daily||[]).forEach(d=>{if(d.date)nextDaily[d.date]={stops:d.stops??"",amount:d.amount??""};});setDaily(nextDaily);const s=await getPremiumStatus();setAiUses(s.statementAiUses||0);setIsPro(!!s.isPro);setAiFile(null);setMode("manual");}catch(e){setAiError(e?.message||"Could not read this statement.");}finally{setAiLoading(false);}};
-
-  return <div className="mx-auto max-w-2xl space-y-4 pb-24 -mt-2">
-    <div className="flex items-center justify-between gap-3"><h1 className="text-2xl font-bold tracking-tight">Check Pay</h1><span className="text-xs text-[#8e9ab2]">Compare · verify</span></div>
-
-    <div className="rounded-2xl border border-[#202a3d] bg-[#111827] p-4">
-      <div className="flex items-center justify-between gap-3"><div><div className="text-[10px] font-bold tracking-[.16em] text-[#69758d]">YOUR RECORDS</div><div className="mt-1 text-xs text-[#8e9ab2]">{new Date(periodDef.start+"T12:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short"})} — {new Date(periodDef.end+"T12:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}</div></div>{!payoutMode&&<label className="text-[9px] text-[#69758d]">CHANGE PERIOD<input type="date" value={payPeriodAnchor || today} onChange={e=>updatePayPeriodAnchor(e.target.value)} className="ios-date-input mt-1 block rounded-lg border border-[#26314a] bg-[#090f1a] p-2 text-xs text-white"/></label>}</div>
-      <div className="mt-4 flex items-end justify-between gap-4"><div><div className="text-2xl font-bold">{stops.toLocaleString("en-GB")}</div><div className="text-[11px] text-[#8e9ab2]">stops</div></div><div className="text-right"><div className="text-2xl font-bold text-[#8f83ff]">{payoutMode&&payoutUnavailable?"Unavailable":<Money amount={expected}/>}</div><div className="text-[11px] text-[#8e9ab2]">{payoutMode?"expected contractor payout":"expected earnings"}</div></div></div>
-    </div>
-
-    {mode==="idle" && <div className="space-y-3">
-      <button data-tour="check-manual" onClick={()=>setMode("manual")} className="flex w-full items-center gap-4 rounded-2xl border border-[#302a5b] bg-[#17152b] p-4 text-left active:scale-[.99]"><div className="rounded-xl bg-[#7567ff]/15 p-3 text-[#8f83ff]"><Keyboard/></div><div className="flex-1"><div className="font-semibold">Enter statement manually</div><div className="mt-1 text-xs text-[#8e9ab2]">Free · compare totals or enter figures by day</div></div></button>
-      <label className="flex w-full cursor-pointer items-center gap-4 rounded-2xl border border-[#302a5b] bg-gradient-to-r from-[#1a1730] to-[#111827] p-4 text-left active:scale-[.99]"><div className="rounded-xl bg-[#7567ff]/15 p-3 text-[#8f83ff]"><Sparkles/></div><div className="flex-1"><div className="flex items-center gap-2 font-semibold">Upload statement with AI <span className="rounded-full bg-[#7567ff] px-2 py-0.5 text-[9px] font-bold">PRO</span></div><div className="mt-1 text-xs text-[#8e9ab2]">{isPro?"Pro · AI statement checks included":aiUses<3?`${3-aiUses} of 3 free AI checks remaining · photo, screenshot or PDF`:"Free AI checks used · Pro required for further AI checks"}</div><div className="mt-1 text-[10px] text-[#69758d]">The original upload is for processing only and is not saved to your Stop Tracker account.</div></div><Upload className="h-4 w-4 text-[#8f83ff]"/><input type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.pdf" disabled={!isPro && aiUses>=3} onChange={e=>chooseAiFile(e.target.files?.[0])} className="sr-only"/></label>
-    </div>}
-
-    {mode==="ai-review" && <div className="rounded-2xl border border-[#302a5b] bg-[#111827] p-5"><div className="flex items-start gap-3"><div className="rounded-xl bg-[#7567ff]/15 p-3 text-[#8f83ff]"><Sparkles/></div><div><h2 className="text-lg font-bold">AI statement check</h2><p className="mt-1 text-xs leading-5 text-[#8e9ab2]">Selected: {aiFile?.name}. Stop Tracker prepares the selected file for DeepSeek, returns the figures for your confirmation, and does not save the original statement to your Stop Tracker account.</p></div></div>{aiError&&<div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-xs text-red-200">{aiError}</div>}<button onClick={runAi} disabled={aiLoading} className="mt-4 h-12 w-full rounded-xl bg-[#7567ff] text-sm font-bold text-white disabled:opacity-60">{aiLoading?"Reading statement…":"Read statement with AI"}</button><button onClick={()=>{setAiFile(null);setMode("idle")}} className="mt-2 flex h-10 w-full items-center justify-center gap-2 text-xs text-[#7f8ba3]"><Trash2 className="h-3.5 w-3.5"/>Discard file</button></div>}
-
-    {payoutMode&&<p className="home-banner">Compare the contractor payout after contractor fees and charges, before your separately paid business expenses. This check does not confirm payment receipt. <button className="home-text-button" onClick={()=>navigate('/app/money',{state:periodDef})}>Back to Money</button></p>}
-    {mode==="manual" && <div className="space-y-4 rounded-2xl border border-[#302a5b] bg-[#111827] p-5">
-      <div><h2 className="text-lg font-bold">Statement totals</h2><p className="mt-1 text-xs text-[#8e9ab2]">{payoutMode?"Enter the final contractor payout for this period. Do not enter gross earnings here.":"Enter the totals shown on the statement. Add daily figures below if you want Stop Tracker to identify exact dates."}</p></div>
-      <fieldset disabled={saving} className="grid grid-cols-2 gap-3">
-        {!payoutMode&&<label className="text-xs text-[#8e9ab2]">Statement stops<input inputMode="numeric" value={statementStops} onChange={e=>setStatementStops(e.target.value)} placeholder="0" className="mt-2 h-12 w-full rounded-xl border border-[#2a3550] bg-[#0b111d] px-3 text-lg font-bold text-white outline-none focus:border-[#7567ff]"/></label>}
-        <label className="text-xs text-[#8e9ab2]">{payoutMode?"Statement contractor payout (£)":"Statement amount (£)"}<input inputMode="decimal" value={statementAmount} onChange={e=>setStatementAmount(e.target.value)} placeholder="0.00" className="mt-2 h-12 w-full rounded-xl border border-[#2a3550] bg-[#0b111d] px-3 text-lg font-bold text-white outline-none focus:border-[#7567ff]"/></label>
-      </fieldset>
-      {payoutMode&&<label className="flex gap-3 items-start py-3 text-sm"><input type="checkbox" disabled={saving} checked={basisConfirmed} onChange={e=>setBasisConfirmed(e.target.checked)}/>I checked that this is the same pay period, in GBP, after contractor charges and before my own expenses, with the same VAT/tax treatment as my records.</label>}
-      {!payoutMode&&<details className="rounded-xl border border-[#26314a] bg-[#0d1422] p-3"><summary className="cursor-pointer text-sm font-semibold">Statement adjustments <span className="text-xs font-normal text-[#7f8ba3]">(optional)</span></summary><p className="mt-2 text-xs leading-5 text-[#7f8ba3]">Record the extras, deductions and VAT shown on the contractor statement for transparency.</p><div className="mt-3 grid grid-cols-2 gap-2"><input inputMode="decimal" value={extraPayments} onChange={e=>setExtraPayments(e.target.value)} placeholder="Extra payments £" className="h-11 rounded-lg border border-[#26314a] bg-[#090f1a] px-3 text-sm"/><input inputMode="decimal" value={charges} onChange={e=>setCharges(e.target.value)} placeholder="Charges £" className="h-11 rounded-lg border border-[#26314a] bg-[#090f1a] px-3 text-sm"/><input inputMode="decimal" value={vat} onChange={e=>setVat(e.target.value)} placeholder="VAT £" className="h-11 rounded-lg border border-[#26314a] bg-[#090f1a] px-3 text-sm"/><input inputMode="decimal" value={finalInvoice} onChange={e=>setFinalInvoice(e.target.value)} placeholder="Final to invoice £" className="h-11 rounded-lg border border-[#26314a] bg-[#090f1a] px-3 text-sm"/></div></details>}
-      {!payoutMode&&period.length>0 && <div>
-        <button onClick={()=>setShowDates(!showDates)} className="flex w-full items-center justify-between border-t border-[#202a3d] pt-4 text-sm font-semibold"><span>Optional: compare by date</span>{showDates?<ChevronUp className="h-4 w-4"/>:<ChevronDown className="h-4 w-4"/>}</button>
-        {showDates && <div className="mt-3 space-y-2">{period.map(l=><div key={l.date} className="rounded-xl border border-[#202a3d] bg-[#0d1422] p-3">
-          <div className="mb-2 flex justify-between text-xs"><span className="font-semibold">{gbDate(l.date)}</span><span className="text-[#77839a]">Your record: {l.stops} · <Money amount={l.total}/></span></div>
-          <div className="grid grid-cols-2 gap-2"><input inputMode="numeric" placeholder="Statement stops" value={daily[l.date]?.stops??""} onChange={e=>updateDaily(l.date,"stops",e.target.value)} className="h-10 rounded-lg border border-[#26314a] bg-[#090f1a] px-2 text-sm outline-none focus:border-[#7567ff]"/><input inputMode="decimal" placeholder="Statement £" value={daily[l.date]?.amount??""} onChange={e=>updateDaily(l.date,"amount",e.target.value)} className="h-10 rounded-lg border border-[#26314a] bg-[#090f1a] px-2 text-sm outline-none focus:border-[#7567ff]"/></div>
-        </div>)}</div>}
-      </div>}
-      <button onClick={compare} disabled={saving||(payoutMode?(!basisConfirmed||payoutUnavailable||statementAmount=== ""):(!hasDaily && statementStops==="" && statementAmount===""))} className="h-14 w-full rounded-2xl bg-[#7567ff] font-bold text-white disabled:opacity-40">{saving?"Saving check…":"Compare with my records"}</button>
-      {saveError&&<p role="alert">{saveError}</p>}
-      <button disabled={saving} onClick={reset} className="w-full text-xs text-[#7f8ba3]">Cancel</button>
-    </div>}
-
-    {compared && <div className={`rounded-2xl border p-5 ${matches?"border-emerald-500/30 bg-emerald-500/5":"border-amber-500/30 bg-amber-500/5"}`}>
-      <div className="flex items-start gap-3">{matches?<CheckCircle2 className="mt-0.5 h-6 w-6 text-emerald-400"/>:<AlertTriangle className="mt-0.5 h-6 w-6 text-amber-400"/>}<div><h2 className="text-xl font-bold">{matches?"Everything matches":"Difference found"}</h2><p className="mt-1 text-sm text-[#9aa6bd]">{matches?"The statement totals match your Stop Tracker record.":"Your statement does not match your independent record."}</p></div></div>
-      <div className="mt-5 overflow-hidden rounded-xl border border-[#293249]">
-        <div className="grid grid-cols-3 bg-[#0c1320] p-3 text-[10px] font-bold tracking-wider text-[#77839a]"><span></span><span>{payoutMode?"BASIS":"STOPS"}</span><span>AMOUNT</span></div>
-        <div className="grid grid-cols-3 border-t border-[#293249] p-3 text-sm"><span className="font-semibold">Your record</span><span>{payoutMode?"Payout":stops}</span><Money amount={expected}/></div>
-        <div className="grid grid-cols-3 border-t border-[#293249] p-3 text-sm"><span className="font-semibold">Statement</span><span>{payoutMode?"Payout":statementStopsNum}</span><Money amount={statementAmountNum}/></div>
-        <div className="grid grid-cols-3 border-t border-[#293249] p-3 text-sm font-bold"><span>Difference</span><span className={stopDiff<0?"text-amber-400":"text-emerald-400"}>{payoutMode?"—":`${stopDiff>0?"+":""}${stopDiff}`}</span><span className={moneyDiff<0?"text-amber-400":"text-emerald-400"}>{moneyDiff>0?"+":""}<Money amount={moneyDiff}/></span></div>
-      </div>
-      {discrepancies.length>0 && <div className="mt-5"><p className="mb-2 text-xs font-bold tracking-[.16em] text-[#77839a]">DATES TO CHECK</p><div className="space-y-2">{discrepancies.map(l=><div key={l.date} className="rounded-xl border border-amber-500/20 bg-[#111827] p-3"><div className="font-semibold">{gbDate(l.date)}</div><div className="mt-2 grid grid-cols-2 gap-3 text-xs text-[#9aa6bd]"><div>You: <strong className="text-white">{l.stops} stops · <Money amount={l.total}/></strong></div><div>Statement: <strong className="text-amber-300">{n(daily[l.date]?.stops)} stops · <Money amount={n(daily[l.date]?.amount)}/></strong></div></div></div>)}</div></div>}
-      {!payoutMode && !hasDaily && !matches && <p className="mt-4 text-xs leading-5 text-[#9aa6bd]">You compared totals only. Enter the statement figures by date to identify exactly where the discrepancy occurred.</p>}
-      <button onClick={()=>setMode("manual")} className="mt-5 h-12 w-full rounded-xl border border-[#343d57] bg-[#111827] text-sm font-semibold">Edit statement figures</button>
-      {!payoutMode&&<button onClick={reset} className="mt-2 w-full py-2 text-xs text-[#7f8ba3]">Start over</button>}
-    </div>}
-
-    {!payoutMode&&<button onClick={()=>navigate("/app/invoice",{state:{periodId:periodDef.id,statementAmount:n(finalInvoice)||statementAmountNum}})} className="w-full rounded-2xl border border-[#202a3d] bg-[#111827] p-4 text-sm font-semibold">{compared?"Statement checked — create your invoice":"Need to send your invoice?"} <span className="text-[#8f83ff]">Open Invoice →</span></button>}
-  </div>
-};
-export default CheckPayV4;
+import {isoDate, listPeriods, getPeriodForDate} from '../features/payperiod/periods';
+import {moneySummary, moneyRevision, payoutComparison, validRange} from '../features/money/moneyModel';
+import {money, pennies} from '../features/home/homeModel';
+import {extractStatement, getPremiumStatus} from '../services/premium';
+import {trackProductEvent as track} from '../services/productAnalytics';
+import StatementDraftGuard from './StatementDraftGuard';
+import StatementWorkDetails,{emptyStatementDetails,validStatementDetails} from './StatementWorkDetails';
+import '../styles/home.css';
+import '../styles/money.css';
+import '../styles/check-pay.css';
+const fmt = d => new Date(d+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+const amountValid = s => /^-?\d+(\.\d{1,2})?$/.test(s) && Number.isSafeInteger(pennies(Number(s)));
+export default function CheckPayV4() {
+ const {logs=[],payPeriodAnchor,periodRecords={},updatePeriodRecord,loading,loadError,forceSync}=useData();
+ const costs=useExpenses(), location=useLocation(), navigate=useNavigate();
+ const [details,setDetails]=useState(emptyStatementDetails);
+ const [selected,setSelected]=useState(null),[mode,setMode]=useState('idle');
+ const [amount,setAmount]=useState(''),[basis,setBasis]=useState(false),[error,setError]=useState('');
+ const [file,setFile]=useState(null),[aiDraft,setAiDraft]=useState(null),[stage,setStage]=useState(''),[saving,setSaving]=useState(false);
+ const [entitlement,setEntitlement]=useState(null),[entitlementError,setEntitlementError]=useState(false),[statusRequest,setStatusRequest]=useState(0);
+ const [revision,setRevision]=useState(null),[offline,setOffline]=useState(!navigator.onLine);
+ const [hidden,setHidden]=useState(()=>{try{return localStorage.getItem('home-hide-money')==='1';}catch(_){return false;}});
+ const lock=useRef(false), mounted=useRef(true), draftRef=useRef(false);
+ const today=isoDate(new Date());
+ const periods=useMemo(()=>listPeriods(logs,payPeriodAnchor||today,13),[logs,payPeriodAnchor,today]);
+ const requested=validRange(location.state)?{...location.state,id:location.state.start+'_'+location.state.end}:periods.find(p=>p.id===location.state?.periodId);
+ const period=selected||requested||periods[0];
+ const choices=periods.some(p=>p.id===period.id)?periods:[period,...periods];
+ const summary=useMemo(()=>moneySummary(logs,costs.expenses,period),[logs,costs.expenses,period.start,period.end]);
+ const busy=loading||costs.loading, unavailable=busy||!!loadError||!!costs.error;
+ const fullPeriod=!!payPeriodAnchor&&getPeriodForDate(payPeriodAnchor,period.start).id===period.id;
+ const ready=fullPeriod&&!unavailable&&summary.rows.length>0&&summary.payout!=null;
+ const comparison=payoutComparison(periodRecords[period.id],period,summary,revision,unavailable);
+ const label={none:period.end<today?'Awaiting statement':'Tracking',incomplete:'Review statement',unavailable:'Comparison unavailable',stale:'Needs recheck',matched:'Checked · figures match',difference:'Difference found',reconciled:'Period reconciled'}[comparison.state];
+ const cash=p=>hidden?'••••':money(p/100);
+ const dirty=mode!=='idle'&&mode!=='saved'&&(!!amount||!!file||!!aiDraft||JSON.stringify(details)!==JSON.stringify(emptyStatementDetails()));
+ draftRef.current=dirty;
+ useEffect(()=>{mounted.current=true;track('check_pay_opened');return()=>{mounted.current=false;if(draftRef.current)track('statement_draft_abandoned');};},[]);
+ useEffect(()=>{const changed=()=>setOffline(!navigator.onLine);window.addEventListener('online',changed);window.addEventListener('offline',changed);return()=>{window.removeEventListener('online',changed);window.removeEventListener('offline',changed);};},[]);
+ useEffect(()=>{if(!dirty)return;const guard=e=>{e.preventDefault();e.returnValue='';};window.addEventListener('beforeunload',guard);return()=>window.removeEventListener('beforeunload',guard);},[dirty]);
+ useEffect(()=>{let active=true;setEntitlement(null);setEntitlementError(false);if(offline)return;getPremiumStatus().then(s=>{if(!active)return;if(typeof s?.isPro!=='boolean'||!Number.isInteger(s?.statementAiUses)||s.statementAiUses<0)throw new Error('Invalid status');setEntitlement(s);}).catch(()=>{if(active)setEntitlementError(true);});return()=>{active=false;};},[statusRequest,offline]);
+ useEffect(()=>{let active=true;setRevision(null);moneyRevision(logs,costs.expenses,period).then(r=>{if(active)setRevision(r);}).catch(()=>{});return()=>{active=false;};},[logs,costs.expenses,period.start,period.end]);
+ function reset(){if(dirty&&!window.confirm('Discard this unsaved statement draft?'))return;setMode('idle');setDetails(emptyStatementDetails());setAmount('');setBasis(false);setFile(null);setAiDraft(null);setError('');}
+ function manual(saved=false){setDetails(saved?(periodRecords[period.id]?.statementWorkDetails||{...emptyStatementDetails(),stops:periodRecords[period.id]?.statementStops==null?'':String(periodRecords[period.id].statementStops),gross:periodRecords[period.id]?.statementAmount==null?'':String(periodRecords[period.id].statementAmount),extras:periodRecords[period.id]?.extraPayments==null?'':String(periodRecords[period.id].extraPayments),charges:periodRecords[period.id]?.charges==null?'':String(periodRecords[period.id].charges),vat:periodRecords[period.id]?.vat==null?'':String(periodRecords[period.id].vat)}):emptyStatementDetails());setAmount(saved&&comparison.statement!=null?String(comparison.statement/100):'');setBasis(false);setError('');setMode('manual');track('statement_manual_started');}
+ function chooseFile(f){if(!f)return;setError('');if(f.size>12*1024*1024){setError('Choose a file under 12 MB.');return;}if(!['application/pdf','image/jpeg','image/png','image/webp'].includes(f.type)&&!f.name.toLowerCase().endsWith('.pdf')){setError('Choose a PDF, JPEG, PNG or WebP file. Export a spreadsheet as PDF first.');return;}setFile(f);setMode('upload');}
+ async function readFile(){if(lock.current||offline)return;lock.current=true;setStage('Preparing file…');setError('');track('statement_ai_started');try{const data=await extractStatement(file,()=>{if(mounted.current)setStage('Reading statement…');});if(!mounted.current)return;setAiDraft(data);setDetails({...emptyStatementDetails(),stops:data.statementStops==null?'':String(data.statementStops),gross:data.currency!=='GBP'||data.statementAmount==null?'':String(data.statementAmount),daily:Object.fromEntries((data.daily||[]).filter(d=>d.date>=period.start&&d.date<=period.end).map(d=>[d.date,{stops:d.stops==null?'':String(d.stops),amount:data.currency!=='GBP'||d.amount==null?'':String(d.amount)}]))});setAmount(data.currency==='GBP'&&typeof data.contractorPayout==='number'?String(data.contractorPayout):'');setBasis(false);setFile(null);setMode('manual');setStatusRequest(n=>n+1);track('statement_ai_completed');}catch(e){if(mounted.current){setError(e?.code?'Could not read this statement. Retry or enter the totals manually. Your file is still selected.':(e?.message||'Could not prepare this file. Your file is still selected.'));track('statement_ai_failed');}}finally{lock.current=false;if(mounted.current)setStage('');}}
+ function preview(){if(!ready||!basis||!amountValid(amount)||!validStatementDetails(details)){setError('Check the payout and optional figures, then confirm the comparison basis.');return;}setError('');setMode('preview');track('statement_reviewed');}
+ async function save(){if(lock.current||!ready||!basis||!amountValid(amount)||!validStatementDetails(details))return;lock.current=true;setSaving(true);setError('');try{const currentRevision=await moneyRevision(logs,costs.expenses,period);const statementPence=pennies(Number(amount));await updatePeriodRecord(period.id,{statementWorkDetails:details,status:'checked',needsReview:false,resolvedAt:null,checkedAt:new Date().toISOString(),payoutComparison:{source:aiDraft?'ai':'manual',scope:'contractor_payout',currency:'GBP',taxBasis:'same_as_records',basisConfirmed:true,start:period.start,end:period.end,statementPence,expectedPence:summary.payout,revision:currentRevision}},true);setMode('saved');track('statement_compared');if(statementPence!==summary.payout)track('discrepancy_found');}catch(_){setError('Could not save this check. Your figures are still here; please retry.');}finally{lock.current=false;setSaving(false);}}
+ const hasSaved=!!periodRecords[period.id];
+ const blocked=!ready;
+ return <main className="home-screen check-pay-page"><StatementDraftGuard dirty={dirty}/>
+ <header className="home-row"><div><h1>Check Pay</h1><p className="home-muted">Your records. Their statement.</p></div><button className="home-icon" aria-label={hidden?'Show monetary amounts':'Hide monetary amounts'} aria-pressed={hidden} onClick={()=>{setHidden(!hidden);try{localStorage.setItem('home-hide-money',hidden?'0':'1');}catch(_){}}}>{hidden?<EyeOff/>:<Eye/>}</button></header>
+ <section className="home-card check-period"><label className="home-field">Pay period<select aria-label="Check Pay period" value={period.id} disabled={mode!=='idle'} onChange={e=>{setSelected(choices.find(p=>p.id===e.target.value));setError('');track('check_pay_period_changed');}}>{choices.map(p=><option key={p.id} value={p.id}>{fmt(p.start)} – {fmt(p.end)}</option>)}</select></label><span className="money-badge">{label}</span>
+ {!fullPeriod&&<p className="home-banner">Choose a full pay period. <Link to="/app/periods" className="home-text-button">Set pay-period dates</Link></p>}
+ {busy?<div className="home-skeleton check-skeleton" role="status" aria-label="Loading expected payout"/>:!summary.rows.length&&!unavailable?<div className="home-empty"><h2>No work recorded this period</h2><p>Log your work so there is something to compare.</p><Link className="home-text-button" to="/app/dashboard">Log work <ArrowRight/></Link></div>:<div className="check-expected"><p className="home-muted">Expected contractor payout · Estimated</p><strong>{unavailable?'Unavailable':summary.payout==null?'Needs complete records':cash(summary.payout)}</strong><p className="home-muted">After contractor fees and recorded charges.<br/>Before your own business expenses and personal tax.</p><Link className="home-text-button" to="/app/money" state={period}>View calculation <ArrowRight size={16}/></Link></div>}
+ {summary.payout==null&&!unavailable&&<p className="home-banner">Some work records need their saved pay details checked before a payout can be calculated.</p>}
+ </section>
+ {(offline||costs.cached)&&<p className="home-banner" role="status">Showing cached records. {offline?'AI requires a connection. Unsaved drafts stay here while this screen is open.':'Refresh before relying on the comparison.'}</p>}
+ {(loadError||costs.error)&&<div className="home-banner" role="alert">Records could not be loaded. <button className="home-text-button" onClick={()=>{costs.retry?.();forceSync?.();}}>Retry records</button></div>}
+ {mode==='idle'&&<>
+ {hasSaved&&<section className="home-card"><h2>{comparison.state==='stale'?'Records changed since your last check':'Saved statement check'}</h2><p className="home-muted">{comparison.state==='stale'?'The previous comparison needs checking again.':'Checking figures does not confirm that payment arrived.'}</p><button className="home-secondary w-full mt-3" disabled={blocked} onClick={()=>manual(true)}>Review saved check</button></section>}
+ <h2 className="check-question">How would you like to check your statement?</h2>
+ <div className="check-actions"><section className="home-card check-action"><div className="home-row"><Keyboard aria-hidden="true"/><span className="money-badge">Free</span></div><h2>Enter statement totals</h2><p className="home-muted">Use totals from any provider invoice or contractor spreadsheet.</p><button data-tour="check-manual" className="home-primary" disabled={blocked} onClick={()=>manual()}>Enter manually <ArrowRight size={18}/></button></section>
+ <section className="home-card check-action"><div className="home-row"><Sparkles aria-hidden="true"/><span className="money-badge">{entitlement?.isPro?'Pro':'AI'}</span></div><h2>Upload with AI</h2><p className="home-muted" role="status">{offline?'Connect to use AI':entitlement?entitlement.isPro?'Included with Pro':entitlement.statementAiUses<3?`${3-entitlement.statementAiUses} free AI checks left`:'Free checks used · Pro required':entitlementError?'Could not check free uses':'Checking free uses…'}</p><p className="home-muted text-sm">PDF, photo or screenshot · Up to 12 MB and 10 PDF pages. Export spreadsheets as PDF.</p>
+ {entitlementError?<button className="home-secondary" onClick={()=>setStatusRequest(n=>n+1)}>Retry AI availability</button>:entitlement&&!entitlement.isPro&&entitlement.statementAiUses>=3?<button className="home-secondary" onClick={()=>navigate('/app/upgrade')}>View Pro</button>:<label className={'home-secondary check-file '+(blocked||offline||!entitlement?'check-disabled':'')}>Choose a file<input aria-label="Choose statement file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp,.pdf" disabled={blocked||offline||!entitlement} onChange={e=>{chooseFile(e.target.files?.[0]);e.target.value='';}}/></label>}
+ </section></div><p className="home-muted check-privacy">Review extracted figures before comparing. Original uploads are processed, not saved to your Stop Tracker account.</p></>}
+ {mode==='upload'&&<section className="home-card check-draft"><h2>Ready to read your statement?</h2><p className="check-filename">{file?.name}</p><p className="home-muted">DeepSeek processes this file to extract figures. You will review them before comparing. A successful extraction uses one free check unless you have Pro.</p><button className="home-primary" disabled={!!stage||offline} onClick={readFile}>{stage||'Read statement with AI'}</button>{stage&&<p role="status">{stage} Please keep this screen open.</p>}<button className="home-secondary" disabled={!!stage} onClick={()=>{setFile(null);manual();}}>Enter manually instead</button><button className="home-text-button" disabled={!!stage} onClick={reset}>Discard file</button></section>}
+ {mode==='manual'&&<section className="home-card check-draft"><h2>{aiDraft?'Review extracted payout':'Statement totals'}</h2><p className="home-muted">Enter the contractor payout after contractor fees and charges, before your own business expenses.</p>{aiDraft&&<p className="home-banner">AI figures are unverified. {aiDraft.contractorPayout==null?'No clear final payout was found. Enter it from your statement.':'Check the amount against your statement.'} {aiDraft.currency!=='GBP'?'GBP could not be verified; do not compare a foreign-currency amount.':''} {(aiDraft.periodStart!==period.start||aiDraft.periodEnd!==period.end)?'The extracted period does not match or is missing. Verify both dates before continuing.':''} Nothing has been saved.</p>}<label className="home-field">Statement contractor payout (£)<input inputMode="decimal" value={amount} onChange={e=>{setAmount(e.target.value);setError('');}} placeholder="0.00"/></label><StatementWorkDetails value={details} onChange={setDetails} rows={summary.rows}/><label className="check-basis"><input type="checkbox" checked={basis} onChange={e=>setBasis(e.target.checked)}/><span>I checked that this is the same pay period, in GBP, after contractor charges and before my own expenses, with the same VAT/tax treatment as my records.</span></label><button className="home-primary" disabled={!ready||!basis||!amountValid(amount)} onClick={preview}>Compare with my records</button><button className="home-text-button" onClick={reset}>Cancel</button></section>}
+ {['preview','saved'].includes(mode)&&<section className="home-card check-draft"><span className="money-badge">{mode==='saved'?'Checked · Not yet reconciled':'Comparison preview · Not saved'}</span><h2>{pennies(Number(amount))===summary.payout?'Payout figures match':'Difference found'}</h2><dl className="money-waterfall"><div><dt>Your estimated payout</dt><dd>{unavailable?'Unavailable':cash(summary.payout)}</dd></div><div><dt>Statement payout</dt><dd>{cash(pennies(Number(amount)))}</dd></div><div><dt>Statement minus records</dt><dd>{!ready?'Unavailable':cash(pennies(Number(amount))-summary.payout)}</dd></div></dl><StatementWorkDetails value={details} rows={summary.rows} readOnly hidden={hidden}/><p className="home-muted">This does not confirm payment receipt or resolve the period.</p>{mode==='preview'&&<button className="home-primary" disabled={saving||!ready} onClick={save}>{saving?'Saving check…':'Confirm and save check'}</button>}<button className="home-secondary" disabled={saving} onClick={()=>{setBasis(false);setMode('manual');}}>Edit statement figures</button><button className="home-text-button" disabled={saving} onClick={reset}>Back to Check Pay</button></section>}
+ {error&&<p role="alert" className="home-banner home-error">{error}</p>}
+ </main>;
+}

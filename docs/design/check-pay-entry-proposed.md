@@ -1,3 +1,5 @@
+Superseded by [approved implementation specification](check-pay-entry-approved.md) after user approval on 27 September 2026.
+
 # Check Pay entry — proposed, awaiting approval
 
 One screen only. Purpose: help a driver choose a free manual comparison or an AI extraction path when external paperwork arrives. It shows the selected FULL pay period, same-basis expected contractor payout from Money, and a lifecycle status. It must never compare own business expenses directly with contractor payout. Gross stop earnings are supporting detail, never a substituted final payout.

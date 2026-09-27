@@ -1,0 +1,10 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+import {extractStatement} from '../services/premium';
+const f=vi.hoisted(()=>({call:vi.fn(),pdf:vi.fn()}));
+vi.mock('../services/firebase',()=>({functions:{}}));
+vi.mock('firebase/functions',()=>({httpsCallable:()=>f.call}));
+vi.mock('pdfjs-dist/webpack',()=>({getDocument:(...args)=>f.pdf(...args)}));
+beforeEach(()=>vi.clearAllMocks());
+it('rejects large files without invoking the provider',async()=>{await expect(extractStatement({size:13*1024*1024})).rejects.toThrow('12 MB');expect(f.call).not.toHaveBeenCalled();});
+it('rejects unsupported spreadsheets with a clear format error',async()=>{await expect(extractStatement({size:20,name:'statement.xlsx',type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})).rejects.toThrow('PDF');expect(f.call).not.toHaveBeenCalled();});
+it('rejects more than ten PDF pages without silently extracting a partial statement',async()=>{const destroy=vi.fn();f.pdf.mockReturnValue({promise:Promise.resolve({numPages:11,destroy})});await expect(extractStatement({name:'statement.pdf',type:'application/pdf',size:200,arrayBuffer:async()=>new ArrayBuffer(8)})).rejects.toThrow('more than 10 pages');expect(destroy).toHaveBeenCalled();expect(f.call).not.toHaveBeenCalled();});

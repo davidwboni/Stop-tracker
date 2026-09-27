@@ -2,7 +2,7 @@ import { httpsCallable } from "firebase/functions";
 import { functions } from "./firebase";
 
 export const getPremiumStatus = async () => {
-  const { data } = await httpsCallable(functions, "getPremiumStatus")();
+  const { data } = await httpsCallable(functions, "getPremiumStatus", {timeout:15000})();
   return data;
 };
 
@@ -22,7 +22,9 @@ const renderPdfToImages = async (file) => {
   // Delivery statements are normally a handful of pages. We cap both page
   // count and encoded size so the callable request stays comfortably bounded
   // on mobile Safari and Cloud Functions.
-  const pageCount = Math.min(pdf.numPages, 10);
+  if (pdf.numPages > 10) { await pdf.destroy(); throw new Error('This PDF has more than 10 pages. Choose a statement of up to 10 pages; no pages were processed.'); }
+  const pageCount = pdf.numPages;
+  try {
   const images = [];
   let encodedChars = 0;
   const MAX_ENCODED_CHARS = 18_000_000;
@@ -34,6 +36,7 @@ const renderPdfToImages = async (file) => {
     const context = canvas.getContext("2d", { alpha: false });
     if (!context) throw new Error("This browser could not prepare the PDF for reading.");
 
+    if (viewport.width * viewport.height > 16000000) throw new Error('This PDF page is too large to prepare on this device.');
     canvas.width = Math.ceil(viewport.width);
     canvas.height = Math.ceil(viewport.height);
     context.fillStyle = "#ffffff";
@@ -50,20 +53,20 @@ const renderPdfToImages = async (file) => {
     if (!blob) throw new Error("This PDF page could not be prepared for AI reading.");
     const fileBase64 = await fileToBase64(blob);
 
-    if (images.length > 0 && encodedChars + fileBase64.length > MAX_ENCODED_CHARS) {
-      break;
-    }
+    if (encodedChars + fileBase64.length > MAX_ENCODED_CHARS) throw new Error('This PDF is too large. No partial statement will be submitted.');
     encodedChars += fileBase64.length;
     images.push({ fileBase64, mimeType: "image/jpeg" });
   }
 
   if (!images.length) throw new Error("No readable pages were found in this PDF.");
   return images;
+  } finally { await pdf.destroy(); }
 };
 
-export const extractStatement = async (file) => {
+export const extractStatement = async (file, onPrepared = () => {}) => {
   if (!file) throw new Error("Choose a statement file.");
 
+  if (file.size > 12 * 1024 * 1024) throw new Error('Choose a file under 12 MB.');
   let images;
   if (file.type === "application/pdf" || file.name?.toLowerCase().endsWith(".pdf")) {
     images = await renderPdfToImages(file);
@@ -74,15 +77,8 @@ export const extractStatement = async (file) => {
     images = [{ fileBase64: await fileToBase64(file), mimeType: file.type }];
   }
 
-  const payload = {
-    images,
-    // Keep the first page in the legacy fields as well. This preserves normal
-    // photo uploads during a rolling deploy while the updated callable reaches
-    // every Firebase instance.
-    fileBase64: images[0].fileBase64,
-    mimeType: images[0].mimeType,
-  };
-  const { data } = await httpsCallable(functions, "extractStatement")(payload);
+  onPrepared();
+  const { data } = await httpsCallable(functions, "extractStatement", {timeout:115000})({images});
   return data;
 };
 
