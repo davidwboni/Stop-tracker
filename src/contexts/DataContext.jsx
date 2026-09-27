@@ -294,6 +294,7 @@ export const DataProvider = ({ children }) => {
     payPeriodNeedsConfirmation,
     updatePayPeriodAnchor,
     periodRecords,
+    adoptPeriodRecords: patches => setPeriodRecords(previous => ({ ...previous, ...patches })),
     updatePeriodRecord
   };
 
