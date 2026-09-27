@@ -115,7 +115,7 @@ export default function SimpleDashboard() {
       </aside>
     </div>
     {!quickOpen && <div className="home-entry-dock"><p className="home-muted text-xs mb-2">{todayLog ? 'Today saved · Tap to edit' : 'Your work. Your records. Your pay.'}</p><button data-tour="log-work" className="home-primary w-full" disabled={loading || !!loadError} onClick={() => todayRows.length > 1 ? records() : openEntry()}><Plus size={22} />Quick Entry</button></div>}
-    {createPortal(<DailyQuickEntry open={quickOpen} initialDate={entryDate} onDateChange={setEntryDate} onClose={() => setQuickOpen(false)} onSaved={() => { setQuickOpen(false); setNotice('Work saved'); }} />, document.body)}
+    {createPortal(<DailyQuickEntry open={quickOpen} initialDate={entryDate} onDateChange={setEntryDate} onClose={() => setQuickOpen(false)} onSaved={(_record, result) => { setQuickOpen(false); setNotice(user?.isGuest ? 'Saved on this device · guest record' : result?.isOnline === false ? 'Saved on this device · waiting to sync' : 'Work saved'); }} />, document.body)}
     {expenseOpen && <HomeExpenseDialog open onClose={() => setExpenseOpen(false)} save={costs.save} isGuest={user?.isGuest} />}
   </div>;
 }
