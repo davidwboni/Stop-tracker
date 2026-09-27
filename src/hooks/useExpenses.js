@@ -78,7 +78,10 @@ export default function useExpenses() {
     const previous=state.expenses.find(row=>row.id===e.id);
     await mutate([e],null,[previous?.date,e.date]);
   },[mutate,state.expenses]);
-  const remove=useCallback(async e=>{await mutate([],e.id,[e.date]);},[mutate]);
+  const remove=useCallback(async e=>{
+    await mutate([],e.id,[e.date]);
+    if(e.receipt?.local) { const service=await import('../services/expenseReceipts'); await service.removeReceipt(user?.uid,e.receipt); }
+  },[mutate,user?.uid]);
   const makeRecurring=useCallback(async(e,frequency,nextDate)=>{
     if(!validateExpense(e)||!validDate(nextDate)||nextDate<=e.date||!['weekly','four_weekly','monthly'].includes(frequency))throw new Error('Choose a valid next date and frequency.');
     const ruleId='rule_'+e.id;

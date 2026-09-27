@@ -200,7 +200,7 @@ Use only figures visible in the statement. Do not invent missing dates or values
 async function getEntitlement(uid) {
   const snap = await admin.firestore().collection("entitlements").doc(uid).get();
   const d = snap.data() || {};
-  return { isPro: d.plan === "pro" && ["active","trialing"].includes(d.subscriptionStatus), ...d };
+  return { ...d, isPro: d.plan === "pro" && ["active","trialing"].includes(d.subscriptionStatus) };
 }
 
 async function consumeFreeUse(uid, field) {
@@ -653,5 +653,45 @@ exports.assignRoleOnSignup = functions.auth.user().onCreate(async (user) => {
     console.log(`User ${user.uid} assigned default role: free`);
   } catch (error) {
     console.error(`Error assigning role for user ${user.uid}:`, error);
+  }
+});
+
+// Enable receipt AI only after the documented staging provider check.
+const receiptAI = require('./receiptAI').registerReceiptAI({ onCall, HttpsError, admin, secret:DEEPSEEK_API_KEY, getEntitlement });
+exports.getReceiptStatus = receiptAI.status;
+exports.extractExpenseReceipt = receiptAI.extract;
+
+// Retry file cleanup when an expense is deleted or its retained receipt changes.
+const { onDocumentWritten } = require('firebase-functions/v2/firestore');
+exports.cleanupExpenseReceipt = onDocumentWritten({document:'users/{uid}/expenses/{expenseId}',retry:true}, async event => {
+  const before = event.data?.before.data()?.receipt;
+  const after = event.data?.after.data()?.receipt;
+  if (!before?.path || before.local || before.path === after?.path) return;
+  const prefix = `users/${event.params.uid}/receipts/${event.params.expenseId}/`;
+  if (!before.path.startsWith(prefix) || before.path.includes('..')) return;
+  const current = await event.data.after.ref.get();
+  if (current.data()?.receipt?.path === before.path) return;
+  await admin.storage().bucket().file(before.path).delete({ignoreNotFound:true});
+});
+
+// Orphan uploads (for example, a browser closed before ledger save) are queued
+// without document content and removed after seven days unless referenced.
+const { onObjectFinalized } = require('firebase-functions/v2/storage');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
+exports.queueReceiptCleanup = onObjectFinalized({retry:true}, async event => {
+  const path = event.data.name || '';
+  const match = /^users\/([^/]+)\/receipts\/([^/]+)\/([^/]+)$/.exec(path);
+  if (!match) return;
+  const jobId = crypto.createHash('sha256').update(path).digest('hex');
+  await admin.firestore().collection('receiptCleanup').doc(jobId).set({path,uid:match[1],expenseId:match[2],bucket:event.data.bucket,after:Date.now()+7*86400000});
+});
+exports.removeOrphanReceipts = onSchedule('every 24 hours', async () => {
+  const db = admin.firestore();
+  const jobs = await db.collection('receiptCleanup').where('after','<=',Date.now()).limit(100).get();
+  for (const job of jobs.docs) {
+    const data = job.data();
+    const expense = await db.doc(`users/${data.uid}/expenses/${data.expenseId}`).get();
+    if (expense.data()?.receipt?.path !== data.path) await admin.storage().bucket(data.bucket).file(data.path).delete({ignoreNotFound:true});
+    await job.ref.delete();
   }
 });

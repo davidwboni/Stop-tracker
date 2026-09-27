@@ -1,0 +1,14 @@
+.ae-panel { max-height:100%; }
+.ae-fields { display:flex; flex-direction:column; gap:16px; min-width:0; }
+.ae-amount input { font-size:36px; min-height:72px; font-weight:700; font-variant-numeric:tabular-nums; }
+.ae-fields textarea { width:100%; background:var(--card); color:var(--foreground); border:1px solid var(--border); border-radius:12px; padding:12px; font-size:16px; resize:vertical; }
+.ae-note { min-height:44px; text-align:left; }
+.ae-receipt { border:1px solid var(--border); border-radius:16px; padding:14px; }
+.ae-receipt button { min-height:44px; }
+.ae-checkbox { display:flex; align-items:center; gap:12px; min-height:48px; font-size:14px; line-height:1.5; cursor:pointer; }
+.ae-checkbox input { width:20px; height:20px; accent-color:#7760e8; flex-shrink:0; }
+.ae-thumbnail { width:50px; height:60px; object-fit:contain; border-radius:6px; }
+.ae-panel button:disabled { opacity:.55; cursor:not-allowed; }
+.ae-panel small { display:inline-block; font-size:11px; margin-left:4px; color:var(--home-muted); }
+.ae-panel button:active:not(:disabled) { transform:scale(.98); }
+@media(max-width:639px) { .qe-position:has(.ae-panel) { padding:env(safe-area-inset-top) 0 0; } .ae-panel { height:100%; border-radius:0; } .ae-panel .qe-form { flex:1; } .ae-panel .qe-scroll { flex:1; } .ae-panel .qe-footer { padding-bottom:max(12px,env(safe-area-inset-bottom)); } }
