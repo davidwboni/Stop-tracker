@@ -1,36 +1,27 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import {describe,it,expect,vi} from 'vitest';
+import {render,screen,fireEvent,waitFor} from '@testing-library/react';
 import PaymentSettings from '../components/PaymentSettings';
-
-vi.mock('../services/firebase', () => ({ db: {} }));
-vi.mock('firebase/firestore', () => ({
-  doc: vi.fn(),
-  updateDoc: vi.fn(() => Promise.resolve()),
-  getDoc: vi.fn(() => Promise.resolve({ exists: () => false })),
-}));
-vi.mock('../contexts/DataContext', () => ({
-  useData: () => ({
-    paymentConfig: {
-      model: 'tiered_stops',
-      thresholds: [{ stopCount: 110, rate: 1.98 }, { rate: 1.48 }],
-      excessParcelRate: 0.05,
-    },
-  }),
-}));
-
-describe('PaymentSettings', () => {
-  it('renders a model picker with the five hand-fillable models', () => {
-    render(<PaymentSettings userId="u1" user={{ isGuest: false }} onSettingsSaved={() => {}} />);
-    expect(screen.getByText('Flat per stop')).toBeTruthy();
-    expect(screen.getByText('Per mile')).toBeTruthy();
-    expect(screen.getByText('Day rate')).toBeTruthy();
-  });
-
-  it('shows a live worked example that reflects the entered rate', () => {
-    render(<PaymentSettings userId="u1" user={{ isGuest: false }} onSettingsSaved={() => {}} />);
-    fireEvent.click(screen.getByText('Flat per stop'));
-    const rate = screen.getByLabelText(/rate per stop/i);
-    fireEvent.change(rate, { target: { value: '2' } });
-    expect(screen.getByTestId('worked-example').textContent).toContain('£200.00');
-  });
+const fixture=vi.hoisted(()=>({save:vi.fn()}));
+vi.mock('../services/firebase',()=>({db:{},functions:{}}));
+vi.mock('../services/payStructureStorage',()=>({savePayStructure:fixture.save}));
+vi.mock('../contexts/DataContext',()=>({useData:()=>({paymentConfig:{model:'flat_stops',ratePerStop:1.75,excessParcelRate:0,contractorFeePercent:0},hasSavedPayStructure:true,loading:false})}));
+vi.mock('../services/productAnalytics',()=>({trackProductEvent:vi.fn()}));
+describe('Profile pay structure',()=>{
+ it('shows current settings, then a manual editor with all six existing models',()=>{
+  render(<PaymentSettings user={{uid:'u1'}} onSettingsSaved={vi.fn()}/>);
+  expect(screen.getByText('Current arrangement')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Edit manually · Free'}));
+  const options=Array.from(screen.getByLabelText('How are you paid?').options).map(o=>o.textContent);
+  expect(options).toEqual(expect.arrayContaining(['Flat per stop','Day rate','Tiered per stop','Per mile','Hourly','Sliding scale']));
+ });
+ it('updates the preview and persists only when the driver confirms',async()=>{
+  fixture.save.mockResolvedValue({model:'flat_stops',ratePerStop:2,excessParcelRate:0,contractorFeePercent:0,versionId:'new'});
+  const done=vi.fn();render(<PaymentSettings user={{uid:'u1'}} onSettingsSaved={done}/>);
+  fireEvent.click(screen.getByRole('button',{name:'Edit manually · Free'}));
+  fireEvent.change(screen.getByLabelText('Rate per stop (£)'),{target:{value:'2'}});
+  expect(screen.getAllByText('£240.00').length).toBeGreaterThan(0);expect(fixture.save).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button',{name:'Confirm pay structure'}));
+  await waitFor(()=>expect(fixture.save).toHaveBeenCalledTimes(1));
+  expect(done).toHaveBeenCalledWith(expect.objectContaining({ratePerStop:2}));
+ });
 });

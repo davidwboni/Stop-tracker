@@ -19,7 +19,7 @@ export function fileToBase64(file) {
 // Calls the deployed Cloud Function. Returns { config, summary, sample }.
 // The caller recomputes the worked example locally with tested code, the AI
 // result is only ever the structured config, never a money figure to trust.
-export async function interpretPayStructure({ text, file }) {
+export async function interpretPayStructure({ text, file, currentConfig }) {
   const payload = {};
   if (text && text.trim()) payload.text = text.trim();
   if (file) {
@@ -27,7 +27,8 @@ export async function interpretPayStructure({ text, file }) {
     payload.fileBase64 = base64;
     payload.mimeType = mimeType;
   }
-  const callable = httpsCallable(functions, "interpretPayStructure");
+  if (currentConfig) payload.currentConfig = currentConfig;
+  const callable = httpsCallable(functions, "interpretPayStructure", { timeout: 100000 });
   const res = await callable(payload);
   return res.data;
 }

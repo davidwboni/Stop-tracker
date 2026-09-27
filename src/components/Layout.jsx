@@ -12,7 +12,7 @@ import { useData } from '../contexts/DataContext';
 const Layout = () => {
   useAuth();
   const reducedMotion = useReducedMotion();
-  const { needsOnboarding, completeOnboarding } = useData();
+  const { needsOnboarding, completeOnboarding, finishOnboarding } = useData();
   const location = useLocation();
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -21,7 +21,7 @@ const Layout = () => {
   }, [location.pathname]);
   // First-run gate: brand-new users set up their pay before entering the app.
   if (needsOnboarding) {
-    return <PayOnboarding onComplete={completeOnboarding} />;
+    return <PayOnboarding onComplete={completeOnboarding} onStart={finishOnboarding} />;
   }
 
   return (

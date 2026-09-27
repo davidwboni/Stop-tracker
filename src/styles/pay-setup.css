@@ -1,0 +1,10 @@
+.pay-setup,.pay-fields{display:flex;flex-direction:column;gap:16px;min-width:0}
+.pay-setup input,.pay-setup textarea,.pay-setup select{font-size:16px;min-height:48px}
+.pay-setup textarea{width:100%;border:1px solid var(--border);border-radius:14px;background:var(--card);padding:14px;color:var(--foreground)}
+.pay-setup button{min-height:44px}.pay-setup button:disabled{opacity:.55}
+.pay-toggle{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:48px;font-weight:650}
+.pay-toggle input{width:24px;height:24px;accent-color:#7056ea}
+.pay-tier{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pay-grid-scroll{overflow:auto;max-width:100%}.pay-grid-scroll th,.pay-grid-scroll td{padding:6px}.pay-grid-scroll input{width:96px;background:var(--background);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--foreground)}
+.pay-save{position:sticky;bottom:0;padding:12px 0 max(12px,env(safe-area-inset-bottom));background:var(--background);display:flex;flex-direction:column;gap:8px;z-index:1}
+@media(max-width:350px){.pay-tier{grid-template-columns:1fr}}

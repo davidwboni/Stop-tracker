@@ -1,3 +1,6 @@
+import {savePayStructure} from '../services/payStructureStorage';
+import {validDate} from '../features/expenses/expenseModel';
+import usePayStructureHistory from '../hooks/usePayStructureHistory';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { syncData, db } from '../services/firebase';
@@ -32,7 +35,9 @@ export const DataProvider = ({ children }) => {
   const [loadError, setLoadError] = useState('');
   const [lastSaveStatus, setLastSaveStatus] = useState('');
   const [isNewUser, setIsNewUser] = useState(false);
+  const payHistory = usePayStructureHistory(user);
   const [paymentConfig, setPaymentConfig] = useState(normalizePayStructure(null));
+  const [hasSavedPayStructure,setHasSavedPayStructure] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [payPeriodAnchor, setPayPeriodAnchor] = useState(null);
   const [payPeriodNeedsConfirmation, setPayPeriodNeedsConfirmation] = useState(false);
@@ -49,6 +54,7 @@ export const DataProvider = ({ children }) => {
       setLoading(true);
       setLoadError('');
       setLogs([]);
+      setHasSavedPayStructure(false);
       setPaymentConfig(normalizePayStructure(null));
       setLastSaveStatus('');
       try {
@@ -66,6 +72,7 @@ export const DataProvider = ({ children }) => {
             const demoLogs = guestLogs ? JSON.parse(guestLogs) : [];
             setLogs(demoLogs);
             setPaymentConfig(normalizePayStructure(guestConfig ? JSON.parse(guestConfig) : null));
+            setHasSavedPayStructure(!!guestConfig);
             setPayPeriodAnchor(guestAnchor || null);
             setPayPeriodNeedsConfirmation(!guestAnchor && demoLogs.length > 0);
             setPeriodRecords(guestPeriods ? JSON.parse(guestPeriods) : {});
@@ -118,6 +125,7 @@ export const DataProvider = ({ children }) => {
           const mainData = mainUserDoc.exists() ? mainUserDoc.data() : {};
           if (mainData.paymentConfig) {
             setPaymentConfig(normalizePayStructure(mainData.paymentConfig));
+            setHasSavedPayStructure(true);
           }
           setPayPeriodAnchor(mainData.payPeriodAnchor || null);
           setPayPeriodNeedsConfirmation(!mainData.payPeriodAnchor && !logsEmpty);
@@ -136,7 +144,7 @@ export const DataProvider = ({ children }) => {
               data = await syncData.forceRefreshAllData(user.uid);
               if (!data || data.success === false) throw new Error("Refresh failed");
               if (data.logs) setLogs(data.logs);
-              if (data.paymentConfig) setPaymentConfig(normalizePayStructure(data.paymentConfig));
+              if (data.paymentConfig) {setPaymentConfig(normalizePayStructure(data.paymentConfig));setHasSavedPayStructure(true);}
               break;
             } catch (fetchErr) {
               console.warn(`Fetch attempt ${retries + 1} failed:`, fetchErr);
@@ -187,31 +195,19 @@ export const DataProvider = ({ children }) => {
   };
 
   const adoptPaymentConfig = config => {
-    setPaymentConfig(normalizePayStructure(config));
     if (user?.isGuest) localStorage.setItem(`guestConfig_${user.uid}`, JSON.stringify(config));
+    setPaymentConfig(normalizePayStructure(config));
+    setHasSavedPayStructure(true);
   };
 
   // Complete first-run onboarding: optionally save the chosen pay config, mark
   // the account onboarded, and clear the gate. Guests persist locally.
   const completeOnboarding = async (config, options = {}) => {
-    if (config) setPaymentConfig(normalizePayStructure(config));
-    if (options.payPeriodAnchor) { setPayPeriodAnchor(options.payPeriodAnchor); setPayPeriodNeedsConfirmation(false); }
-    setNeedsOnboarding(false);
-    if (!user?.uid) return;
-    try {
-      if (user.isGuest) {
-        if (config) localStorage.setItem(`guestConfig_${user.uid}`, JSON.stringify(config));
-        if (options.payPeriodAnchor) localStorage.setItem(`payPeriodAnchor_${user.uid}`, options.payPeriodAnchor);
-        localStorage.setItem(`onboarded_${user.uid}`, '1');
-      } else {
-        const payload = { onboarded: true, updatedAt: new Date().toISOString() };
-        if (config) payload.paymentConfig = config;
-        if (options.payPeriodAnchor) payload.payPeriodAnchor = options.payPeriodAnchor;
-        await setDoc(doc(db, 'users', user.uid), payload, { merge: true });
-      }
-    } catch (err) {
-      console.warn("Could not persist onboarding:", err);
-    }
+    if (!validDate(options.payPeriodAnchor)) throw new Error('Choose a valid pay-period start.');
+    const saved = await savePayStructure({user,config,previous:hasSavedPayStructure?paymentConfig:null,onboardingOptions:options});
+    setPaymentConfig(saved);setHasSavedPayStructure(true);
+    setPayPeriodAnchor(options.payPeriodAnchor);setPayPeriodNeedsConfirmation(false);
+    return saved;
   };
 
   const updatePayPeriodAnchor = async (date) => {
@@ -290,8 +286,13 @@ export const DataProvider = ({ children }) => {
     syncing,
     isNewUser,
     paymentConfig,
+    hasSavedPayStructure,
+    payStructureVersions: payHistory.versions,
+    payHistoryLoading: payHistory.loading,
+    payHistoryError: payHistory.error,
     needsOnboarding,
     completeOnboarding,
+    finishOnboarding: () => setNeedsOnboarding(false),
     forceSync,
     payPeriodAnchor,
     payPeriodNeedsConfirmation,

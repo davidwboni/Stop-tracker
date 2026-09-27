@@ -5,7 +5,7 @@ import { X, Check, CalendarDays } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { App as NativeApp } from '@capacitor/app';
 import { useData } from '../contexts/DataContext';
-import { PAY_MODELS } from '../features/payperiod/payStructure';
+import { PAY_MODELS, describePayStructure } from '../features/payperiod/payStructure';
 import { isoDate } from '../features/payperiod/periods';
 import { grossForEntry, money, pennies } from '../features/home/homeModel';
 import { draftFromLog, sameWork, validateDraft } from '../features/home/quickEntryModel';
@@ -21,11 +21,21 @@ export default function DailyQuickEntry({ open, initialDate, onDateChange, onClo
 }
 
 function EntryEditor({ date, onDateChange, onClose, onSaved }) {
-  const { logs = [], paymentConfig, updateLogs, loading, loadError } = useData();
+  const { logs = [], paymentConfig, updateLogs, loading, loadError, hasSavedPayStructure, payStructureVersions = [], payHistoryLoading, payHistoryError } = useData();
   const rows = logs.filter(row => row.date === date);
+  const [chosen,setChosen]=useState(null);
+  const pastNew=!rows.length&&date<isoDate(new Date());
   // Wait for the actual record before initializing the form.
   if (loading || loadError) return <Dialog open onClose={onClose} className="qe-root"><div className="qe-backdrop" /><div className="qe-position"><Dialog.Panel className="home-screen qe-panel"><Dialog.Title>Quick Entry</Dialog.Title><p role={loadError ? 'alert' : 'status'}>{loadError || 'Loading your work…'}</p><button className="home-secondary" onClick={onClose}>Close</button></Dialog.Panel></div></Dialog>;
-  return <ReadyEditor date={date} rows={rows} logs={logs} paymentConfig={paymentConfig} updateLogs={updateLogs} onDateChange={onDateChange} onClose={onClose} onSaved={onSaved} />;
+  if (!rows.length && hasSavedPayStructure===false) return <Dialog open onClose={onClose} className="qe-root"><div className="qe-backdrop"/><div className="qe-position"><Dialog.Panel className="home-screen qe-panel qe-discard"><Dialog.Title>Set up your pay first</Dialog.Title><p>Choose how you get paid before calculating a new entry.</p><a className="home-primary" href="/app/settings">Set up pay structure</a><button className="home-secondary" onClick={onClose}>Close</button></Dialog.Panel></div></Dialog>;
+  if(pastNew && hasSavedPayStructure===true && !chosen) return <HistoricalRateChoice versions={payStructureVersions} current={paymentConfig} loading={payHistoryLoading} error={payHistoryError} onChoose={setChosen} onClose={onClose}/>;
+  return <ReadyEditor date={date} rows={rows} logs={logs} paymentConfig={chosen||paymentConfig} updateLogs={updateLogs} onDateChange={onDateChange} onClose={onClose} onSaved={onSaved} />;
+}
+
+function HistoricalRateChoice({versions,current,loading,error,onChoose,onClose}){
+ const [id,setId]=useState('');
+ const choices=[{id:'current',config:current,label:'Current arrangement'},...versions.filter(v=>v.config&&v.id!==current?.versionId).map(v=>({...v,label:v.savedAt?`Saved ${new Date(v.savedAt).toLocaleDateString('en-GB')}`:'Previous arrangement · date unknown'}))];
+ return <Dialog open onClose={onClose} className="qe-root"><div className="qe-backdrop"/><div className="qe-position"><Dialog.Panel className="home-screen qe-panel qe-discard"><Dialog.Title>Which rates applied that day?</Dialog.Title><p>This is a new entry for a past day. Choose the applicable arrangement before logging work.</p>{loading?<p role="status">Loading saved rates…</p>:error?<p role="alert">{error} Close and reopen to retry.</p>:<><label className="home-field">Pay structure<select value={id} onChange={e=>setId(e.target.value)}><option value="">Choose rates</option>{choices.map(v=><option key={v.id} value={v.id}>{v.label} · {describePayStructure(v.config)}</option>)}</select></label><button className="home-primary" disabled={!id} onClick={()=>onChoose(choices.find(v=>v.id===id).config)}>Use these rates</button></>}<button className="home-secondary" onClick={onClose}>Cancel</button></Dialog.Panel></div></Dialog>;
 }
 
 function ReadyEditor({ date, rows, logs, paymentConfig, updateLogs, onDateChange, onClose, onSaved }) {

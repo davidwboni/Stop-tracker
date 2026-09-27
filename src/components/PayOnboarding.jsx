@@ -3,11 +3,12 @@ import { motion } from "framer-motion";
 import { Check, ArrowRight, Package, CalendarDays } from "lucide-react";
 import PayStructureAISetup from "./PayStructureAISetup";
 import { useAuth } from "../contexts/AuthContext";
+import {isoDate} from '../features/payperiod/periods';
 import { describePayStructure } from "../features/payperiod/payStructure";
 
 // Completion beat shown after the user confirms their pay setup: a spring-in
 // check-mark, then a staggered welcome + pay summary + "Start tracking".
-const WelcomeStep = ({ firstName, config, payPeriodAnchor, setPayPeriodAnchor, onStart }) => {
+const WelcomeStep = ({ firstName, config, payPeriodAnchor, onStart }) => {
   const formattedPayPeriodAnchor = new Date(`${payPeriodAnchor}T12:00:00`).toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
@@ -75,19 +76,12 @@ const WelcomeStep = ({ firstName, config, payPeriodAnchor, setPayPeriodAnchor, o
           Current 4-week period started
         </div>
 
-        <label className="relative mt-2 block w-full cursor-pointer">
+        <div className="relative mt-2 block w-full">
           <div className="flex h-12 w-full items-center justify-between rounded-xl border border-[#26314a] bg-[#090f1a] px-4 text-base font-semibold text-white">
             <span>{formattedPayPeriodAnchor}</span>
             <CalendarDays className="h-5 w-5 shrink-0 text-[#8f83ff]" />
           </div>
-          <input
-            type="date"
-            value={payPeriodAnchor}
-            onChange={(e) => setPayPeriodAnchor(e.target.value)}
-            aria-label="Current 4-week period start date"
-            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-          />
-        </label>
+        </div>
 
         <p className="mt-3 text-xs leading-5 text-muted-foreground">
           Use the first day of your current invoice/pay cycle. Stop Tracker will keep future 28-day periods aligned automatically.
@@ -112,16 +106,18 @@ const WelcomeStep = ({ firstName, config, payPeriodAnchor, setPayPeriodAnchor, o
 // First-run screen for a brand-new user before they reach the app. Reuses the
 // AI describe/upload panel; on confirm it shows the welcome beat, then hands the
 // config up to completeOnboarding. "Set up later" completes with no config.
-const PayOnboarding = ({ onComplete }) => {
+const PayOnboarding = ({ onComplete, onStart }) => {
   const { user } = useAuth();
   const firstName = user?.displayName?.split(" ")[0] || "there";
+  const [periodError,setPeriodError]=useState('');
+  async function confirm(config){if(!payPeriodAnchor){setPeriodError('Choose a pay-period start date.');throw new Error('Missing period');}const saved=await onComplete(config,{payPeriodAnchor});setConfirmed(saved);}
   const [confirmed, setConfirmed] = useState(null); // the config once confirmed
-  const [payPeriodAnchor, setPayPeriodAnchor] = useState(() => new Date().toISOString().split("T")[0]);
+  const [payPeriodAnchor, setPayPeriodAnchor] = useState(() => isoDate(new Date()));
 
   return (
     <div className="min-h-[100dvh] w-full overflow-x-hidden bg-[#080c14] text-[#f5f7fb] flex flex-col items-center justify-center px-4 py-10 pt-safe">
       {confirmed ? (
-        <WelcomeStep firstName={firstName} config={confirmed} payPeriodAnchor={payPeriodAnchor} setPayPeriodAnchor={setPayPeriodAnchor} onStart={() => onComplete(confirmed,{ payPeriodAnchor })} />
+        <WelcomeStep firstName={firstName} config={confirmed} payPeriodAnchor={payPeriodAnchor} setPayPeriodAnchor={setPayPeriodAnchor} onStart={onStart} />
       ) : (
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -132,16 +128,18 @@ const PayOnboarding = ({ onComplete }) => {
           <div className="text-center space-y-2">
             <h1 className="text-3xl font-bold">Welcome, {firstName} 👋</h1>
             <p className="text-muted-foreground">
-              Let's set up how you get paid, so your daily totals are always spot on.
+              Let's set up how you get paid, so you can calculate expected earnings.
             </p>
           </div>
 
+          <label className="home-field">Current 4-week period start date<input type="date" value={payPeriodAnchor} onChange={e=>{setPayPeriodAnchor(e.target.value);setPeriodError('');}} /></label>
+          {periodError&&<p role="alert">{periodError}</p>}
           <div className="rounded-[18px] border border-border bg-card p-5 shadow-sm">
-            <PayStructureAISetup onConfirm={(config) => setConfirmed(config)} />
+            <PayStructureAISetup onConfirm={confirm} />
           </div>
 
           <p className="text-center text-xs text-muted-foreground px-6">
-            This takes a few seconds and makes every daily total accurate. You can change it
+            Review your rates before you start tracking. You can change it
             anytime in Profile &rsaquo; Pay Structure.
           </p>
         </motion.div>

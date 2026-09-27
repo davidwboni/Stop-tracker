@@ -20,10 +20,10 @@ const PERIOD_LENGTH_DAYS = 28;
  */
 export function getPeriodFromDate(anchorISO: string, date: Date): Period {
   const anchor = new Date(anchorISO);
-  anchor.setHours(0, 0, 0, 0);
+  anchor.setUTCHours(0, 0, 0, 0);
 
   const targetDate = new Date(date);
-  targetDate.setHours(0, 0, 0, 0);
+  targetDate.setUTCHours(0, 0, 0, 0);
 
   // Calculate the number of days between anchor and target
   const daysDiff = Math.floor((targetDate.getTime() - anchor.getTime()) / (1000 * 60 * 60 * 24));
@@ -33,16 +33,16 @@ export function getPeriodFromDate(anchorISO: string, date: Date): Period {
 
   // Calculate the start date of this period
   const start = new Date(anchor);
-  start.setDate(anchor.getDate() + (periodIndex * PERIOD_LENGTH_DAYS));
+  start.setUTCDate(anchor.getUTCDate() + (periodIndex * PERIOD_LENGTH_DAYS));
 
   // Calculate the end date (exclusive)
   const end = new Date(start);
-  end.setDate(start.getDate() + PERIOD_LENGTH_DAYS);
+  end.setUTCDate(start.getUTCDate() + PERIOD_LENGTH_DAYS);
 
   // Create label
   const formatDate = (d: Date) => {
-    const month = d.toLocaleDateString('en-US', { month: 'short' });
-    const day = d.getDate();
+    const month = d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
+    const day = d.getUTCDate();
     return `${month} ${day}`;
   };
 
@@ -74,21 +74,21 @@ export function getPeriods(anchorISO: string, countBack: number = 6): Period[] {
     const anchor = new Date(anchorISO);
 
     const start = new Date(anchor);
-    start.setDate(anchor.getDate() + (periodIndex * PERIOD_LENGTH_DAYS));
+    start.setUTCDate(anchor.getUTCDate() + (periodIndex * PERIOD_LENGTH_DAYS));
 
     const end = new Date(start);
-    end.setDate(start.getDate() + PERIOD_LENGTH_DAYS);
+    end.setUTCDate(start.getUTCDate() + PERIOD_LENGTH_DAYS);
 
     const formatDate = (d: Date) => {
-      const month = d.toLocaleDateString('en-US', { month: 'short' });
-      const day = d.getDate();
-      const year = d.getFullYear();
+      const month = d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
+      const day = d.getUTCDate();
+      const year = d.getUTCFullYear();
       return `${month} ${day}, ${year}`;
     };
 
     const shortFormatDate = (d: Date) => {
-      const month = d.toLocaleDateString('en-US', { month: 'short' });
-      const day = d.getDate();
+      const month = d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
+      const day = d.getUTCDate();
       return `${month} ${day}`;
     };
 
@@ -114,7 +114,7 @@ export function getPeriods(anchorISO: string, countBack: number = 6): Period[] {
  */
 export function isDateInPeriod(date: Date, period: Period): boolean {
   const checkDate = new Date(date);
-  checkDate.setHours(0, 0, 0, 0);
+  checkDate.setUTCHours(0, 0, 0, 0);
 
   return checkDate >= period.start && checkDate < period.end;
 }
@@ -128,11 +128,11 @@ export function getSuggestedAnchorDate(): string {
 
   // Go back 28 days
   const suggested = new Date(today);
-  suggested.setDate(today.getDate() - 28);
+  suggested.setUTCDate(today.getUTCDate() - 28);
 
   // Round to the previous Sunday
-  const dayOfWeek = suggested.getDay();
-  suggested.setDate(suggested.getDate() - dayOfWeek);
+  const dayOfWeek = suggested.getUTCDay();
+  suggested.setUTCDate(suggested.getUTCDate() - dayOfWeek);
 
   return suggested.toISOString().split('T')[0];
 }
