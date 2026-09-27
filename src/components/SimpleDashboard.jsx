@@ -71,7 +71,7 @@ export default function SimpleDashboard() {
   }
   function toggleHidden() { const next = !hidden; setHidden(next); try { localStorage.setItem('home-hide-money', next ? '1' : '0'); } catch (_) {} }
   const records = () => { track('records_opened', { source: 'home' }); navigate('/app/entries'); };
-  const goMoney = range => { track('money_overview_viewed', { source: 'home' }); navigate('/app/money', { state: range }); };
+  const goMoney = range => { navigate('/app/money', { state: range }); };
 
   return <div className="home-screen home-layout">
     <header className="home-header">

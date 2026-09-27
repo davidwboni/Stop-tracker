@@ -225,15 +225,18 @@ export const DataProvider = ({ children }) => {
     } catch (err) { console.warn('Could not save pay-period start:', err); }
   };
 
-  const updatePeriodRecord = async (periodId, patch) => {
-    if (!periodId) return;
-    const next = { ...periodRecords, [periodId]: { ...(periodRecords[periodId] || {}), ...patch, updatedAt: new Date().toISOString() } };
-    setPeriodRecords(next);
-    if (!user?.uid) return;
+  const updatePeriodRecord = async (periodId, patch, strict = false) => {
     try {
-      if (user.isGuest) localStorage.setItem(`periodRecords_${user.uid}`, JSON.stringify(next));
-      else await setDoc(doc(db, 'users', user.uid), { periodRecords: next, updatedAt: new Date().toISOString() }, { merge: true });
-    } catch (err) { console.warn('Could not save period record:', err); }
+      if (!periodId || !user?.uid) throw new Error('Sign in before saving a check.');
+      if (!user.isGuest && !navigator.onLine) throw new Error('Connect before saving a check.');
+      const record = { ...(periodRecords[periodId] || {}), ...patch, updatedAt: new Date().toISOString() };
+      if (user.isGuest) {
+        const key = `periodRecords_${user.uid}`;
+        localStorage.setItem(key, JSON.stringify({ ...JSON.parse(localStorage.getItem(key) || '{}'), [periodId]: record }));
+      } else await setDoc(doc(db, 'users', user.uid), { periodRecords: { [periodId]: record }, updatedAt: new Date().toISOString() }, { merge: true });
+      setPeriodRecords(previous => ({ ...previous, [periodId]: record }));
+      return true;
+    } catch (err) { if (strict) throw err; return false; }
   };
 
   // Force sync all data
