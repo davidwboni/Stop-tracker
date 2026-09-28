@@ -1,3 +1,5 @@
+Superseded by [approved specification](statement-review-approved.md) after user approval on 27 September 2026.
+
 # Review Extracted Data — proposed, awaiting approval
 
 One screen. User checks an AI draft before any comparison or permanent saving. All example content is illustrative.
