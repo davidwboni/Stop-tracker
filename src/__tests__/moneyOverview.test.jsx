@@ -42,7 +42,17 @@ describe('Money to Check Pay integration',()=>{
   fireEvent.click(screen.getByRole('button',{name:'Compare with my records'}));fireEvent.click(screen.getByRole('button',{name:'Confirm and save check'}));
   await waitFor(()=>expect(f.save).toHaveBeenCalledTimes(1));
   expect(f.save.mock.calls[0]).toEqual([period.id,expect.objectContaining({status:'checked',payoutComparison:expect.objectContaining({statementPence:421769,expectedPence:426412,scope:'contractor_payout'})}),true]);
-  await screen.findByText('Difference found');
+  await screen.findByText('£46.43 lower');
  });
- it('retains the form when saving the check fails',async()=>{f.save.mockRejectedValue(new Error('offline'));open();fireEvent.click(screen.getByRole('button',{name:'Enter manually'}));fireEvent.change(screen.getByLabelText('Statement contractor payout (£)'),{target:{value:'4217.69'}});fireEvent.click(screen.getByRole('checkbox'));fireEvent.click(screen.getByRole('button',{name:'Compare with my records'}));fireEvent.click(screen.getByRole('button',{name:'Confirm and save check'}));await screen.findByText(/Could not save this check/);expect(screen.getByText('Comparison preview · Not saved')).toBeInTheDocument();fireEvent.click(screen.getByRole('button',{name:'Edit statement figures'}));expect(screen.getByLabelText('Statement contractor payout (£)')).toHaveValue('4217.69');});
+ it('opens a saved comparison and resolves it only after explicit confirmation',async()=>{
+  f.data.periodRecords[period.id]=checked(await moneyRevision(logs,expenses,period));
+  open();await screen.findByText('Difference found');fireEvent.click(screen.getByRole('button',{name:'Review saved check'}));
+  await screen.findByText('Checked · Unresolved');expect(f.save).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button',{name:'Mark comparison resolved'}));
+  fireEvent.change(screen.getByLabelText('Outcome'),{target:{value:'explained_difference'}});
+  fireEvent.click(screen.getByRole('button',{name:'Confirm resolved'}));
+  await screen.findByText('You marked this comparison resolved. This does not confirm that payment arrived.');
+  expect(f.save).toHaveBeenCalledWith(period.id,expect.objectContaining({status:'reconciled',resolutionReason:'explained_difference'}),true);
+ });
+ it('retains the form when saving the check fails',async()=>{f.save.mockRejectedValue(new Error('offline'));open();fireEvent.click(screen.getByRole('button',{name:'Enter manually'}));fireEvent.change(screen.getByLabelText('Statement contractor payout (£)'),{target:{value:'4217.69'}});fireEvent.click(screen.getByRole('checkbox'));fireEvent.click(screen.getByRole('button',{name:'Compare with my records'}));fireEvent.click(screen.getByRole('button',{name:'Confirm and save check'}));await screen.findByText(/Could not save this check/);expect(screen.getByText('Preview · Not saved')).toBeInTheDocument();fireEvent.click(screen.getByRole('button',{name:'Edit statement figures'}));expect(screen.getByLabelText('Statement contractor payout (£)')).toHaveValue('4217.69');});
 });

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { GoogleMap, useJsApiLoader, MarkerF, PolylineF } from '@react-google-maps/api';
 
 // Google Maps version of the route map. Used when a Maps key is configured;
@@ -11,7 +11,7 @@ const DEFAULT_CENTER = { lat: 51.5074, lng: -0.1278 }; // London
 function numberedIcon(index) {
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 34 34">
-      <circle cx="17" cy="17" r="14" fill="#0D9488" stroke="#ffffff" stroke-width="3"/>
+      <circle cx="17" cy="17" r="14" fill="#175fa2" stroke="#ffffff" stroke-width="3"/>
       <text x="17" y="22" text-anchor="middle" font-family="Arial, sans-serif"
             font-size="13" font-weight="bold" fill="#ffffff">${index}</text>
     </svg>`;
@@ -28,9 +28,10 @@ const GoogleRouteMap = ({ addresses = [], fallback = null }) => {
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '',
   });
   const mapRef = useRef(null);
+  const [ready,setReady]=useState(false);
 
   const onLoad = useCallback((map) => {
-    mapRef.current = map;
+    mapRef.current = map;setReady(true);
   }, []);
 
   // Keep every stop in view as the list changes.
@@ -44,7 +45,7 @@ const GoogleRouteMap = ({ addresses = [], fallback = null }) => {
     } else {
       mapRef.current.fitBounds(bounds, 48);
     }
-  }, [addresses, isLoaded]);
+  }, [addresses, isLoaded, ready]);
 
   if (loadError) {
     console.error("Google Maps failed to load:", loadError);
@@ -92,7 +93,7 @@ const GoogleRouteMap = ({ addresses = [], fallback = null }) => {
         {addresses.length > 1 && (
           <PolylineF
             path={path}
-            options={{ strokeColor: '#0D9488', strokeOpacity: 0.8, strokeWeight: 4 }}
+            options={{ strokeColor: '#175fa2', strokeOpacity: 0.8, strokeWeight: 4 }}
           />
         )}
       </GoogleMap>

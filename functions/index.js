@@ -571,3 +571,5 @@ exports.removeOrphanReceipts = onSchedule('every 24 hours', async () => {
     await job.ref.delete();
   }
 });
+
+exports.deleteDriverAccount = require('./accountDeletion').registerAccountDeletion({onCall,HttpsError,admin});

@@ -20,7 +20,7 @@ export async function optimizeRouteGoogle(addresses) {
     type: a.type || "",
   }));
 
-  const call = httpsCallable(functions, "optimizeDriverRoute");
+  const call = httpsCallable(functions, "optimizeDriverRoute", {timeout:90000});
   const { data } = await call({ addresses: payload });
 
   if (!data?.route || !Array.isArray(data.route)) return null;

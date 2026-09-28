@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import {Dialog} from "@headlessui/react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Mail, User, Loader2, X, Apple } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -25,6 +25,7 @@ const GoogleMark = () => (
 // Bottom sheet offering every way into the app. Portaled to body so it is fixed
 // to the viewport rather than any transformed ancestor.
 const SignInSheet = ({ open, onClose }) => {
+  const reduced=useReducedMotion();
   const { loginWithGoogle, loginAsGuest } = useAuth();
   const [busy, setBusy] = useState(null);
   const [error, setError] = useState(null);
@@ -61,10 +62,10 @@ const SignInSheet = ({ open, onClose }) => {
     </button>
   );
 
-  return createPortal(
+  return (
     <AnimatePresence>
       {open && (
-        <motion.div
+        <Dialog open={open} onClose={()=>{if(!busy)onClose();}} as={motion.div}
           className="fixed inset-0 z-[80] flex items-end justify-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -72,16 +73,16 @@ const SignInSheet = ({ open, onClose }) => {
         >
           <div className="absolute inset-0 bg-black/50" onClick={busy ? undefined : onClose} />
 
-          <motion.div
-            initial={{ y: "100%" }}
+          <Dialog.Panel as={motion.div}
+            initial={{ y: reduced?0:"100%" }}
             animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", stiffness: 320, damping: 32 }}
+            exit={{ y: reduced?0:"100%" }}
+            transition={{duration:reduced?0:0.2}}
             className="relative w-full max-w-sm bg-background rounded-t-[24px] px-6 pt-5 pb-8 pb-safe"
           >
             <div className="flex items-center justify-between mb-1">
-              <h2 className="text-lg font-semibold">Get started</h2>
-              <button onClick={onClose} disabled={!!busy} aria-label="Close" className="text-muted-foreground hover:text-foreground">
+              <Dialog.Title className="text-lg font-semibold">Get started</Dialog.Title>
+              <button onClick={onClose} disabled={!!busy} aria-label="Close" className="min-h-[44px] min-w-[44px] grid place-items-center text-muted-foreground hover:text-foreground">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -127,11 +128,10 @@ const SignInSheet = ({ open, onClose }) => {
             <p className="text-[11px] text-muted-foreground text-center mt-5 leading-relaxed">
               By continuing you agree to our Terms and Privacy Policy.
             </p>
-          </motion.div>
-        </motion.div>
+          </Dialog.Panel>
+        </Dialog>
       )}
-    </AnimatePresence>,
-    document.body
+    </AnimatePresence>
   );
 };
 

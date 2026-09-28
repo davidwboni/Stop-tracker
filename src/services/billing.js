@@ -1,3 +1,4 @@
+import {trackProductEvent as track} from './productAnalytics';
 import { httpsCallable } from "firebase/functions";
 import { doc, onSnapshot } from "firebase/firestore";
 import { functions, db } from "./firebase";
@@ -6,6 +7,7 @@ export const startProCheckout = async (plan) => {
   const call = httpsCallable(functions, "createProCheckout");
   const { data } = await call({ plan, origin: window.location.origin });
   if (!data?.url) throw new Error("Stripe Checkout did not return a URL.");
+  track('checkout_opened');
   window.location.assign(data.url);
 };
 
@@ -21,5 +23,5 @@ export const subscribeToEntitlement = (uid, callback) => {
   return onSnapshot(doc(db, "entitlements", uid), (snap) => {
     const data = snap.exists() ? snap.data() : {};
     callback({ ...data, isPro: data.plan === "pro" && ["active", "trialing"].includes(data.subscriptionStatus) });
-  });
+  },()=>callback({isPro:false,unavailable:true}));
 };

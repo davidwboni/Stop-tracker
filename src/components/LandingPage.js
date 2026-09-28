@@ -1,6 +1,8 @@
-import React, { useState } from "react";
+import AnalyticsConsent from './AnalyticsConsent';
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Truck, Zap, Sparkles, FileText, ArrowRight } from "lucide-react";
+import {trackProductEvent as track} from '../services/productAnalytics';
 import SignInSheet from "./SignInSheet";
 
 // App-style first-run screen, not a marketing website: one screen, no scroll,
@@ -10,34 +12,35 @@ const BENEFITS = [
   {
     icon: Zap,
     title: "Log in seconds",
-    body: "One number at the end of your round. That's it.",
+    body: "Stops, parcels and optional extras. Save your day in seconds.",
   },
   {
     icon: Sparkles,
     title: "Any pay deal",
-    body: "Tell us how you're paid, or upload your rate sheet. We work it out.",
+    body: "Describe how you get paid, then review and confirm your setup.",
   },
   {
     icon: FileText,
-    title: "Invoice in a tap",
-    body: "Send a proper invoice and check you've been paid right.",
+    title: "Check your pay",
+    body: "Compare your records with the contractor statement. Understand the difference.",
   },
 ];
 
 export default function LandingPage({ onContactUs, onPrivacyPolicy, onTermsOfService }) {
   const [sheetOpen, setSheetOpen] = useState(false);
 
+  useEffect(()=>{track('landing_viewed');},[]);
   const rise = {
     hidden: { opacity: 0, y: 14 },
-    show: (i) => ({ opacity: 1, y: 0, transition: { delay: 0.08 * i, duration: 0.4 } }),
+    show: (i) => ({ opacity: 1, y: 0, transition: { delay: 0, duration: 0.2 } }),
   };
 
   return (
-    <div className="relative min-h-[100dvh] animated-gradient overflow-hidden flex flex-col items-center px-6 pt-safe pb-safe">
+    <div className="relative min-h-[100dvh] bg-background overflow-hidden flex flex-col items-center px-6 pt-safe pb-safe">
       {/* Ambient depth behind the content. Decorative only. */}
-      <div className="ambient-blob w-72 h-72 bg-primary/25 -top-16 -left-20" aria-hidden="true" />
+      <div className="hidden w-72 h-72 bg-primary/25 -top-16 -left-20" aria-hidden="true" />
       <div
-        className="ambient-blob w-80 h-80 bg-secondary/20 -bottom-24 -right-24"
+        className="hidden w-80 h-80 bg-secondary/20 -bottom-24 -right-24"
         style={{ animationDelay: "-9s" }}
         aria-hidden="true"
       />
@@ -57,9 +60,7 @@ export default function LandingPage({ onContactUs, onPrivacyPolicy, onTermsOfSer
           animate="show"
           className="text-3xl font-bold leading-tight mt-7"
         >
-          Every stop,
-          <br />
-          every penny.
+          Your Work.<br />Your Records.<br />Your Pay.
         </motion.h1>
 
         <motion.p
@@ -130,6 +131,7 @@ export default function LandingPage({ onContactUs, onPrivacyPolicy, onTermsOfSer
         </motion.div>
       </div>
 
+      <div className="mx-auto max-w-md px-5 pb-6"><AnalyticsConsent/></div>
       <SignInSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
     </div>
   );

@@ -10,6 +10,7 @@ import ExpensesOverview from '../components/ExpensesOverview';
 import DashboardWrapper from '../components/DashboardWrapper';
 import EntriesWrapper from '../components/EntriesWrapper';
 import StatsPage from '../components/StatsPage';
+import DocumentsPage from '../components/DocumentsPage';
 import InvoicePage from '../components/InvoicePage';
 import CheckPayV4 from '../components/CheckPayV4';
 import PeriodHistoryV4 from '../components/PeriodHistoryV4';
@@ -91,7 +92,7 @@ const router = createBrowserRouter([
           { path: 'periods', element: <ErrorBoundary><div className="max-w-2xl mx-auto pb-24 -mt-2"><div className="mb-4 flex items-center justify-between gap-3"><h1 className="text-2xl font-bold tracking-tight">Pay Periods</h1><span className="text-xs text-[#8e9ab2]">4-week history</span></div><PeriodHistoryV4 /></div></ErrorBoundary> },
           { path: 'money/expenses', element: <ErrorBoundary><ExpensesOverview /></ErrorBoundary> },
           { path: 'money', element: <ErrorBoundary><MoneyOverview /></ErrorBoundary> },
-          { path: 'documents', element: <ErrorBoundary><InvoicePage /></ErrorBoundary> },
+          { path: 'documents', element: <ErrorBoundary><DocumentsPage /></ErrorBoundary> },
           { path: 'stats', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><StatsPage /></React.Suspense></ErrorBoundary> },
           { path: 'profile', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><ProfileWrapper /></React.Suspense></ErrorBoundary> },
           { path: 'settings', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><PaymentSettingsWrapper /></React.Suspense></ErrorBoundary> },

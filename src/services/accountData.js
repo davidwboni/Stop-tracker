@@ -1,0 +1,4 @@
+import {httpsCallable} from 'firebase/functions';
+import {functions} from './firebase';
+export function downloadRecords(data){const url=URL.createObjectURL(new Blob([JSON.stringify({format:'Stop Tracker records',version:1,exportedAt:new Date().toISOString(),...data},null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='stop-tracker-records.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+export async function deleteAccountRecords(uid){await httpsCallable(functions,'deleteDriverAccount',{timeout:120000})({});for(const key of Object.keys(localStorage))if(key.endsWith('_'+uid))localStorage.removeItem(key);const {openDB}=await import('idb');const db=await openDB('stop-tracker-receipts',1,{upgrade(db){db.createObjectStore('receipts');}});for(const key of await db.getAllKeys('receipts'))if(String(key).startsWith('users/'+uid+'/'))await db.delete('receipts',key);db.close();}

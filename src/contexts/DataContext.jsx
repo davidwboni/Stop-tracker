@@ -210,15 +210,12 @@ export const DataProvider = ({ children }) => {
     return saved;
   };
 
-  const updatePayPeriodAnchor = async (date) => {
-    if (!date) return;
-    setPayPeriodAnchor(date);
-    setPayPeriodNeedsConfirmation(false);
-    if (!user?.uid) return;
-    try {
-      if (user.isGuest) localStorage.setItem(`payPeriodAnchor_${user.uid}`, date);
-      else await setDoc(doc(db, 'users', user.uid), { payPeriodAnchor: date, updatedAt: new Date().toISOString() }, { merge: true });
-    } catch (err) { console.warn('Could not save pay-period start:', err); }
+  const updatePayPeriodAnchor = async date => {
+    if (!validDate(date)||!user?.uid) throw new Error('Choose a valid period date.');
+    if (!user.isGuest&&!navigator.onLine) throw new Error('Connect before saving.');
+    if (user.isGuest) localStorage.setItem(`payPeriodAnchor_${user.uid}`,date);
+    else await setDoc(doc(db,'users',user.uid),{payPeriodAnchor:date,updatedAt:new Date().toISOString()},{merge:true});
+    setPayPeriodAnchor(date);setPayPeriodNeedsConfirmation(false);
   };
 
   const updatePeriodRecord = async (periodId, patch, strict = false) => {

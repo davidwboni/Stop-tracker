@@ -1,3 +1,6 @@
+import '../styles/home.css';
+import '../styles/money.css';
+import '../styles/product.css';
 import React, { useEffect } from 'react';
 import ErrorBoundary from './ErrorBoundary';
 import { motion, useReducedMotion } from 'framer-motion';
@@ -15,10 +18,10 @@ const Layout = () => {
   const { needsOnboarding, completeOnboarding, finishOnboarding } = useData();
   const location = useLocation();
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
     const main = document.querySelector('main');
-    if (main) main.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [location.pathname]);
+    if (main) main.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
+  }, [location.pathname,reducedMotion]);
   // First-run gate: brand-new users set up their pay before entering the app.
   if (needsOnboarding) {
     return <PayOnboarding onComplete={completeOnboarding} onStart={finishOnboarding} />;

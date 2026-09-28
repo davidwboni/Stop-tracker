@@ -1,15 +1,12 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { useData } from "../contexts/DataContext";
 import { useInvoice } from "../contexts/InvoiceContext";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Alert, AlertDescription } from "./ui/alert";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import {buildInvoicePdf} from '../services/invoicePdf';
 import {
   Plus,
-  Trash2,
   Download,
   Share2,
   Building2,
@@ -20,11 +17,9 @@ import {
   X,
 } from "lucide-react";
 
-const blankLine = () => ({ id: Date.now() + Math.random(), desc: "", qty: "", rate: "" });
 const money = (n) => `£${(Number(n) || 0).toFixed(2)}`;
 
 export default function InvoiceCreate({ prefill }) {
-  const { updatePeriodRecord } = useData();
   const {
     clients,
     saveClient,
@@ -50,7 +45,6 @@ export default function InvoiceCreate({ prefill }) {
   }, [clients, client]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [newClient, setNewClient] = useState(null);
-  const [lines, setLines] = useState([blankLine()]);
   const [notes, setNotes] = useState("");
   const [advanced, setAdvanced] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -59,11 +53,6 @@ export default function InvoiceCreate({ prefill }) {
   const [persisted, setPersisted] = useState(false);
 
   const total = Number(invoiceAmount) || 0;
-
-  const setLine = (id, key, val) =>
-    setLines((ls) => ls.map((l) => (l.id === id ? { ...l, [key]: val } : l)));
-  const addLine = () => setLines((ls) => [...ls, blankLine()]);
-  const removeLine = (id) => setLines((ls) => (ls.length > 1 ? ls.filter((l) => l.id !== id) : ls));
 
   // ---------- Sender setup gate ----------
   const saveSender = async () => {
@@ -89,7 +78,7 @@ export default function InvoiceCreate({ prefill }) {
             <h3 className="font-semibold">Your invoice details</h3>
           </div>
           <p className="text-sm text-muted-foreground">
-            Set this up once and Stop Tracker will reuse it for future four-week invoices. Your invoice details stay attached to your signed-in account.
+            Set this up once and Stop Tracker will reuse it for future four-week invoices. Guest details stay on this device; signed-in details are saved to your account.
           </p>
         </div>
 
@@ -129,102 +118,28 @@ export default function InvoiceCreate({ prefill }) {
   const saveNewClient = async () => {
     if (!newClient?.name?.trim()) return setError("Add a client name.");
     setError(null);
-    const all = await saveClient(newClient);
-    chooseClient(all[all.length - 1] || newClient);
+    setBusy(true);try{const all=await saveClient(newClient);chooseClient(all[all.length-1]||newClient);}catch(e){setError(e.message||'Could not save client.');}finally{setBusy(false);}
   };
 
   // ---------- Generate PDF ----------
-  const buildPdf = () => {
-    const docPdf = new jsPDF({ unit: "pt", format: "a4" });
-    const margin = 40;
-    let y = margin;
+  const invoiceRecord = () => ({invoiceNumber,senderSnapshot:{...sender},clientSnapshot:{...client},notes,issuedDate:new Date().toISOString().slice(0,10),clientName:client.name,clientEmail:client.email||'',invoiceAmount:total.toFixed(2),dateFrom,dateTo,lines:[{desc:'Delivery services',qty:'1',rate:String(total)}],periodId:prefill?.periodId||null,status:'generated'});
+  const persist = async () => { if(persisted)return; await addInvoice(invoiceRecord());setPersisted(true); };
 
-    docPdf.setFontSize(22);
-    docPdf.text("INVOICE", margin, y);
-    docPdf.setFontSize(10);
-    docPdf.text(`No. ${invoiceNumber}`, 555, y, { align: "right" });
-    docPdf.text(new Date().toLocaleDateString("en-GB"), 555, y + 14, { align: "right" });
-    y += 30;
-
-    docPdf.setFontSize(11);
-    docPdf.setFont(undefined, "bold");
-    docPdf.text(sender.name, margin, y);
-    docPdf.setFont(undefined, "normal");
-    docPdf.setFontSize(9);
-    [sender.address, sender.email, sender.extra].filter(Boolean).forEach((l, i) => {
-      docPdf.text(String(l), margin, y + 14 + i * 12);
-    });
-
-    y += 70;
-    docPdf.setFontSize(9);
-    docPdf.setTextColor(120);
-    docPdf.text("BILL TO", margin, y);
-    docPdf.setTextColor(0);
-    docPdf.setFontSize(11);
-    docPdf.setFont(undefined, "bold");
-    docPdf.text(client.name, margin, y + 15);
-    docPdf.setFont(undefined, "normal");
-    docPdf.setFontSize(9);
-    [client.address, client.email].filter(Boolean).forEach((l, i) => {
-      docPdf.text(String(l), margin, y + 29 + i * 12);
-    });
-    if (dateFrom || dateTo) {
-      docPdf.text(`Period: ${dateFrom || "-"} to ${dateTo || "-"}`, 555, y + 15, { align: "right" });
-    }
-
-    autoTable(docPdf, {
-      startY: y + 60,
-      head: [["Description", "Qty", "Rate", "Amount"]],
-      body: [["Delivery services", "1", money(total), money(total)]],
-      foot: [["", "", "Total", money(total)]],
-      theme: "striped",
-      headStyles: { fillColor: [29, 158, 117] },
-      footStyles: { fillColor: [225, 245, 238], textColor: [15, 110, 86], fontStyle: "bold" },
-      margin: { left: margin, right: margin },
-    });
-
-    if (notes) {
-      const afterY = docPdf.lastAutoTable.finalY + 24;
-      docPdf.setFontSize(9);
-      docPdf.setTextColor(120);
-      docPdf.text("Notes", margin, afterY);
-      docPdf.setTextColor(0);
-      docPdf.text(docPdf.splitTextToSize(notes, 515), margin, afterY + 14);
-    }
-    return docPdf;
-  };
-
-  const persist = async (status = "generated") => {
-    if (persisted) return;
-    await addInvoice({
-      invoiceNumber,
-      clientName: client.name,
-      clientEmail: client.email || "",
-      invoiceAmount: total.toFixed(2),
-      dateFrom,
-      dateTo,
-      lines: [{desc:"Delivery services",qty:"1",rate:String(total)}],
-      periodId: prefill?.periodId || null,
-      status,
-    });
-    setPersisted(true);
-  };
-
-  const canGenerate = client && total > 0;
+  const canGenerate = client && total > 0 && /^\d+(\.\d{1,2})?$/.test(invoiceAmount) && Number.isSafeInteger(Math.round(total*100)) && dateFrom && dateTo && dateFrom<=dateTo;
 
   const handleDownload = async () => {
     if (!canGenerate) return setError("Add a client and the amount you need to invoice.");
     setBusy(true);
     setError(null);
     try {
-      const docPdf = buildPdf();
+      const docPdf = await buildInvoicePdf(invoiceRecord());
+      await persist();
       docPdf.save(`Invoice_${invoiceNumber}.pdf`);
-      await persist("generated");
-      if (prefill?.periodId) await updatePeriodRecord(prefill.periodId,{status:"invoice_generated",invoiceNumber,invoiceAmount:total,invoiceGeneratedAt:new Date().toISOString()});
+
       setSaved(true);
     } catch (e) {
       console.error(e);
-      setError("Couldn't generate the invoice.");
+      setError(e?.message || "Couldn't generate the invoice.");
     } finally {
       setBusy(false);
     }
@@ -235,16 +150,17 @@ export default function InvoiceCreate({ prefill }) {
     setBusy(true);
     setError(null);
     try {
-      const docPdf = buildPdf();
+      const docPdf = await buildInvoicePdf(invoiceRecord());
       const blob = docPdf.output("blob");
       const file = new File([blob], `Invoice_${invoiceNumber}.pdf`, { type: "application/pdf" });
+      await persist();
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], title: `Invoice ${invoiceNumber}`, text: `Invoice for ${client.name}` });
       } else {
         throw new Error("Sharing files is not supported by this browser. Use Download instead.");
       }
-      await persist("sent");
-      if (prefill?.periodId) await updatePeriodRecord(prefill.periodId,{status:"invoice_sent",invoiceNumber,invoiceAmount:total,invoiceGeneratedAt:new Date().toISOString()});
+
+
       setSaved(true);
     } catch (e) {
       if (e?.name !== "AbortError") {
@@ -256,10 +172,11 @@ export default function InvoiceCreate({ prefill }) {
     }
   };
 
+  if(persisted)return <section className="home-card space-y-3"><h2>Invoice record saved</h2><p>Your invoice record is in Documents. You can download another copy from invoice history.</p>{error&&<p role="alert" className="home-error">{error} Your record is saved.</p>}<a href="/app/documents" className="home-primary">Open Documents</a></section>;
   // ---------- Create form ----------
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-      {prefill?.periodId && <div className="rounded-[18px] border border-[#302a5b] bg-[#17152b] p-4"><div className="text-xs font-bold uppercase tracking-wider text-[#8f83ff]">PAY PERIOD</div><div className="mt-1 font-semibold">{prefill.startDate} → {prefill.endDate}</div><div className="mt-1 text-sm text-muted-foreground">{prefill.stops || 0} stops in your Stop Tracker record · {money(prefill.amount)} expected</div></div>}
+      {prefill?.periodId && <div className="rounded-[18px] border border-border bg-card p-4"><div className="text-xs font-bold uppercase tracking-wider text-primary">PAY PERIOD</div><div className="mt-1 font-semibold">{prefill.startDate} → {prefill.endDate}</div><div className="mt-1 text-sm text-muted-foreground">{prefill.stops || 0} stops in your Stop Tracker record · {money(prefill.amount)} expected</div></div>}
 
       {/* Header row: number + sender */}
       <div className="flex items-center justify-between">
@@ -278,8 +195,8 @@ export default function InvoiceCreate({ prefill }) {
 
       {/* Optional dates */}
       <div className="flex gap-2">
-        <Field label="From" optional type="date" value={dateFrom} onChange={setDateFrom} />
-        <Field label="To" optional type="date" value={dateTo} onChange={setDateTo} />
+        <Field label="From" type="date" value={dateFrom} onChange={setDateFrom} />
+        <Field label="To" type="date" value={dateTo} onChange={setDateTo} />
       </div>
 
       {/* Client on demand */}
@@ -287,7 +204,7 @@ export default function InvoiceCreate({ prefill }) {
         <div className="rounded-[14px] bg-primary/5 border border-primary/20 p-3">
           <div className="flex items-center justify-between">
             <span className="text-xs text-primary">Billed to</span>
-            <button onClick={() => setClient(null)}><X className="w-4 h-4 text-primary" /></button>
+            <button aria-label="Change client" className="min-h-[44px] min-w-[44px] grid place-items-center" onClick={() => setClient(null)}><X className="w-4 h-4 text-primary" /></button>
           </div>
           <div className="font-semibold text-primary">{client.name}</div>
           {client.email && <div className="text-xs text-muted-foreground">{client.email}</div>}
@@ -302,11 +219,11 @@ export default function InvoiceCreate({ prefill }) {
           ))}
           {newClient ? (
             <div className="p-3 space-y-2 bg-muted/20">
-              <Input placeholder="Client name" value={newClient.name} onChange={(e) => setNewClient({ ...newClient, name: e.target.value })} />
-              <Input placeholder="Email (optional)" value={newClient.email} onChange={(e) => setNewClient({ ...newClient, email: e.target.value })} />
-              <Input placeholder="Address (optional)" value={newClient.address} onChange={(e) => setNewClient({ ...newClient, address: e.target.value })} />
+              <Input aria-label="Client name" maxLength={200} placeholder="Client name" value={newClient.name} onChange={(e) => setNewClient({ ...newClient, name: e.target.value })} />
+              <Input aria-label="Client email" maxLength={254} placeholder="Email (optional)" value={newClient.email} onChange={(e) => setNewClient({ ...newClient, email: e.target.value })} />
+              <Input aria-label="Client address" maxLength={500} placeholder="Address (optional)" value={newClient.address} onChange={(e) => setNewClient({ ...newClient, address: e.target.value })} />
               <div className="flex gap-2">
-                <Button size="sm" onClick={saveNewClient}>Save client</Button>
+                <Button size="sm" disabled={busy} onClick={saveNewClient}>Save client</Button>
                 <Button size="sm" variant="outline" onClick={() => setNewClient(null)}>Cancel</Button>
               </div>
             </div>
@@ -325,13 +242,13 @@ export default function InvoiceCreate({ prefill }) {
         </button>
       )}
 
-      <div className="rounded-2xl border border-[#26314a] bg-[#111827] p-4">
-        <label className="block text-xs font-bold uppercase tracking-[.14em] text-[#69758d]">Amount to invoice</label>
-        <div className="mt-2 flex items-center rounded-xl border border-[#34415f] bg-[#0a101b] px-4"><span className="text-xl text-[#8e9ab2]">£</span><input inputMode="decimal" value={invoiceAmount} onChange={e=>setInvoiceAmount(e.target.value)} placeholder="0.00" className="h-14 min-w-0 flex-1 bg-transparent px-2 text-2xl font-bold text-white outline-none"/></div>
-        <p className="mt-2 text-xs leading-5 text-[#8e9ab2]">{prefill?.statementAmount != null ? "Prefilled from the statement you checked. Change it only if needed." : "Enter the final amount shown on the statement your contractor sent you."}</p>
+      <div className="rounded-2xl border border-border bg-card p-4">
+        <label htmlFor="invoice-amount" className="block text-xs font-bold uppercase tracking-[.14em] text-muted-foreground">Amount to invoice</label>
+        <div className="mt-2 flex items-center rounded-xl border border-border bg-background px-4"><span className="text-xl text-muted-foreground">£</span><input id="invoice-amount" inputMode="decimal" value={invoiceAmount} onChange={e=>setInvoiceAmount(e.target.value)} placeholder="0.00" className="h-14 min-w-0 flex-1 bg-transparent px-2 text-2xl font-bold text-foreground outline-none"/></div>
+        <p className="mt-2 text-xs leading-5 text-muted-foreground">{prefill?.statementAmount != null ? "Prefilled from the statement you checked. Change it only if needed." : "Enter the agreed amount for this invoice. Check any required tax details with your contractor."}</p>
       </div>
 
-      <textarea
+      <textarea aria-label="Invoice notes (optional)" maxLength={5000}
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
         rows={2}
@@ -370,8 +287,8 @@ function Field({ label, value, onChange, optional, type = "text" }) {
     <div className="flex-1">
       <label className="block text-xs text-muted-foreground mb-1">
         {label} {optional && <span className="opacity-70">(optional)</span>}
+      <Input type={type} maxLength={500} value={value} onChange={(e) => onChange(e.target.value)} className="min-h-[44px] text-base mt-1" />
       </label>
-      <Input type={type} value={value} onChange={(e) => onChange(e.target.value)} className="h-10 text-sm" />
     </div>
   );
 }

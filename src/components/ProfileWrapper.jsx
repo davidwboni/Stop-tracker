@@ -7,26 +7,7 @@ const ProfileWrapper = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   
-  // Wrapper function to handle profile picture updates
-  const handleProfilePicUpdate = (newPicUrl) => {
-    // This is just a placeholder as we don't need to update state anymore
-    console.log("Profile picture updated:", newPicUrl);
-  };
-  
-  // Handle logout and navigation
-  const handleLogout = async () => {
-    try {
-      await logout();
-      navigate('/');
-    } catch (error) {
-      console.error("Error signing out:", error);
-    }
-  };
-  
-  const handleHome = () => {
-    navigate('/app/dashboard');
-  };
-  
+  const handleLogout = async () => { const ok=await logout(); if(ok===false)throw new Error('Could not sign out. Please retry.'); navigate('/'); };
   if (!user) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -48,8 +29,6 @@ const ProfileWrapper = () => {
       userId={user.uid}
       user={user}  // Pass the full user object so Profile can handle guests
       onLogout={handleLogout}
-      onHome={handleHome}
-      updateProfilePic={handleProfilePicUpdate}
     />
   );
 };
