@@ -31,3 +31,7 @@ Core manual tracking/expense/comparison remains free. Paid AI and routing remain
 ## Verification evidence
 
 Verification: 177 frontend tests passed across 24 files, 15 targeted backend tests passed, and the production build compiled successfully. Targeted backend tests cover AI structure/rate limits and account deletion guards. These are synthetic tests; they do not exercise real paid provider calls or delete a real account. Existing dependency, CRA bundle-size and lint warnings must be assessed separately from a successful compile.
+
+## Preview hosting follow-up
+
+Vercel Git integration builds `feat/approved-home` as a preview in the existing Stop Tracker project. It uses the same configured Firebase project as the app, not an isolated test database; use guest mode or a dedicated test account and synthetic data. Preview hosting is access-protected by Vercel; an owner login or temporary share link is needed. Removed the old unconditional AdSense script and restored browser zoom before distributing the preview.
