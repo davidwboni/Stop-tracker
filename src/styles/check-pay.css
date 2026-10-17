@@ -8,3 +8,66 @@
 
 .check-work-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0}.check-work-day{padding:14px 0;border-top:1px solid var(--border)}.check-work-day h3{font-weight:650}@media(max-width:370px){.check-work-fields{grid-template-columns:1fr}}
 .comparison-page{display:grid;gap:18px}.comparison-page>.money-badge{justify-self:start}.comparison-hero h2{font-size:clamp(28px,7vw,40px);margin:8px 0}.comparison-warning{border-color:#a97524}.comparison-warning h2{color:#946000}.dark .comparison-warning h2{color:#ffca66}.comparison-match h2{color:var(--home-money)}.comparison-page summary span{float:right;margin-left:12px;font-size:14px}.comparison-page summary{overflow:auto}
+
+
+/* Approved Pay hub: one amount, two clear choices and one past-result link. */
+.check-pay-page{max-width:850px;gap:15px}
+.check-page-header h1{font-size:clamp(23px,6vw,28px)}
+.check-page-header>div:first-child>p{margin-top:3px;font-size:13px}
+.check-period{gap:0;padding:17px!important;border-radius:17px}
+.check-period-top{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.check-period-picker{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
+.check-period-picker>span:first-child{font-size:12px;color:var(--home-muted)}
+.check-period-control{display:inline-flex;align-items:center;gap:4px;max-width:100%;color:var(--home-purple)}
+.check-period-control select{appearance:none;min-width:0;max-width:100%;width:auto;border:0;background:transparent;color:inherit;font-weight:650;font-size:13px;cursor:pointer;padding:0 2px 0 0;min-height:30px}
+.check-period-control select:disabled{opacity:.65}
+.check-period-control svg{flex-shrink:0;pointer-events:none}
+.check-status{font-size:11px;white-space:normal;max-width:50%;text-align:center}
+.check-expected{margin-top:13px}
+.check-expected>p:first-child,.check-empty>p:first-child{font-size:12px;line-height:1.4}
+.check-expected strong{margin:5px 0 7px;font-size:clamp(31px,8vw,41px)}
+.check-expected .text-xs{font-size:12px;line-height:1.45}
+.check-period-days{margin-top:5px}
+.check-empty{display:grid;gap:7px;margin-top:11px}
+.check-empty-value{font-size:20px;font-weight:700}
+.check-start{display:grid;gap:9px}
+.check-start>.home-muted{line-height:1.5}
+.check-question{font-size:19px!important;font-weight:730;margin:3px 0 0}
+.check-actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;align-items:stretch}
+.check-action{padding:13px!important;border-radius:16px;gap:8px;min-width:0}
+.check-action-top{display:flex;align-items:center;justify-content:space-between;gap:4px}
+.check-action-top>svg{color:var(--home-purple);flex-shrink:0}
+.check-action-top .money-badge{font-size:10px;padding:3px 5px}
+.check-action h3{font-size:15px;font-weight:750;line-height:1.3}
+.check-action>.home-muted{font-size:12px;line-height:1.4}
+.check-action>button,.check-action>.check-file{min-height:45px;display:flex;justify-content:center;align-items:center;gap:5px;padding:8px 7px;font-size:12px;line-height:1.25;text-align:center;border-radius:10px}
+.check-action>button svg{height:15px;width:15px}
+.check-ai-error{color:var(--home-muted)}
+.check-privacy{font-size:11px;line-height:1.45;margin:0 2px}
+.check-previous{background:var(--card);border:1px solid var(--border);border-radius:15px;overflow:hidden}
+.check-previous-button{display:flex;align-items:center;gap:12px;width:100%;min-height:76px;padding:14px;text-align:left}
+.check-previous-button>span:nth-child(2){flex:1;min-width:0}
+.check-previous-button strong{display:block;font-size:14px;font-weight:700}
+.check-previous-button small{display:block;font-size:12px;color:var(--home-muted);margin-top:3px}
+.check-previous-icon{display:grid;place-items:center;width:38px;height:38px;flex-shrink:0;border-radius:11px;background:color-mix(in srgb,var(--home-purple) 14%,var(--card));color:var(--home-purple)}
+.check-previous-button>svg{color:var(--home-muted);flex-shrink:0}
+.check-previous-button:disabled{opacity:.5}
+.check-previous-button:hover{background:color-mix(in srgb,var(--home-purple) 6%,var(--card))}
+.check-history-link{justify-self:center;font-size:13px;min-height:44px}
+@media(min-width:700px){
+ .check-pay-page{padding-bottom:36px}
+ .check-period{padding:23px!important}
+ .check-actions{gap:16px}
+ .check-action{padding:19px!important}
+ .check-action h3{font-size:17px}
+ .check-action>.home-muted{font-size:13px}
+ .check-action>button,.check-action>.check-file{font-size:14px}
+}
+@media(max-width:360px){
+ .check-action{padding:11px!important}
+ .check-action h3{font-size:13px}
+ .check-action>button,.check-action>.check-file{font-size:11px}
+ .check-period-top{flex-direction:column}
+ .check-status{max-width:100%}
+}
+@media(prefers-reduced-motion:reduce){.check-previous-button{transition:none!important}}
