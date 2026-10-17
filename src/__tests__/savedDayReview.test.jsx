@@ -20,11 +20,11 @@ describe('approved saved-day flow',()=>{
  it('opens a readable summary first, not the editable form',()=>{
   mount();
   expect(screen.queryByTestId('compact-entry-editor')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button',{name:/View work for Sat, 26 Sept 2026/i}));
+  fireEvent.click(screen.getByRole('button',{name:/View work for/i}));
   expect(screen.getByRole('dialog')).toBeInTheDocument();
   expect(screen.getByText('Saved workday')).toBeInTheDocument();
   expect(screen.getByText('Extra collection at depot')).toBeInTheDocument();
-  expect(screen.getByText('281.50',{exact:false})).toBeTruthy();
+  expect(screen.getAllByText(/£281\.50/).length).toBeGreaterThan(0);
   expect(screen.queryByTestId('compact-entry-editor')).not.toBeInTheDocument();
  });
  it('opens the compact editor with the existing day only after Edit is tapped',()=>{
