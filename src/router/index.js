@@ -1,5 +1,5 @@
 import React from 'react';
-import { createBrowserRouter, Navigate, useNavigate } from 'react-router-dom';
+import { createBrowserRouter, Navigate, useNavigate, useLocation } from 'react-router-dom';
 
 // Layout
 import Layout from '../components/Layout';
@@ -30,6 +30,9 @@ import Auth from '../components/Auth';
 // Auth route protection
 import ProtectedRoute from './ProtectedRoute';
 import PublicRoute from './PublicRoute';
+
+// Give every navigation back to Pay a fresh screen state; unsaved drafts are protected by StatementDraftGuard.
+const PayRoot=()=>{const location=useLocation();return <CheckPayV4 key={location.key}/>;};
 
 // Create wrapper components for public routes with navigation
 const ContactUsPublic = () => {
@@ -91,7 +94,7 @@ const router = createBrowserRouter([
           { path: 'entries', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><EntriesWrapper /></React.Suspense></ErrorBoundary> },
           { path: 'routes', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><RoutePlannerWrapper /></React.Suspense></ErrorBoundary> },
           { path: 'invoice', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><InvoicePage /></React.Suspense></ErrorBoundary> },
-          { path: 'check-pay', element: <ErrorBoundary><CheckPayV4 /></ErrorBoundary> },
+          { path: 'check-pay', element: <ErrorBoundary><PayRoot /></ErrorBoundary> },
           { path: 'periods', element: <ErrorBoundary><div className="max-w-2xl mx-auto pb-24 -mt-2"><div className="mb-4 flex items-center justify-between gap-3"><h1 className="text-2xl font-bold tracking-tight">Pay Periods</h1><span className="text-xs text-[#8e9ab2]">4-week history</span></div><PeriodHistoryV4 /></div></ErrorBoundary> },
           { path: 'money/expenses', element: <ErrorBoundary><ExpensesOverview /></ErrorBoundary> },
           { path: 'money', element: <ErrorBoundary><MoneyOverview /></ErrorBoundary> },
