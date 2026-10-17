@@ -17,7 +17,7 @@ const BENEFITS = [
   {
     icon: Sparkles,
     title: "Know your earnings",
-    body: "Describe how you get paid, then review and confirm your setup.",
+    body: "See earnings calculated from your own saved pay rates.",
   },
   {
     icon: FileText,
