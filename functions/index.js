@@ -3,6 +3,7 @@ const admin = require("firebase-admin");
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
 const crypto = require("crypto");
+const { resolveAccess } = require("./entitlementModel");
 
 admin.initializeApp();
 
@@ -72,10 +73,10 @@ const STATEMENT_SYSTEM_PROMPT = `Extract visible delivery pay statement figures 
 {"statementStops":number|null,"statementAmount":number|null,"contractorPayout":number|null,"contractorFee":number|null,"contractorCharges":number|null,"taxBasis":"included"|"excluded"|"not_applicable"|"unknown","charges":[{"label":string,"amount":number|null}],"currency":string|null,"periodStart":"YYYY-MM-DD"|null,"periodEnd":"YYYY-MM-DD"|null,"daily":[{"date":"YYYY-MM-DD","stops":number|null,"amount":number|null}]}
 statementAmount is GROSS work earnings. contractorPayout is the explicitly labelled FINAL payout after contractor fees and charges, before the driver's separately paid expenses. Never substitute gross for payout. Do not calculate totals, sum pages, infer missing fields, or include names, addresses, bank details or free-text notes. If the final payout, currency or dates are ambiguous return null. ContractorFee is the separately stated franchise/admin percentage fee amount; contractorCharges excludes that fee. Charges contains each visible contractor charge, using short generic categories (lease, insurance, fuel, mileage, claim, other), no people or contractor names. VAT treatment must be explicit, otherwise unknown. Do not infer zero for absent fee or charges. Daily amounts are gross work earnings. Multiple pages belong to one statement; never duplicate a total.`;
 
-async function getEntitlement(uid) {
+async function getEntitlement(uid, verifiedToken) {
   const snap = await admin.firestore().collection("entitlements").doc(uid).get();
   const d = snap.data() || {};
-  return { ...d, isPro: d.plan === "pro" && ["active","trialing"].includes(d.subscriptionStatus) };
+  return { ...d, ...resolveAccess(d, verifiedToken) };
 }
 
 async function consumeFreeUse(uid, field) {
@@ -139,7 +140,7 @@ exports.optimizeDriverRoute = onCall(
       };
     });
 
-    const ent = await getEntitlement(request.auth.uid);
+    const ent = await getEntitlement(request.auth.uid, request.auth.token);
     if (!ent.isPro) {
       const usage = (await admin.firestore().collection("usage").doc(request.auth.uid).get()).data() || {};
       if (Number(usage.routeOptimizationUses || 0) >= 3) {
@@ -249,11 +250,11 @@ exports.optimizeDriverRoute = onCall(
 exports.getPremiumStatus = onCall({ cors: true, invoker: "public" }, async request => {
   if (!request.auth) throw new HttpsError("unauthenticated", "You must be signed in.");
   const [ent, usage] = await Promise.all([
-    getEntitlement(request.auth.uid),
+    getEntitlement(request.auth.uid, request.auth.token),
     admin.firestore().collection("usage").doc(request.auth.uid).get(),
   ]);
   const u = usage.data() || {};
-  return { isPro: ent.isPro, statementAiUses: Number(u.statementAiUses || 0), routeOptimizationUses: Number(u.routeOptimizationUses || 0) };
+  return { isPro: ent.isPro, isAdmin: ent.isAdmin, isPaidPro: ent.isPaidPro, statementAiUses: Number(u.statementAiUses || 0), routeOptimizationUses: Number(u.routeOptimizationUses || 0) };
 });
 
 exports.extractStatement = onCall(
@@ -285,7 +286,7 @@ exports.extractStatement = onCall(
       throw new HttpsError("invalid-argument", "This statement is too large to process in one check.");
     }
 
-    const ent = await getEntitlement(request.auth.uid);
+    const ent = await getEntitlement(request.auth.uid, request.auth.token);
     const usageRef = admin.firestore().collection("usage").doc(request.auth.uid);
     const now = Date.now(), day = new Date(now).toISOString().slice(0,10);
     await admin.firestore().runTransaction(async tx => {
@@ -369,7 +370,7 @@ exports.extractStatement = onCall(
 
 exports.consumeRouteOptimization = onCall({ cors: true, invoker: "public" }, async request => {
   if (!request.auth) throw new HttpsError("unauthenticated", "You must be signed in.");
-  const ent = await getEntitlement(request.auth.uid);
+  const ent = await getEntitlement(request.auth.uid, request.auth.token);
   if (ent.isPro) return { allowed: true, isPro: true };
   const result = await consumeFreeUse(request.auth.uid, "routeOptimizationUses");
   if (!result.allowed) throw new HttpsError("permission-denied", "Your 3 free route optimisations are used. Upgrade to Pro.");
