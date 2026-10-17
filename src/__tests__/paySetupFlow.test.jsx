@@ -44,7 +44,7 @@ describe('Pay setup',()=>{
   expect(screen.queryByRole('button',{name:'Save entry'})).not.toBeInTheDocument();
   fireEvent.change(screen.getByLabelText('Pay structure'),{target:{value:'old'}});
   fireEvent.click(screen.getByRole('button',{name:'Use these rates'}));
-  expect(screen.getByText('How many stops did you do today?')).toBeInTheDocument();
+  expect(screen.getByText('Your deliveries')).toBeInTheDocument();
  });
 });
 

@@ -52,6 +52,7 @@ function ReadyEditor({ date, rows, logs, paymentConfig, updateLogs, onDateChange
   const id = useRef(original.current?.id || crypto.randomUUID());
   const titleRef = useRef(null);
   const formRef = useRef(null);
+  const scrollRef = useRef(null);
   const closeHandler = useRef(null);
   const reducedMotion = useReducedMotion();
   const today = isoDate(new Date());
@@ -71,13 +72,44 @@ function ReadyEditor({ date, rows, logs, paymentConfig, updateLogs, onDateChange
   const question = { per_day: 'Did you work today?', hourly: 'How many hours did you work?', per_mile: 'How many miles did you drive?' }[config?.model] || 'How many stops did you do today?';
   const primaryLabel = { per_day: 'Worked today', hourly: 'Hours worked', per_mile: 'Miles driven' }[config?.model] || 'Stops';
 
+  // Android's keyboard shrinks the visual viewport, not necessarily window.innerHeight.
+  // Keep the sheet inside that viewport and scroll the *fields* rather than the locked body.
   useEffect(() => {
     const view = window.visualViewport;
-    if (!view) return;
-    const update = () => setViewport({ height: view.height, top: view.offsetTop });
-    update(); view.addEventListener('resize', update); view.addEventListener('scroll', update);
-    return () => { view.removeEventListener('resize', update); view.removeEventListener('scroll', update); };
+    const update = () => setViewport({
+      height: Math.max(240, view?.height || window.innerHeight),
+      top: view?.offsetTop || 0,
+    });
+    update();
+    view?.addEventListener('resize', update);
+    view?.addEventListener('scroll', update);
+    window.addEventListener('resize', update);
+    return () => {
+      view?.removeEventListener('resize', update);
+      view?.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+    };
   }, []);
+
+  function revealField(target) {
+    const region = scrollRef.current;
+    if (!region || !target || !region.contains(target)) return;
+    const align = () => {
+      if (!scrollRef.current || !scrollRef.current.contains(target)) return;
+      const visible = region.getBoundingClientRect();
+      const field = target.getBoundingClientRect();
+      const margin = 18;
+      if (field.bottom > visible.bottom - margin) region.scrollTop += field.bottom - visible.bottom + margin;
+      else if (field.top < visible.top + margin) region.scrollTop -= visible.top - field.top + margin;
+    };
+    requestAnimationFrame(align);
+    window.setTimeout(align, 140);
+    window.setTimeout(align, 350);
+  }
+  useEffect(() => {
+    const active = document.activeElement;
+    if (active?.matches?.('input, textarea, select')) revealField(active);
+  }, [viewport?.height, viewport?.top, draft.extraWork]);
   useEffect(() => {
     if (!dirty) return;
     const prevent = event => { event.preventDefault(); event.returnValue = ''; };
@@ -159,26 +191,52 @@ function ReadyEditor({ date, rows, logs, paymentConfig, updateLogs, onDateChange
     <div className="qe-backdrop" aria-hidden="true" />
     <div className="qe-position" style={viewport ? { height: viewport.height, top: viewport.top } : undefined}>
       <Dialog.Panel as={motion.div} initial={reducedMotion ? false : { opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={transition} className="home-screen qe-panel">
-        <header className="qe-header"><div><Dialog.Title ref={titleRef} tabIndex={-1} className="qe-title">{editing ? 'Edit workday' : 'Log your day'}</Dialog.Title><p className="home-muted">Only the essentials. Save when you're ready.</p></div><button type="button" className="home-icon" aria-label="Close Quick Entry" disabled={saving} onClick={() => closeHandler.current?.()}><X /></button></header>
+        <header className="qe-header"><div><Dialog.Title ref={titleRef} tabIndex={-1} className="qe-title">{editing ? 'Edit workday' : 'Log your day'}</Dialog.Title></div><button type="button" className="home-icon" aria-label="Close Quick Entry" disabled={saving} onClick={() => closeHandler.current?.()}><X /></button></header>
         {pending ? <div className="qe-discard" role="alert"><h3>Discard unsaved changes?</h3><p>Your changes have not been saved.</p><button className="home-primary w-full" onClick={() => setPending(null)}>Keep editing</button><button className="home-secondary w-full" onClick={discard}>{pending.kind === 'date' ? 'Discard and change date' : 'Discard changes'}</button></div> :
         <form ref={formRef} onSubmit={save} noValidate className="qe-form">
-          <fieldset disabled={saving} className="qe-scroll">
+          <fieldset ref={scrollRef} disabled={saving} className="qe-scroll" onFocusCapture={event => revealField(event.target)}>
             <label className="home-field qe-date"><span><CalendarDays size={18} aria-hidden="true" />Entry date</span><input aria-label="Entry date" type="date" max={today} value={date} onChange={event => changeDate(event.target.value)} /></label>{error('date')}
-            <h3 className="qe-question">{question}</h3>
+            <h3 className="qe-question">{config?.model === "per_day" ? question : config?.model === "hourly" ? "Hours worked" : config?.model === "per_mile" ? "Miles driven" : "Your deliveries"}</h3>
             {meta?.primary.field === 'day' ? <div className="qe-worked" role="group" aria-label="Worked today"><button type="button" aria-pressed={draft.quantity === '1'} onClick={() => change('quantity', '1')}>Yes, I worked</button><button type="button" aria-pressed={draft.quantity === '0'} onClick={() => change('quantity', '0')}>No work today</button></div> :
             <div className={parcelsRelevant ? 'qe-counts' : 'qe-counts qe-single'}><label className="home-field">{primaryLabel}<input {...inputProps('quantity')} inputMode={meta?.primary.field === 'stops' ? 'numeric' : 'decimal'} placeholder="0" autoComplete="off" /></label>{parcelsRelevant && <label className="home-field">Total parcels<input {...inputProps('parcels')} inputMode="numeric" placeholder="Optional" autoComplete="off" /></label>}</div>}
             {error('quantity')}{error('parcels')}
-            {parcelsRelevant && <p className="home-muted qe-hint">{draft.parcels===''?'Parcels are optional. You can add them later.':validity.parcels||validity.quantity?'Check the counts above.':(Number(draft.parcels)-Number(draft.quantity))+' excess parcels calculated automatically.'}</p>}
+            {parcelsRelevant && <p className={draft.parcels !== '' && validity.parcels ? "qe-hint qe-inline-error" : "home-muted qe-hint"}>{draft.parcels === '' ? 'Parcels optional · add them later if needed.' : validity.parcels ? 'Total parcels must be at least the number of stops.' : validity.quantity ? 'Enter your stops to calculate excess parcels.' : Number(draft.parcels) - Number(draft.quantity) + ' excess parcels'}</p>}
             {config?.model === 'sliding_scale' && <label className="home-field">Miles driven<input {...inputProps('miles')} inputMode="decimal" />{error('miles')}</label>}
-            <section className="qe-extra"><button type="button" className="qe-extra-toggle" role="switch" aria-checked={draft.extraWork} aria-controls="qe-extras" onClick={() => change('extraWork', !draft.extraWork)}><span>Did you do extra work?</span><span className={'qe-switch ' + (draft.extraWork ? 'qe-switch-on' : '')} aria-hidden="true"><span /></span></button>
-            {draft.extraWork && <motion.div id="qe-extras" initial={reducedMotion ? false : { opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={transition} className="qe-extra-fields"><label className="home-field">Extra type (optional)<select {...inputProps('extraType')}><option value="">Choose a type</option>{Array.from(new Set(['Extra run', 'Collection', 'Return', 'Extra route', 'Other', draft.extraType].filter(Boolean))).map(type => <option key={type}>{type}</option>)}</select></label><label className="home-field">Extra amount (£)<input {...inputProps('amount')} inputMode="decimal" placeholder="Optional" /></label>{error('amount')}{draft.amount === '' && <p className="home-muted qe-hint">No extra payment included until an amount is entered.</p>}</motion.div>}</section>
-            <details className="qe-optional-note" defaultOpen={!!baseline.notes}><summary>Add a note (optional){draft.notes?' · saved':''}</summary><label className="home-field">Work notes<textarea {...inputProps('notes')} rows={2} maxLength={1000} placeholder="Anything you'd like to remember about this day?" /></label></details>
+            <section className="qe-extra">
+              <button type="button" className="qe-extra-toggle" role="switch" aria-checked={draft.extraWork} aria-controls="qe-extras" onClick={() => change('extraWork', !draft.extraWork)}>
+                <span>Extra work <small>{draft.extraWork ? 'Add run details below' : 'Only if you did extra work'}</small></span>
+                <span className={'qe-switch ' + (draft.extraWork ? 'qe-switch-on' : '')} aria-hidden="true"><span /></span>
+              </button>
+              {draft.extraWork && <motion.div id="qe-extras" initial={reducedMotion ? false : { opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={transition} className="qe-extra-fields">
+                <label className="home-field">What type of work?<select {...inputProps('extraType')}><option value="">Choose a type (optional)</option>{Array.from(new Set(['Extra run', 'Collection', 'Return', 'Extra route', 'Other', draft.extraType].filter(Boolean))).map(type => <option key={type}>{type}</option>)}</select></label>
+                <label className="home-field">Extra payment (£)<input {...inputProps('amount')} inputMode="decimal" placeholder="e.g. 30.00" autoComplete="off" /></label>
+                {error('amount')}
+                <label className="home-field">What was it for? (optional)<textarea {...inputProps('notes')} rows={2} maxLength={1000} placeholder="e.g. Second collection at depot" /></label>
+              </motion.div>}
+            </section>
+            {!draft.extraWork && <details className="qe-optional-note" defaultOpen={!!baseline.notes}>
+              <summary>Add a note (optional){draft.notes ? ' · saved' : ''}</summary>
+              <label className="home-field">Work notes<textarea {...inputProps('notes')} rows={2} maxLength={1000} placeholder="Anything to remember about this day?" /></label>
+            </details>}
+            <details className="qe-breakdown"><summary>View pay breakdown</summary>
+              <dl>
+                <div><dt>Gross earnings</dt><dd>{grossKnown && draft.quantity !== '' && !Object.keys(validity).length ? money(gross) : '—'}</dd></div>
+                <div><dt>Contractor fee{feeKnown ? ' · ' + rate + '%' : ''}</dt><dd>{fee != null && !Object.keys(validity).length ? money(-fee) : 'Not available'}</dd></div>
+                <div><dt>After contractor fee</dt><dd>{fee != null && !Object.keys(validity).length ? money((pennies(gross) - pennies(fee)) / 100) : '—'}</dd></div>
+              </dl>
+              <p className="home-muted qe-hint">Before personal expenses and tax.</p>
+            </details>
             {legacy && <p className="qe-hint home-banner">This older entry has no saved rates. Its original gross stays unchanged unless you change work quantities or extra payment; those changes use your current pay structure.</p>}
-            <section className="qe-summary" aria-label="Earnings preview"><div className="home-row"><div><h3>Estimated earnings</h3><p className="home-muted qe-hint">After contractor fee · Before expenses and tax</p></div><strong className="qe-key-estimate" aria-live="polite">{fee != null ? money((pennies(gross) - pennies(fee)) / 100) : grossKnown ? money(gross) : '—'}</strong></div><details className="qe-calc"><summary>View pay breakdown</summary><dl><div><dt>Gross earnings</dt><dd>{grossKnown ? money(gross) : '—'}</dd></div><div><dt>Contractor fee{feeKnown ? ' · ' + rate + '%' : ''}</dt><dd>{fee != null ? money(-fee) : 'Not recorded'}</dd></div><div className="qe-after"><dt>After contractor fee</dt><dd>{fee != null ? money((pennies(gross) - pennies(fee)) / 100) : '—'}</dd></div></dl></details></section>
             {rows.length > 1 && <p role="alert" className="home-error">Multiple records exist for this day. Review them in View records before saving.</p>}
             {error('save')}
           </fieldset>
-          <footer className="qe-footer"><button type="submit" className="home-primary w-full" disabled={saving || rows.length > 1 || !meta}><Check size={20} aria-hidden="true" />{saving ? 'Saving…' : editing ? 'Save changes' : 'Save entry'}</button><p className="home-muted qe-hint">{saving ? 'Keep this open until saving finishes.' : editing ? 'Your saved day will be updated, not duplicated.' : 'You can review and edit this day later.'}</p></footer>
+          <footer className="qe-footer">
+            <div className="qe-footer-estimate" aria-label="Live earnings estimate">
+              <span>{feeKnown ? 'Estimated after contractor fee' : 'Estimated gross'}</span>
+              <strong aria-live="polite">{draft.quantity !== '' && !Object.keys(validity).length && grossKnown ? fee != null ? money((pennies(gross) - pennies(fee)) / 100) : money(gross) : '—'}</strong>
+            </div>
+            <button type="submit" className="home-primary w-full" disabled={saving || rows.length > 1 || !meta}><Check size={20} aria-hidden="true" />{saving ? 'Saving…' : editing ? 'Save changes' : 'Save day'}</button>
+          </footer>
         </form>}
       </Dialog.Panel>
     </div>
