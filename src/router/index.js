@@ -11,6 +11,7 @@ import DashboardWrapper from '../components/DashboardWrapper';
 import EntriesWrapper from '../components/EntriesWrapper';
 import StatsPage from '../components/StatsPage';
 import DocumentsPage from '../components/DocumentsPage';
+import RecordsHub from '../components/RecordsHub';
 import InvoicePage from '../components/InvoicePage';
 import CheckPayV4 from '../components/CheckPayV4';
 import PeriodHistoryV4 from '../components/PeriodHistoryV4';
@@ -85,6 +86,7 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <Navigate to="/app/dashboard" /> },
           { path: 'dashboard', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><DashboardWrapper /></React.Suspense></ErrorBoundary> },
+          { path: 'records', element: <ErrorBoundary><RecordsHub /></ErrorBoundary> },
           { path: 'entries', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><EntriesWrapper /></React.Suspense></ErrorBoundary> },
           { path: 'routes', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><RoutePlannerWrapper /></React.Suspense></ErrorBoundary> },
           { path: 'invoice', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><InvoicePage /></React.Suspense></ErrorBoundary> },
