@@ -24,7 +24,7 @@ describe('Approved earnings-first Home',()=>{
   mount();
   expect(screen.getByRole('heading',{name:'Today'})).toBeInTheDocument();
   expect(screen.getAllByText('£264.61').length).toBeGreaterThan(0);
-  expect(screen.getByText('Your expected contractor payout')).toBeInTheDocument();
+  expect(screen.getByText('Expected contractor payout')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button',{name:/View calculation/i}));
   expect(screen.getByText('£219.41')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button',{name:'Hide monetary amounts'}));
@@ -33,7 +33,7 @@ describe('Approved earnings-first Home',()=>{
  });
  it('does not present recorded business expenses as contractor payout deductions',()=>{
   mount();
-  expect(screen.getByText('Your expected contractor payout')).toBeInTheDocument();
+  expect(screen.getByText('Expected contractor payout')).toBeInTheDocument();
   expect(screen.getAllByText('£264.61').length).toBeGreaterThan(0);
   expect(screen.queryByText('£219.41')).not.toBeInTheDocument();
  });
@@ -45,9 +45,33 @@ describe('Approved earnings-first Home',()=>{
  });
  it('has a clear log action and no invented £0.00 for a new user',()=>{
   fixture.data.logs=[];mount();
-  expect(screen.getByText('Ready to log your day?')).toBeInTheDocument();
-  expect(screen.getAllByRole('button',{name:/Log your day/}).length).toBeGreaterThan(0);
+  expect(screen.getByText('Ready to record today’s work?')).toBeInTheDocument();
+  expect(screen.getAllByRole('button',{name:/Log your day/})).toHaveLength(1);
   expect(screen.queryByText('£0.00')).not.toBeInTheDocument();
+ });
+ it('keeps the compact sections in the agreed order and provides no duplicate Log shortcut',()=>{
+  fixture.data.logs=[];mount();
+  const home=document.querySelector('.customer-home-grid');
+  const today=home.querySelector('.customer-today');
+  const period=home.querySelector('.customer-period');
+  const recent=home.querySelector('.customer-recent');
+  const tools=home.querySelector('.customer-tools');
+  expect([today,period,recent,tools].every(Boolean)).toBe(true);
+  expect(today.compareDocumentPosition(period)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(period.compareDocumentPosition(recent)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(recent.compareDocumentPosition(tools)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(today).toHaveTextContent('Not logged yet');
+  expect(screen.getAllByRole('button',{name:/Log your day/})).toHaveLength(1);
+  expect(tools.querySelectorAll('button')).toHaveLength(3);
+  expect(screen.getByRole('button',{name:/Expenses/})).toBeInTheDocument();
+  expect(screen.getByRole('button',{name:/Routes/})).toBeInTheDocument();
+ });
+ it('shows saved work with a primary review action rather than asking to log again',()=>{
+  mount();
+  const today=document.querySelector('.customer-today');
+  expect(today).toHaveTextContent('Saved');
+  expect(today.querySelector('[data-tour="log-work"]')).toHaveTextContent("View today's record");
+  expect(screen.queryByRole('button',{name:/Log your day/})).not.toBeInTheDocument();
  });
  it('prevents replacing unknown records following a load failure',()=>{
   fixture.data.loadError='Your saved work could not be loaded.';mount();
