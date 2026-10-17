@@ -12,6 +12,8 @@ vi.mock('../components/DailyQuickEntry',()=>({
 const config={model:'flat_stops',ratePerStop:2.08,contractorFeePercent:6,excessParcelRate:0.05};
 const row={id:'work-1',date:'2026-09-26',stops:120,quantity:120,totalParcels:158,total:281.5,extraWork:true,extraType:'Collection',extra:30,notes:'Extra collection at depot',payStructureSnapshot:config};
 beforeEach(()=>{
+ vi.stubGlobal('ResizeObserver',class{observe(){}unobserve(){}disconnect(){}});
+ vi.stubGlobal('scrollTo',vi.fn());
  localStorage.clear();state.save=vi.fn(async()=>({success:true}));
  state.data={logs:[row],loading:false,loadError:'',updateLogs:(...args)=>state.save(...args)};
 });
