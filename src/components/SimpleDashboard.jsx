@@ -70,14 +70,14 @@ export default function SimpleDashboard() {
     track('quick_entry_opened', { mode: logs.some(l => l.date === date) ? 'edit' : 'new', source: 'home' });
   }
   function toggleHidden() { const next = !hidden; setHidden(next); try { localStorage.setItem('home-hide-money', next ? '1' : '0'); } catch (_) {} }
-  const records = () => { track('records_opened', { source: 'home' }); navigate('/app/entries'); };
+  const records = () => { track('records_opened', { source: 'home' }); navigate('/app/records'); };
   const goMoney = range => { navigate('/app/money', { state: range }); };
 
   return <div className="home-screen home-layout">
     <header className="home-header">
-      <div className="home-row"><div className="home-brand"><Package aria-hidden="true" /><span>STOP TRACKER</span></div><div className="flex gap-2"><button className="home-icon" onClick={toggleHidden} aria-label={hidden ? 'Show monetary amounts' : 'Hide monetary amounts'} aria-pressed={hidden}>{hidden ? <EyeOff /> : <Eye />}</button><button className="home-icon" aria-label="Open profile" onClick={() => navigate('/app/profile')}>{user?.displayName?.[0]?.toUpperCase() || 'D'}</button></div></div>
+      <div className="home-row"><span className="home-muted text-sm">{now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}</span><div className="flex gap-2"><button className="home-icon" onClick={toggleHidden} aria-label={hidden ? 'Show monetary amounts' : 'Hide monetary amounts'} aria-pressed={hidden}>{hidden ? <EyeOff /> : <Eye />}</button><button className="home-icon" aria-label="Open profile" onClick={() => navigate('/app/profile')}>{user?.displayName?.[0]?.toUpperCase() || 'D'}</button></div></div>
       <h1>{greeting}, {user?.displayName?.split(' ')[0] || 'Driver'}</h1>
-      <p className="home-muted">{now.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}</p>
+      <p className="home-muted">Your work, at a glance.</p>
     </header>
     {(!online || lastSaveStatus === 'local' || costs.pending) && <p role="status" className="home-banner">{!online ? 'Offline · showing available records' : 'Changes on this device · waiting to sync'}</p>}
     {notice && <p role="status" className="home-banner">{notice}</p>}
@@ -90,7 +90,7 @@ export default function SimpleDashboard() {
             <div className="home-hero"><h3>{day.takeHome == null ? 'Recorded gross earnings' : 'Estimated take-home'}</h3><div className={`home-money ${day.takeHome < 0 ? 'home-negative' : ''}`} aria-live="polite">{costs.loading && day.takeHome != null ? '…' : costs.error && day.takeHome != null ? 'Unavailable' : cash(day.takeHome ?? day.gross)}</div><p className="home-muted text-sm">Recorded costs only<br />Before personal tax</p></div>
             {day.feeRate == null && <p className="home-banner">No contractor fee was recorded with this entry. Its original gross is preserved; take-home cannot be verified.</p>}
             {todayRows.length > 1 && <p className="home-banner">Multiple records exist for today. <button onClick={records} className="underline">Review records</button> before editing.</p>}
-            <dl className="home-breakdown"><div><dt>Gross earnings</dt><dd>{cash(day.gross)}</dd></div><div><dt>After contractor fee{day.feeRate != null ? ` (${day.feeRate}%)` : ''}</dt><dd>{day.afterFee == null ? 'Not recorded' : cash(day.afterFee)}</dd></div><div><dt><button className="home-text-button" onClick={() => navigate('/app/money/expenses', {state:{start:today,end:today}})}>Expenses today</button></dt><dd>{costs.loading ? 'Loading…' : costs.error ? 'Unavailable' : cash(-day.expenses)}</dd></div></dl>
+            <dl className="home-breakdown"><div><dt>Gross earnings</dt><dd>{cash(day.gross)}</dd></div><div><dt>After contractor fee{day.feeRate != null ? ` (${day.feeRate}%)` : ''}</dt><dd>{day.afterFee == null ? 'Not recorded' : cash(day.afterFee)}</dd></div><div><dt><button className="home-text-button" onClick={() => navigate('/app/records?tab=expenses', {state:{start:today,end:today}})}>Expenses today</button></dt><dd>{costs.loading ? 'Loading…' : costs.error ? 'Unavailable' : cash(-day.expenses)}</dd></div></dl>
             {costs.error && <p role="alert" className="home-error">{costs.error} <button className="home-text-button underline" onClick={costs.retry}>Retry</button></p>}
             {costs.expenses.some(e => e.periodOnly) && <p className="home-muted text-sm">Period-wide charges are not included in today’s estimate.</p>}
             <button className="home-link-row" aria-expanded={expanded} aria-controls="home-calculation" onClick={() => { setExpanded(!expanded); if (!expanded) track('home_calculation_expanded'); }}>View calculation<ChevronDown className={expanded ? 'rotate-180' : ''} /></button>
