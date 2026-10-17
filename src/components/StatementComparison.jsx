@@ -12,7 +12,7 @@ export default function StatementComparison({period,expected,statement,summary,r
  const lines=comparisonLines(review,summary);
  const dailyRows=(summary?.rows||[]).map(row=>{
    const recorded=workDetails?.daily?.[row.date];
-   const hasAmount=recorded?.amount!==''&&recorded?.amount!=null&&/^\\d+(\\.\\d{1,2})?$/.test(String(recorded.amount))&&Number.isFinite(Number(row.total));
+   const hasAmount=recorded?.amount!==''&&recorded?.amount!=null&&/^\d+(\.\d{1,2})?$/.test(String(recorded.amount))&&Number.isFinite(Number(row.total));
    const expectedGross=hasAmount?pennies(Number(row.total)):null;
    const statementGross=hasAmount?pennies(Number(recorded.amount)):null;
    return {date:row.date,stops:row.stops,statementStops:recorded?.stops,expectedGross,statementGross,difference:hasAmount?statementGross-expectedGross:null};
@@ -32,7 +32,7 @@ export default function StatementComparison({period,expected,statement,summary,r
    ...mismatchedDays.map(row=>row.date+': your gross '+money(row.expectedGross/100)+', statement gross '+money(row.statementGross/100)+', difference '+money(row.difference/100)+(row.statementStops!==''&&row.statementStops!=null?'; recorded stops '+row.stops+', statement stops '+row.statementStops:'')),
    '',
    'This is a reconciliation aid, not proof of underpayment or payment receipt. Verify the original contractor statement and agreed rates before disputing.'
- ].join('\\n');
+ ].join('\n');
  function downloadReport(){
    const blob=new Blob([reportText],{type:'text/plain;charset=utf-8'});
    const url=URL.createObjectURL(blob);
