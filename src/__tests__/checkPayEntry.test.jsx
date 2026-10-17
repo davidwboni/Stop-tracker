@@ -37,7 +37,7 @@ describe('Check Pay entry',()=>{
    await screen.findByText('AI access could not be verified');
    expect(screen.getByText(/account could not access the AI status service/)).toBeInTheDocument();
    expect(screen.getByRole('button',{name:'Enter manually'})).toBeEnabled();
-   expect(screen.getByLabelText('Choose statement file')).toBeDisabled();
+   expect(screen.queryByLabelText('Choose statement file')).not.toBeInTheDocument();
    f.status.mockResolvedValue({isPro:true,statementAiUses:3});
    fireEvent.click(screen.getByRole('button',{name:'Retry AI availability'}));
    await screen.findByText('Included with Pro');
