@@ -7,24 +7,18 @@ import {useAuth} from "../contexts/AuthContext";
 
 import {trackProductEvent as track} from '../services/productAnalytics';
 
-const FLAG="st_app_walkthrough_v2";
+const FLAG="st_app_walkthrough_v3";
 
 const steps=[
- {path:"/app/dashboard",target:'[data-tour="log-work"]',title:"Log today’s work",body:"This is the button you’ll use at the end of a shift. Tap the highlighted button to continue.",action:"Tap Log today’s work"},
- {path:"/app/dashboard",target:'[data-tour="past-entry"]',title:"Forgot a day?",body:"Use Past entry when you missed a day. You can choose any earlier date before saving.",action:"Tap Past entry"},
- {path:"/app/entries",target:'[data-tour="entry-example"]',title:"Your work ledger",body:"This temporary example shows a saved work day: date, stops, expected earnings and notes. In real use, tap Edit record. The example is never saved and disappears after the tour.",action:"Tap the example entry"},
- {path:"/app/entries",target:'[data-tour="nav-routes"]',title:"Routes",body:"Now tap Routes in the navigation. This is where you check addresses and build the order of your stops.",action:"Tap Routes",nextPath:"/app/routes"},
- {path:"/app/routes",target:'[data-tour="route-search"]',title:"Build a route",body:"Start here by searching an address. Address checking stays separate from your daily work log.",action:"Tap address search"},
- {path:"/app/routes",target:'[data-tour="nav-check-pay"]',title:"Check Pay",body:"At the end of the pay period, move to Check Pay when your contractor statement arrives.",action:"Tap Check Pay",nextPath:"/app/check-pay"},
- {path:"/app/check-pay",target:'[data-tour="check-manual"]',title:"Compare the statement",body:"You can compare the contractor statement with your own records manually. AI extraction includes three free checks, then Pro. You always review before comparing.",action:"Tap manual check"},
- {path:"/app/check-pay",target:'[data-tour="nav-documents"]',title:"Documents",body:"Find your reviewed statements, generated invoices and receipts you chose to keep. Create invoices only if your contractor needs them.",action:"Tap Documents",nextPath:"/app/documents"},
- {path:"/app/documents",target:'[data-tour="document-tabs"]',title:"Your records",body:"Statements store the figures you reviewed. Receipts are retained only when you choose. Original statement uploads are not archived.",action:"Explore document types"},
- {path:"/app/documents",target:'[data-tour="nav-money"]',title:"Money",body:"See earnings, contractor deductions and your own business expenses together. Take-home is an estimate before personal tax.",action:"Tap Money",nextPath:"/app/money"},
- {path:"/app/money",target:'[data-tour="money-sections"]',title:"Expenses and insights",body:"Money contains Overview, Expenses and Insights. Record contractor charges separately from your own costs to avoid double-counting.",action:"Continue to Insights",nextPath:"/app/stats"},
- {path:"/app/stats",target:'[data-tour="insights-period"]',title:"Review each period",body:"Use the period selector to look back at stops, expected earnings and workload trends.",action:"Tap the period selector"},
- {path:"/app/stats",target:'[data-tour="nav-home"]',title:"Back to Home",body:"You now know the main workflow. Tap Home to return to your starting point.",action:"Tap Home",nextPath:"/app/dashboard"},
- {path:"/app/dashboard",title:"You’re ready",body:"The walkthrough did not create or save any work. You will now return to your real records.",action:"Ready"}
-];
+ {path:"/app/dashboard",target:'[data-tour="log-work"]',title:"Log your work",body:"At the end of a shift, record stops, parcels and any extra work. This walkthrough never saves example data.",action:"Continue"},
+ {path:"/app/dashboard",target:'[data-tour="nav-records"]',title:"Your records",body:"Your workdays, expenses and documents are together under Records.",action:"Explore Records",nextPath:"/app/records"},
+ {path:"/app/records",target:'[data-tour="records-tabs"]',title:"Find what you need",body:"Work opens first. Switch to Expenses for receipts or Documents for statement checks and invoices.",action:"Continue"},
+ {path:"/app/records",target:'[data-tour="nav-pay"]',title:"Check your pay",body:"Select a four-week period and compare the contractor statement with your own records.",action:"Explore Pay",nextPath:"/app/check-pay"},
+ {path:"/app/check-pay",target:'[data-tour="check-manual"]',title:"Manual or AI",body:"Manual comparison is always available. AI helps extract statement figures, which you review before saving.",action:"Continue"},
+ {path:"/app/check-pay",target:'[data-tour="nav-routes"]',title:"Plan your route",body:"Add an address and watch it appear on the map. Full optimisation is a Pro feature after free trial uses.",action:"Explore Routes",nextPath:"/app/routes"},
+ {path:"/app/routes",target:'[data-tour="route-search"]',title:"Add delivery stops",body:"See your stops on the map and adjust the order. You can always return here from the Routes tab.",action:"Finish tour",nextPath:"/app/dashboard"},
+ {path:"/app/dashboard",title:"You're ready",body:"Return to Home to start recording your real work. You can skip the guidance at any time.",action:"Start tracking"}
+]
 
 export default function AppWalkthrough(){
  const reduced=useReducedMotion();
