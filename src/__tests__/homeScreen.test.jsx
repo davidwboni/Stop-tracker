@@ -49,22 +49,21 @@ describe('Approved earnings-first Home',()=>{
   expect(screen.getAllByRole('button',{name:/Log your day/})).toHaveLength(1);
   expect(screen.queryByText('£0.00')).not.toBeInTheDocument();
  });
- it('keeps the compact sections in the agreed order and provides no duplicate Log shortcut',()=>{
+ it('keeps the compact sections and does not duplicate footer shortcuts',()=>{
   fixture.data.logs=[];mount();
   const home=document.querySelector('.customer-home-grid');
   const today=home.querySelector('.customer-today');
   const period=home.querySelector('.customer-period');
   const recent=home.querySelector('.customer-recent');
-  const tools=home.querySelector('.customer-tools');
-  expect([today,period,recent,tools].every(Boolean)).toBe(true);
+  expect([today,period,recent].every(Boolean)).toBe(true);
   expect(today.compareDocumentPosition(period)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(period.compareDocumentPosition(recent)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  expect(recent.compareDocumentPosition(tools)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(today).toHaveTextContent('Not logged yet');
   expect(screen.getAllByRole('button',{name:/Log your day/})).toHaveLength(1);
-  expect(tools.querySelectorAll('button')).toHaveLength(3);
-  expect(screen.getByRole('button',{name:/Expenses/})).toBeInTheDocument();
-  expect(screen.getByRole('button',{name:/Routes/})).toBeInTheDocument();
+  expect(home.querySelector('.customer-tools')).toBeNull();
+  expect(screen.queryByRole('button',{name:/Expenses/})).not.toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:/Routes/})).not.toBeInTheDocument();
+  expect(screen.getByRole('button',{name:/See all/})).toBeInTheDocument();
  });
  it('shows saved work with a primary review action rather than asking to log again',()=>{
   mount();

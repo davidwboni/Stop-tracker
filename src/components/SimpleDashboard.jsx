@@ -1,12 +1,11 @@
 import React,{useEffect,useMemo,useState} from 'react';
 import {createPortal} from 'react-dom';
 import {useLocation,useNavigate} from 'react-router-dom';
-import {Eye,EyeOff,Plus,ChevronRight,ClipboardList,MapPin,Receipt,CheckCircle2,ChevronDown} from 'lucide-react';
+import {Eye,EyeOff,Plus,ChevronRight,CheckCircle2,ChevronDown} from 'lucide-react';
 import {useAuth} from '../contexts/AuthContext';
 import {useData} from '../contexts/DataContext';
 import DailyQuickEntry from './DailyQuickEntry';
 import DayRecordSheet from './DayRecordSheet';
-import HomeExpenseDialog from './HomeExpenseDialog';
 import useExpenses from '../hooks/useExpenses';
 import {getPeriodForDate,isoDate} from '../features/payperiod/periods';
 import {money,summarizeDay} from '../features/home/homeModel';
@@ -29,7 +28,6 @@ export default function SimpleDashboard(){
  const [hidden,setHidden]=useState(readHidden);
  const [entryDate,setEntryDate]=useState(()=>isoDate(new Date()));
  const [quickOpen,setQuickOpen]=useState(false);
- const [expenseOpen,setExpenseOpen]=useState(false);
  const [selectedId,setSelectedId]=useState(null);
  const [notice,setNotice]=useState('');
  const [showCalculation,setShowCalculation]=useState(false);
@@ -131,17 +129,8 @@ export default function SimpleDashboard(){
          <span><strong>{fullDate(row.date)}</strong><small>{quantityFor(row,row.payStructureSnapshot?.model||row.payModel)}{row.totalParcels!=null?` · ${row.totalParcels} parcels`:''}</small></span>
          <span className="customer-recent-earnings">{row.total!=null&&Number.isFinite(Number(row.total))?cash(Number(row.total)):'Unavailable'}<small>Gross</small></span><ChevronRight size={18} aria-hidden="true"/></button>):<p className="home-muted text-sm">Your previously logged days will appear here.</p>}
      </section>
-     <section className="customer-tools" aria-label="Quick tools">
-       <h2>Quick tools</h2>
-       <div className="customer-tools-grid">
-         <button className="customer-tool" onClick={goRecords}><span className="customer-tool-icon"><ClipboardList size={21}/></span><strong>Records</strong><small>Saved days</small></button>
-         <button className="customer-tool" onClick={()=>{track('expense_opened',{source:'home'});setExpenseOpen(true)}}><span className="customer-tool-icon"><Receipt size={21}/></span><strong>Expenses</strong><small>Track costs</small></button>
-         <button className="customer-tool" onClick={()=>navigate('/app/routes')}><span className="customer-tool-icon"><MapPin size={21}/></span><strong>Routes</strong><small>Plan stops</small></button>
-       </div>
-     </section>
    </div>
    <DayRecordSheet log={selected} hidden={hidden} duplicate={selected?logs.filter(r=>r.date===selected.date).length>1:false} onClose={()=>setSelectedId(null)} onEdit={()=>{const d=selected.date;setSelectedId(null);openEntry(d)}} onDelete={deleteRecord}/>
    {createPortal(<DailyQuickEntry open={quickOpen} initialDate={entryDate} onDateChange={setEntryDate} onClose={()=>setQuickOpen(false)} onSaved={(_record,result)=>{setQuickOpen(false);setNotice(user?.isGuest?'Saved on this device · guest record':result?.isOnline===false?'Saved on this device · waiting to sync':'Work saved')}}/>,document.body)}
-   {expenseOpen&&<HomeExpenseDialog open onClose={()=>setExpenseOpen(false)} save={costs.save} isGuest={user?.isGuest}/>}
  </div>;
 }
