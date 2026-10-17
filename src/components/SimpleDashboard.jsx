@@ -1,7 +1,7 @@
 import React,{useEffect,useMemo,useState} from 'react';
 import {createPortal} from 'react-dom';
 import {useLocation,useNavigate} from 'react-router-dom';
-import {Eye,EyeOff,Plus,ChevronRight,ClipboardList,Wallet,MapPin,Receipt,CalendarDays,CheckCircle2,ChevronDown} from 'lucide-react';
+import {Eye,EyeOff,Plus,ChevronRight,ClipboardList,MapPin,Receipt,CheckCircle2,ChevronDown} from 'lucide-react';
 import {useAuth} from '../contexts/AuthContext';
 import {useData} from '../contexts/DataContext';
 import DailyQuickEntry from './DailyQuickEntry';
@@ -49,7 +49,6 @@ export default function SimpleDashboard(){
  const moneyPence=value=>value==null?'Unavailable':cash(value/100);
  const hasPeriodData=periodInfo&&periodInfo.rows.length>0;
  const periodTotalReady=hasPeriodData&&!loading&&!loadError&&!costs.loading&&!costs.error&&periodInfo.payout!=null;
- const todayHasCosts=day&&!day.unavailable&&(day.expenses>0);
  const hour=now.getHours();
  const greeting=hour<12?'Good morning':hour<18?'Good afternoon':'Good evening';
  const firstName=user?.displayName?.split(' ')[0]||'Driver';
@@ -84,7 +83,7 @@ export default function SimpleDashboard(){
    {notice&&<p role="status" className="home-banner">{notice}</p>}
    <div className="customer-home-grid">
      <section className="customer-today home-card" aria-labelledby="today-title" aria-busy={loading}>
-       <div className="home-row"><h2 id="today-title">Today</h2><span className="home-badge">Estimated</span></div>
+       <div className="home-row"><h2 id="today-title">Today</h2><span className="home-badge">{loading?"Loading":loadError?"Unavailable":todayLog?"Saved":"Not logged yet"}</span></div>
        {loading?<div className="home-skeleton" role="status" aria-label="Loading today's work"/>:
        loadError?<div className="customer-home-error" role="alert"><p>{loadError}</p><button className="home-secondary" onClick={forceSync}>Retry loading records</button></div>:
        todayLog&&!day?.unavailable?<>
@@ -98,10 +97,9 @@ export default function SimpleDashboard(){
          </div>
          {todayRows.length>1&&<p role="alert" className="home-banner">Multiple entries for today. Review them in Records.</p>}
          {day.fee==null&&<p className="home-muted text-xs">No contractor fee was saved with this entry. Its original gross remains unchanged.</p>}
-         <button className="home-primary customer-main-action" onClick={()=>reviewRecord(todayLog)} disabled={todayRows.length>1?false:undefined}>
+         <button data-tour="log-work" className="home-primary customer-main-action" onClick={()=>reviewRecord(todayLog)}>
            <CheckCircle2 size={19}/>View today's record<ChevronRight size={18}/>
          </button>
-         <button className="customer-subtle-action" onClick={()=>openEntry()} disabled={todayRows.length>1}>Edit today's work</button>
          <button className="customer-calculation-toggle" aria-expanded={showCalculation} aria-controls="home-calculation" onClick={()=>setShowCalculation(v=>!v)}>View calculation <ChevronDown size={18} aria-hidden="true" className={showCalculation?'rotate-180':''}/></button>
          {showCalculation&&<dl className="customer-calculation" id="home-calculation">
            <div><dt>Gross earnings</dt><dd>{cash(day.gross)}</dd></div>
@@ -112,32 +110,20 @@ export default function SimpleDashboard(){
          {costs.error&&<p role="alert" className="home-banner">Expenses are temporarily unavailable. <button className="home-text-button" onClick={costs.retry}>Retry</button></p>}
        </>:<>
          <div className="customer-empty-day">
-           <div className="customer-empty-icon"><CalendarDays size={27} aria-hidden="true"/></div>
-           <h3>{todayLog?'Review today’s saved entry':'Ready to log your day?'}</h3>
-           <p className="home-muted">{todayLog?'We couldn’t calculate this entry from its saved values.':'Add your stops, parcels and any extra work to start tracking your earnings.'}</p>
+           <h3>{todayLog?'Review your saved entry':'Ready to record today’s work?'}</h3>
+           <p className="home-muted">{todayLog?'The saved earnings cannot be calculated. You can still review the work you recorded.':'Record your stops, parcels and any extra work.'}</p>
          </div>
          <button data-tour="log-work" className="home-primary customer-main-action" onClick={()=>todayLog?reviewRecord(todayLog):openEntry()}><Plus size={20}/>{todayLog?'View today’s record':'Log your day'}<ChevronRight size={18}/></button>
-         {!todayLog&&<p className="home-muted text-xs">It only takes a moment. You can edit it later.</p>}
        </>}
      </section>
      <section className="home-card customer-period" aria-labelledby="period-title">
        <div className="home-row"><h2 id="period-title">Current pay period</h2><span className="home-badge">{period?periodStatus:'Not set'}</span></div>
        <p className="home-muted text-sm">{period?`${shortDate(period.start)} – ${shortDate(period.end)}`:'Set up your four-week period in Profile'}</p>
-       <p className="customer-money-label">Your expected contractor payout</p>
+       <p className="customer-money-label">Expected contractor payout</p>
        <strong className="customer-period-money">{loading||costs.loading?'Loading…':loadError||costs.error?'Unavailable':periodTotalReady?moneyPence(periodInfo.payout):hasPeriodData?'Needs complete records':'No work logged yet'}</strong>
-       <p className="home-muted text-xs">After contractor fees and recorded contractor charges · Before personal expenses and tax</p>
+       <p className="home-muted text-xs">After contractor fees and charges · Before personal expenses and tax</p>
        {hasPeriodData&&<p className="home-muted text-xs">{periodInfo.rows.length} {periodInfo.rows.length===1?'day':'days'} recorded this period</p>}
        <button className="home-secondary customer-period-cta" onClick={period?goPay:goPeriods}>{period?'Check your statement':'Set pay-period dates'}<ChevronRight size={18}/></button>
-       <button className="customer-subtle-action" onClick={goPeriods}>View previous periods</button>
-     </section>
-     <section className="customer-tools" aria-label="Quick tools">
-       <h2>Quick tools</h2>
-       <div className="customer-tools-grid">
-         <button className="customer-tool" data-tour="log-work" onClick={()=>todayLog?reviewRecord(todayLog):openEntry()}><span className="customer-tool-icon"><Plus size={22}/></span><strong>{todayLog?'Review today':'Log your day'}</strong><small>Stops & extra work</small></button>
-         <button className="customer-tool" onClick={goRecords}><span className="customer-tool-icon"><ClipboardList size={22}/></span><strong>Work records</strong><small>Your saved days</small></button>
-         <button className="customer-tool" onClick={()=>{track('expense_opened',{source:'home'});setExpenseOpen(true)}}><span className="customer-tool-icon"><Receipt size={22}/></span><strong>Add expense</strong><small>Track your costs</small></button>
-         <button className="customer-tool" onClick={()=>navigate('/app/routes')}><span className="customer-tool-icon"><MapPin size={22}/></span><strong>Plan route</strong><small>See stops on a map</small></button>
-       </div>
      </section>
      <section className="home-card customer-recent">
        <div className="home-row"><h2>Recent work</h2><button className="customer-header-link" onClick={goRecords}>See all <ChevronRight size={16}/></button></div>
@@ -145,7 +131,14 @@ export default function SimpleDashboard(){
          <span><strong>{fullDate(row.date)}</strong><small>{quantityFor(row,row.payStructureSnapshot?.model||row.payModel)}{row.totalParcels!=null?` · ${row.totalParcels} parcels`:''}</small></span>
          <span className="customer-recent-earnings">{row.total!=null&&Number.isFinite(Number(row.total))?cash(Number(row.total)):'Unavailable'}<small>Gross</small></span><ChevronRight size={18} aria-hidden="true"/></button>):<p className="home-muted text-sm">Your previously logged days will appear here.</p>}
      </section>
-     <button className="customer-check-pay-link" onClick={goPay}><Wallet size={18}/>Need to check a payment? <strong>Go to Pay</strong><ChevronRight size={17}/></button>
+     <section className="customer-tools" aria-label="Quick tools">
+       <h2>Quick tools</h2>
+       <div className="customer-tools-grid">
+         <button className="customer-tool" onClick={goRecords}><span className="customer-tool-icon"><ClipboardList size={21}/></span><strong>Records</strong><small>Saved days</small></button>
+         <button className="customer-tool" onClick={()=>{track('expense_opened',{source:'home'});setExpenseOpen(true)}}><span className="customer-tool-icon"><Receipt size={21}/></span><strong>Expenses</strong><small>Track costs</small></button>
+         <button className="customer-tool" onClick={()=>navigate('/app/routes')}><span className="customer-tool-icon"><MapPin size={21}/></span><strong>Routes</strong><small>Plan stops</small></button>
+       </div>
+     </section>
    </div>
    <DayRecordSheet log={selected} hidden={hidden} duplicate={selected?logs.filter(r=>r.date===selected.date).length>1:false} onClose={()=>setSelectedId(null)} onEdit={()=>{const d=selected.date;setSelectedId(null);openEntry(d)}} onDelete={deleteRecord}/>
    {createPortal(<DailyQuickEntry open={quickOpen} initialDate={entryDate} onDateChange={setEntryDate} onClose={()=>setQuickOpen(false)} onSaved={(_record,result)=>{setQuickOpen(false);setNotice(user?.isGuest?'Saved on this device · guest record':result?.isOnline===false?'Saved on this device · waiting to sync':'Work saved')}}/>,document.body)}
