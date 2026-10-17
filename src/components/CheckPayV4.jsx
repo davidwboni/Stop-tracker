@@ -141,7 +141,7 @@ export default function CheckPayV4() {
      <p className="home-muted check-privacy">AI supports PDF or photos, up to 12 MB. Review the figures before comparing. Files aren't saved to your account.</p>
    </section>
    {hasSaved&&<section className="check-previous" aria-label="Previous comparison">
-     <button className="check-previous-button" onClick={viewSaved} disabled={blocked}>
+     <button className="check-previous-button" aria-label="Review saved check" onClick={viewSaved} disabled={blocked}>
        <span className="check-previous-icon"><FileCheck2 size={20}/></span>
        <span><strong>{comparison.state==='stale'?'Previous check needs reviewing':'Previous comparison'}</strong><small>{comparison.state==='stale'?'Your records changed since the last check.':comparison.state==='difference'?'Difference recorded · Tap to review':comparison.state==='matched'?'Figures matched · Tap to review':'Review your saved comparison'}</small></span>
        <ArrowRight size={19} aria-hidden="true"/>
