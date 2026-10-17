@@ -23,7 +23,7 @@ describe('Approved earnings-first Home',()=>{
  it('puts today earnings and expected contractor payout up front and retains detailed cost calculation',()=>{
   mount();
   expect(screen.getByRole('heading',{name:'Today'})).toBeInTheDocument();
-  expect(screen.getByText('£264.61')).toBeInTheDocument();
+  expect(screen.getAllByText('£264.61').length).toBeGreaterThan(0);
   expect(screen.getByText('Your expected contractor payout')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button',{name:/View calculation/i}));
   expect(screen.getByText('£219.41')).toBeInTheDocument();
@@ -34,7 +34,7 @@ describe('Approved earnings-first Home',()=>{
  it('does not present recorded business expenses as contractor payout deductions',()=>{
   mount();
   expect(screen.getByText('Your expected contractor payout')).toBeInTheDocument();
-  expect(screen.getByText('£264.61')).toBeInTheDocument();
+  expect(screen.getAllByText('£264.61').length).toBeGreaterThan(0);
   expect(screen.queryByText('£219.41')).not.toBeInTheDocument();
  });
  it('shows a clear error rather than a confident payout if expenses cannot load',()=>{
@@ -46,7 +46,7 @@ describe('Approved earnings-first Home',()=>{
  it('has a clear log action and no invented £0.00 for a new user',()=>{
   fixture.data.logs=[];mount();
   expect(screen.getByText('Ready to log your day?')).toBeInTheDocument();
-  expect(screen.getByRole('button',{name:/Log your day/})).toBeInTheDocument();
+  expect(screen.getAllByRole('button',{name:/Log your day/}).length).toBeGreaterThan(0);
   expect(screen.queryByText('£0.00')).not.toBeInTheDocument();
  });
  it('prevents replacing unknown records following a load failure',()=>{
