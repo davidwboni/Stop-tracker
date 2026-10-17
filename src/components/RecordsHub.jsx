@@ -11,7 +11,7 @@ export default function RecordsHub(){
  const tab=tabs.some(t=>t.id===params.get('tab'))?params.get('tab'):'work';
  return <div className="home-screen records-hub st-page">
   <header><h1>Records</h1><p className="home-muted">Your work, expenses and saved documents in one place.</p></header>
-  <nav className="records-tabs" aria-label="Records sections">
+  <nav className="records-tabs" data-tour="records-tabs" aria-label="Records sections">
    {tabs.map(({id,label,Icon})=><button type="button" key={id} aria-current={tab===id?'page':undefined} onClick={()=>setParams(id==='work'?{}:{tab:id})}>
     <Icon size={18} aria-hidden="true"/><span>{label}</span></button>)}
   </nav>
