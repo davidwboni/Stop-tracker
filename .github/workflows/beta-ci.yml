@@ -47,3 +47,5 @@ jobs:
           cache-dependency-path: functions/package-lock.json
       - run: npm install --ignore-scripts
       - run: node --check index.js
+      - name: Verify server-only access model
+        run: node --test tests/entitlementModel.test.js
