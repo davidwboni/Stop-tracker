@@ -5,7 +5,7 @@
 // fields must never be used to decide this permission.
 function resolveAccess(entitlement, verifiedToken) {
   const data = entitlement || {};
-  const isAdmin = verifiedToken?.admin === true;
+  const isAdmin = verifiedToken?.stopTrackerAdmin === true;
   const isPaidPro = data.plan === 'pro' && ['active', 'trialing'].includes(data.subscriptionStatus);
   return { isAdmin, isPaidPro, isPro: isPaidPro || isAdmin };
 }
