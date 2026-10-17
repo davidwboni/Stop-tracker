@@ -1,6 +1,6 @@
 import React from 'react';
 import '../styles/app-navigation.css';
-import {Home, ClipboardList, Wallet, MapPinned} from 'lucide-react';
+import {Home, ClipboardList, Wallet, MapPin} from 'lucide-react';
 import {useNavigate,useLocation} from 'react-router-dom';
 const items=[
  {path:'/app/dashboard',label:'Home',Icon:Home,active:p=>p==='/app'||p.startsWith('/app/dashboard')},
