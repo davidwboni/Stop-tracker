@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Package, Plus, History, ChevronRight, ChevronDown } from 'lucide-react';
+import { Eye, EyeOff, Plus, History, ChevronRight, ChevronDown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import DailyQuickEntry from './DailyQuickEntry';
