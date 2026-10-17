@@ -17,6 +17,7 @@ import CheckPayV4 from '../components/CheckPayV4';
 import PeriodHistoryV4 from '../components/PeriodHistoryV4';
 import ErrorBoundary from '../components/ErrorBoundary';
 import ProfileWrapper from '../components/ProfileWrapper';
+import BusinessSettings from '../components/BusinessSettings';
 import PaymentSettingsWrapper from '../components/PaymentSettingsWrapper';
 import UpgradeToPro from '../components/UpgradeToPro';
 import RoutePlannerWrapper from '../components/RoutePlannerWrapper';
@@ -97,6 +98,7 @@ const router = createBrowserRouter([
           { path: 'documents', element: <ErrorBoundary><DocumentsPage /></ErrorBoundary> },
           { path: 'stats', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><StatsPage /></React.Suspense></ErrorBoundary> },
           { path: 'profile', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><ProfileWrapper /></React.Suspense></ErrorBoundary> },
+          { path: 'business', element: <ErrorBoundary><BusinessSettings /></ErrorBoundary> },
           { path: 'settings', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><PaymentSettingsWrapper /></React.Suspense></ErrorBoundary> },
           { path: 'upgrade', element: <ErrorBoundary><UpgradeToPro /></ErrorBoundary> },
           { path: 'contact', element: <ContactUs /> },
