@@ -22,6 +22,7 @@ const money = (n) => `£${(Number(n) || 0).toFixed(2)}`;
 export default function InvoiceCreate({ prefill }) {
   const {
     clients,
+    defaultClientId,
     saveClient,
     addInvoice,
     getNextInvoiceNumber,
@@ -41,8 +42,8 @@ export default function InvoiceCreate({ prefill }) {
   const [client, setClient] = useState(null);
 
   React.useEffect(() => {
-    if (!client && clients?.length === 1) setClient(clients[0]);
-  }, [clients, client]);
+    if (!client && (clients?.length === 1 || defaultClientId)) setClient(clients.find(c=>c.id===defaultClientId) || (clients.length===1?clients[0]:null));
+  }, [clients, client, defaultClientId]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [newClient, setNewClient] = useState(null);
   const [notes, setNotes] = useState("");
