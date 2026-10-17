@@ -14,7 +14,7 @@
     --card: #FFFFFF;
     --card-foreground: #000000;
 
-    --primary: #0D9488;
+    --primary: #6650DF;
     --primary-foreground: #FFFFFF;
 
     --secondary: #0891B2;
@@ -23,7 +23,7 @@
     --muted: #F3F4F6;
     --muted-foreground: #6B7280;
 
-    --accent: #0D9488;
+    --accent: #6650DF;
     --accent-foreground: #FFFFFF;
 
     --destructive: #FF3B30;
@@ -31,7 +31,7 @@
 
     --border: #EEEEEE;
     --input: #EEEEEE;
-    --ring: #0D9488;
+    --ring: #6650DF;
   }
 
   .dark {
