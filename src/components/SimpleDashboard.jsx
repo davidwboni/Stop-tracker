@@ -5,6 +5,7 @@ import { Eye, EyeOff, Plus, History, ChevronRight, ChevronDown } from 'lucide-re
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import DailyQuickEntry from './DailyQuickEntry';
+import DayRecordSheet from './DayRecordSheet';
 import HomeExpenseDialog from './HomeExpenseDialog';
 import useExpenses from '../hooks/useExpenses';
 import { getPeriodForDate, isoDate } from '../features/payperiod/periods';
@@ -16,13 +17,14 @@ const shortDate = value => new Date(`${value}T12:00:00`).toLocaleDateString('en-
 const readHidden = () => { try { return localStorage.getItem('home-hide-money') === '1'; } catch (_) { return false; } };
 export default function SimpleDashboard() {
   const { user } = useAuth();
-  const { logs = [], loading, loadError, forceSync, paymentConfig, payPeriodAnchor, periodRecords = {}, isNewUser, lastSaveStatus } = useData();
+  const { logs = [], loading, loadError, forceSync, paymentConfig, payPeriodAnchor, periodRecords = {}, isNewUser, lastSaveStatus, updateLogs } = useData();
   const costs = useExpenses();
   const navigate = useNavigate();
   const location = useLocation();
   const [now, setNow] = useState(() => new Date());
   const [hidden, setHidden] = useState(readHidden);
   const [quickOpen, setQuickOpen] = useState(false);
+  const [viewToday,setViewToday]=useState(false);
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [online, setOnline] = useState(navigator.onLine);
@@ -71,6 +73,8 @@ export default function SimpleDashboard() {
   }
   function toggleHidden() { const next = !hidden; setHidden(next); try { localStorage.setItem('home-hide-money', next ? '1' : '0'); } catch (_) {} }
   const records = () => { track('records_opened', { source: 'home' }); navigate('/app/records'); };
+  const reviewToday = () => todayRows.length > 1 ? records() : setViewToday(true);
+  async function deleteToday(row) { const result=await updateLogs(logs.filter(r=>r.id!==row.id),{strict:true});if(result?.success===false)throw new Error('Delete rejected');setViewToday(false);setNotice('Work record deleted'); }
   const goMoney = range => { navigate('/app/money', { state: range }); };
 
   return <div className="home-screen home-layout">
@@ -91,6 +95,7 @@ export default function SimpleDashboard() {
             {day.feeRate == null && <p className="home-banner">No contractor fee was recorded with this entry. Its original gross is preserved; take-home cannot be verified.</p>}
             {todayRows.length > 1 && <p className="home-banner">Multiple records exist for today. <button onClick={records} className="underline">Review records</button> before editing.</p>}
             <dl className="home-breakdown"><div><dt>Gross earnings</dt><dd>{cash(day.gross)}</dd></div><div><dt>After contractor fee{day.feeRate != null ? ` (${day.feeRate}%)` : ''}</dt><dd>{day.afterFee == null ? 'Not recorded' : cash(day.afterFee)}</dd></div><div><dt><button className="home-text-button" onClick={() => navigate('/app/records?tab=expenses', {state:{start:today,end:today}})}>Expenses today</button></dt><dd>{costs.loading ? 'Loading…' : costs.error ? 'Unavailable' : cash(-day.expenses)}</dd></div></dl>
+            <button type="button" className="home-link-row" onClick={reviewToday}>Review saved day <ChevronRight size={20}/></button>
             {costs.error && <p role="alert" className="home-error">{costs.error} <button className="home-text-button underline" onClick={costs.retry}>Retry</button></p>}
             {costs.expenses.some(e => e.periodOnly) && <p className="home-muted text-sm">Period-wide charges are not included in today’s estimate.</p>}
             <button className="home-link-row" aria-expanded={expanded} aria-controls="home-calculation" onClick={() => { setExpanded(!expanded); if (!expanded) track('home_calculation_expanded'); }}>View calculation<ChevronDown className={expanded ? 'rotate-180' : ''} /></button>
@@ -114,7 +119,8 @@ export default function SimpleDashboard() {
         <button data-tour="past-entry" className="home-text-button" onClick={() => { const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1); openEntry(isoDate(yesterday)); }}>Log another day<ChevronRight size={16} /></button>
       </aside>
     </div>
-    {!quickOpen && <div className="home-entry-dock"><p className="home-muted text-xs mb-2">{todayLog ? 'Today saved · Tap to edit' : 'Your work. Your records. Your pay.'}</p><button data-tour="log-work" className="home-primary w-full" disabled={loading || !!loadError} onClick={() => todayRows.length > 1 ? records() : openEntry()}><Plus size={22} />Quick Entry</button></div>}
+    {!quickOpen && <div className="home-entry-dock"><p className="home-muted text-xs mb-2">{todayLog ? 'Today saved · Tap to review' : 'Your work. Your records. Your pay.'}</p><button data-tour="log-work" className="home-primary w-full" disabled={loading || !!loadError} onClick={() => todayLog && !loadError ? reviewToday() : todayRows.length > 1 ? records() : openEntry()}><Plus size={22} />{todayLog && !loadError ? 'Review today' : 'Quick Entry'}</button></div>}
+    <DayRecordSheet log={viewToday?todayLog:null} hidden={hidden} duplicate={todayRows.length>1} onClose={()=>setViewToday(false)} onEdit={()=>{setViewToday(false);openEntry()}} onDelete={deleteToday}/>
     {createPortal(<DailyQuickEntry open={quickOpen} initialDate={entryDate} onDateChange={setEntryDate} onClose={() => setQuickOpen(false)} onSaved={(_record, result) => { setQuickOpen(false); setNotice(user?.isGuest ? 'Saved on this device · guest record' : result?.isOnline === false ? 'Saved on this device · waiting to sync' : 'Work saved'); }} />, document.body)}
     {expenseOpen && <HomeExpenseDialog open onClose={() => setExpenseOpen(false)} save={costs.save} isGuest={user?.isGuest} />}
   </div>;
