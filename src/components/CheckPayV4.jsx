@@ -1,6 +1,6 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {Link, useLocation, useNavigate} from 'react-router-dom';
-import {Keyboard, Sparkles, ArrowRight, Eye, EyeOff,User} from 'lucide-react';
+import {Keyboard, Sparkles, ArrowRight, Eye, EyeOff,User,ChevronDown,FileCheck2} from 'lucide-react';
 import {useData} from '../contexts/DataContext';
 import useExpenses from '../hooks/useExpenses';
 import {isoDate, listPeriods, getPeriodForDate} from '../features/payperiod/periods';
@@ -51,7 +51,25 @@ export default function CheckPayV4() {
  useEffect(()=>{mounted.current=true;track('check_pay_opened');return()=>{mounted.current=false;if(draftRef.current)track('statement_draft_abandoned');};},[]);
  useEffect(()=>{const changed=()=>setOffline(!navigator.onLine);window.addEventListener('online',changed);window.addEventListener('offline',changed);return()=>{window.removeEventListener('online',changed);window.removeEventListener('offline',changed);};},[]);
  useEffect(()=>{if(!dirty)return;const guard=e=>{e.preventDefault();e.returnValue='';};window.addEventListener('beforeunload',guard);return()=>window.removeEventListener('beforeunload',guard);},[dirty]);
- useEffect(()=>{let active=true;setEntitlement(null);setEntitlementError(false);if(offline)return;getPremiumStatus().then(s=>{if(!active)return;if(typeof s?.isPro!=='boolean'||!Number.isInteger(s?.statementAiUses)||s.statementAiUses<0)throw new Error('Invalid status');setEntitlement(s);}).catch(()=>{if(active)setEntitlementError(true);});return()=>{active=false;};},[statusRequest,offline]);
+ useEffect(()=>{
+  let active=true;
+  setEntitlement(null);setEntitlementError(false);
+  if(offline)return;
+  getPremiumStatus().then(status=>{
+    if(!active)return;
+    if(typeof status?.isPro!=='boolean'||!Number.isSafeInteger(status.statementAiUses)||status.statementAiUses<0){
+      const error=new Error('Unexpected AI entitlement response');error.code='invalid-response';throw error;
+    }
+    setEntitlement(status);
+  }).catch(err=>{
+    if(!active)return;
+    const code=String(err?.code||'');
+    setEntitlementError(code.includes('unauthenticated')?'auth':code.includes('permission-denied')?'permission':'connection');
+    // No client-side fallback can reliably determine Free uses or Pro access.
+    track('statement_ai_access_check_failed',{reason:code.includes('unauthenticated')?'auth':code.includes('permission-denied')?'permission':'other'});
+  });
+  return()=>{active=false;};
+ },[statusRequest,offline]);
  useEffect(()=>{let active=true;setRevision(null);moneyRevision(logs,costs.expenses,period).then(r=>{if(active)setRevision(r);}).catch(()=>{});return()=>{active=false;};},[logs,costs.expenses,period.start,period.end]);
  function reset(){if(dirty&&!window.confirm('Discard this unsaved statement draft?'))return;setMode('idle');setResolved(false);setReview(null);setReviewedStatement(null);setDetails(emptyStatementDetails());setAmount('');setBasis(false);setFile(null);setAiDraft(null);setError('');}
  function manual(saved=false){setResolved(false);const previous=periodRecords[period.id];if(saved&&previous?.reviewedStatement){const r=previous.reviewedStatement;const daily=previous.statementWorkDetails?.daily||{};setDetails(previous.statementWorkDetails||emptyStatementDetails());setReview({...createStatementReview({periodStart:r.start,periodEnd:r.end,currency:r.currency,taxBasis:r.taxBasis,contractorPayout:r.payoutPence/100,statementAmount:r.grossPence==null?null:r.grossPence/100,contractorFee:r.feePence==null?null:r.feePence/100,contractorCharges:r.chargesPence==null?null:r.chargesPence/100,charges:r.charges.map(i=>({label:i.label,amount:i.amountPence/100}))}),items:r.charges.map((i,index)=>({id:String(index),label:i.label,amount:String(i.amountPence/100),reviewed:true}))});setReviewedStatement(null);setAiDraft({currency:r.currency,daily:Object.entries(daily).map(([date,d])=>({date,stops:d.stops===''?null:Number(d.stops),amount:d.amount===''?null:Number(d.amount)}))});setFile(null);setBasis(false);setError('');setMode('review');return;}setReview(null);setReviewedStatement(null);setAiDraft(null);setDetails(saved?(periodRecords[period.id]?.statementWorkDetails||{...emptyStatementDetails(),stops:periodRecords[period.id]?.statementStops==null?'':String(periodRecords[period.id].statementStops),gross:periodRecords[period.id]?.statementAmount==null?'':String(periodRecords[period.id].statementAmount),extras:periodRecords[period.id]?.extraPayments==null?'':String(periodRecords[period.id].extraPayments),charges:periodRecords[period.id]?.charges==null?'':String(periodRecords[period.id].charges),vat:periodRecords[period.id]?.vat==null?'':String(periodRecords[period.id].vat)}):emptyStatementDetails());setAmount(saved&&comparison.statement!=null?String(comparison.statement/100):'');setBasis(false);setError('');setMode('manual');track('statement_manual_started');}
@@ -66,21 +84,71 @@ export default function CheckPayV4() {
  const blocked=!ready;
  if(mode==='review'&&review)return <main className="home-screen check-pay-page"><StatementDraftGuard dirty={dirty}/>{offline&&<p className="home-banner">Offline · Edits stay in this open draft. Connect before saving to your account.</p>}<StatementReview draft={review} onChange={setReview} period={period} periods={choices} onPeriodChange={setSelected} file={file} onContinue={continueReview} onBack={reset} ready={ready}/></main>;
  return <main className="home-screen check-pay-page"><StatementDraftGuard dirty={dirty}/>
- <header className="home-row"><div><h1>Your pay</h1><p className="home-muted">Your records. Their statement.</p><Link className="home-text-button text-sm" to="/app/periods">Previous pay periods <ArrowRight size={16}/></Link></div><div className="flex items-center gap-2"><button className="home-icon" aria-label="Open profile" onClick={()=>navigate("/app/profile")}><User size={20} aria-hidden="true"/></button><button className="home-icon" aria-label={hidden?'Show monetary amounts':'Hide monetary amounts'} aria-pressed={hidden} onClick={()=>{setHidden(!hidden);try{localStorage.setItem('home-hide-money',hidden?'0':'1');}catch(_){}}}>{hidden?<EyeOff/>:<Eye/>}</button></div></header>
- <section className="home-card check-period"><label className="home-field">Pay period<select aria-label="Check Pay period" value={period.id} disabled={mode!=='idle'} onChange={e=>{setSelected(choices.find(p=>p.id===e.target.value));setError('');track('check_pay_period_changed');}}>{choices.map(p=><option key={p.id} value={p.id}>{fmt(p.start)} – {fmt(p.end)}</option>)}</select></label><span className="money-badge">{label}</span>
- {!fullPeriod&&<p className="home-banner">Choose a full pay period. <Link to="/app/periods" className="home-text-button">Set pay-period dates</Link></p>}
- {busy?<div className="home-skeleton check-skeleton" role="status" aria-label="Loading expected payout"/>:!summary.rows.length&&!unavailable?<div className="home-empty"><h2>No work recorded this period</h2><p>Log your work so there is something to compare.</p><Link className="home-text-button" to="/app/dashboard">Log work <ArrowRight/></Link></div>:<div className="check-expected"><p className="home-muted">Expected contractor payout · Estimated</p><strong>{unavailable?'Unavailable':summary.payout==null?'Needs complete records':cash(summary.payout)}</strong><p className="home-muted">After contractor fees and recorded charges.<br/>Before your own business expenses and personal tax.</p><Link className="home-text-button" to="/app/money" state={period}>View calculation <ArrowRight size={16}/></Link></div>}
- {summary.payout==null&&!unavailable&&<p className="home-banner">Some work records need their saved pay details checked before a payout can be calculated.</p>}
+ <header className="home-row check-page-header">
+  <div><h1>Your pay</h1><p className="home-muted">Know what you're owed. Check what you're paid.</p></div>
+  <div className="flex items-center gap-2">
+    <button className="home-icon" aria-label="Open profile" onClick={()=>navigate("/app/profile")}><User size={20} aria-hidden="true"/></button>
+    <button className="home-icon" aria-label={hidden?'Show monetary amounts':'Hide monetary amounts'} aria-pressed={hidden} onClick={()=>{setHidden(!hidden);try{localStorage.setItem('home-hide-money',hidden?'0':'1');}catch(_){}}}>{hidden?<EyeOff/>:<Eye/>}</button>
+  </div>
+ </header>
+ <section className="home-card check-period" aria-label="Current pay period">
+   <div className="check-period-top">
+     <label className="check-period-picker">
+       <span>Pay period</span>
+       <span className="check-period-control"><select aria-label="Check Pay period" value={period.id} disabled={mode!=='idle'} onChange={e=>{setSelected(choices.find(p=>p.id===e.target.value));setError('');track('check_pay_period_changed');}}>{choices.map(p=><option key={p.id} value={p.id}>{fmt(p.start)} – {fmt(p.end)}</option>)}</select><ChevronDown size={17} aria-hidden="true"/></span>
+     </label>
+     <span className="money-badge check-status">{label}</span>
+   </div>
+   {!fullPeriod&&<p className="home-banner">Choose a full pay period. <Link to="/app/periods" className="home-text-button">Set pay-period dates</Link></p>}
+   {busy?<div className="home-skeleton check-skeleton" role="status" aria-label="Loading expected payout"/>:!summary.rows.length&&!unavailable?
+     <div className="check-empty">
+       <p className="home-muted">Expected contractor payout</p><strong className="check-empty-value">No work logged yet</strong>
+       <p className="home-muted text-sm">Log a day's work to start checking your pay.</p>
+       <Link className="home-text-button" to="/app/dashboard">Log your day <ArrowRight size={16}/></Link>
+     </div>:
+     <div className="check-expected">
+       <p className="home-muted">Expected contractor payout</p>
+       <strong>{unavailable?'Unavailable':summary.payout==null?'Needs complete records':cash(summary.payout)}</strong>
+       <p className="home-muted text-xs">After contractor fees and charges · Before personal expenses and tax</p>
+       {summary.rows.length>0&&<p className="home-muted text-xs check-period-days">{summary.rows.length} {summary.rows.length===1?'day':'days'} recorded</p>}
+     </div>
+   }
+   {summary.payout==null&&!unavailable&&summary.rows.length>0&&<p className="home-banner">Some work records need their saved pay details checked before a payout can be calculated.</p>}
  </section>
  {(offline||costs.cached)&&<p className="home-banner" role="status">Showing cached records. {offline?'AI requires a connection. Unsaved drafts stay here while this screen is open.':'Refresh before relying on the comparison.'}</p>}
  {(loadError||costs.error)&&<div className="home-banner" role="alert">Records could not be loaded. <button className="home-text-button" onClick={()=>{costs.retry?.();forceSync?.();}}>Retry records</button></div>}
  {mode==='idle'&&<>
- {hasSaved&&<section className="home-card"><h2>{comparison.state==='stale'?'Records changed since your last check':'Saved statement check'}</h2><p className="home-muted">{comparison.state==='stale'?'The previous comparison needs checking again.':'Checking figures does not confirm that payment arrived.'}</p><button className="home-secondary w-full mt-3" disabled={blocked} onClick={viewSaved}>Review saved check</button></section>}
- <h2 className="check-question">How would you like to check your statement?</h2>
- <div className="check-actions"><section className="home-card check-action"><div className="home-row"><Keyboard aria-hidden="true"/><span className="money-badge">Free</span></div><h2>Enter statement totals</h2><p className="home-muted">Use totals from any provider invoice or contractor spreadsheet.</p><button data-tour="check-manual" className="home-primary" disabled={blocked} onClick={()=>manual()}>Enter manually <ArrowRight size={18}/></button></section>
- <section className="home-card check-action"><div className="home-row"><Sparkles aria-hidden="true"/><span className="money-badge">{entitlement?.isPro?'Pro':'AI'}</span></div><h2>Upload with AI</h2><p className="home-muted" role="status">{offline?'Connect to use AI':entitlement?entitlement.isPro?'Included with Pro':entitlement.statementAiUses<3?`${3-entitlement.statementAiUses} free AI checks left`:'Free checks used · Pro required':entitlementError?'Could not check free uses':'Checking free uses…'}</p><p className="home-muted text-sm">PDF, photo or screenshot · Up to 12 MB and 10 PDF pages. Export spreadsheets as PDF.</p>
- {entitlementError?<button className="home-secondary" onClick={()=>setStatusRequest(n=>n+1)}>Retry AI availability</button>:entitlement&&!entitlement.isPro&&entitlement.statementAiUses>=3?<button className="home-secondary" onClick={()=>navigate('/app/upgrade')}>View Pro</button>:<label className={'home-secondary check-file '+(blocked||offline||!entitlement?'check-disabled':'')}>Choose a file<input aria-label="Choose statement file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp,.pdf" disabled={blocked||offline||!entitlement} onChange={e=>{chooseFile(e.target.files?.[0]);e.target.value='';}}/></label>}
- </section></div><p className="home-muted check-privacy">Review extracted figures before comparing. Original uploads are processed, not saved to your Stop Tracker account.</p></>}
+   <section className="check-start" aria-label="Check your statement">
+     <h2 className="check-question">Check your statement</h2>
+     <p className="home-muted text-sm">Choose how you'd like to compare your contractor's statement with your work.</p>
+     <div className="check-actions">
+       <section className="home-card check-action check-action-manual">
+         <div className="check-action-top"><Keyboard aria-hidden="true" size={23}/><span className="money-badge">Free</span></div>
+         <h3>Enter manually</h3>
+         <p className="home-muted">Type in the payout shown on your statement.</p>
+         <button data-tour="check-manual" className="home-primary" disabled={blocked} onClick={()=>manual()}>Enter manually <ArrowRight size={18}/></button>
+       </section>
+       <section className="home-card check-action check-action-ai">
+         <div className="check-action-top"><Sparkles aria-hidden="true" size={23}/><span className="money-badge">{entitlement?.isPro?'Pro':entitlement?'AI':'Verification'}</span></div>
+         <h3>Upload with AI</h3>
+         <p className="home-muted" role="status">{offline?'Connect to check AI access':entitlement?entitlement.isPro?'Included with Pro':entitlement.statementAiUses<3?`${3-entitlement.statementAiUses} free AI checks left`:'Free checks used · Pro required':entitlementError?'AI access could not be verified':'Checking AI access…'}</p>
+         {entitlementError&&<p className="check-ai-error home-muted text-xs" role="alert">{entitlementError==='auth'?'Your session needs refreshing. Please sign in again if retrying does not work.':entitlementError==='permission'?'This account could not access the AI status service. You can still enter figures manually.':'We could not reach the secure AI status service. You can still enter figures manually.'}</p>}
+         {entitlementError?<button className="home-secondary" onClick={()=>setStatusRequest(n=>n+1)}>Retry AI availability</button>:
+          entitlement&&!entitlement.isPro&&entitlement.statementAiUses>=3?<button className="home-secondary" onClick={()=>navigate('/app/upgrade')}>View Pro</button>:
+          <label className={'home-secondary check-file '+(blocked||offline||!entitlement?'check-disabled':'')}>Choose a file<input aria-label="Choose statement file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp,.pdf" disabled={blocked||offline||!entitlement} onChange={e=>{chooseFile(e.target.files?.[0]);e.target.value='';}}/></label>}
+       </section>
+     </div>
+     <p className="home-muted check-privacy">AI supports PDF or photos, up to 12 MB. Review the figures before comparing. Files aren't saved to your account.</p>
+   </section>
+   {hasSaved&&<section className="check-previous" aria-label="Previous comparison">
+     <button className="check-previous-button" onClick={viewSaved} disabled={blocked}>
+       <span className="check-previous-icon"><FileCheck2 size={20}/></span>
+       <span><strong>{comparison.state==='stale'?'Previous check needs reviewing':'Previous comparison'}</strong><small>{comparison.state==='stale'?'Your records changed since the last check.':comparison.state==='difference'?'Difference recorded · Tap to review':comparison.state==='matched'?'Figures matched · Tap to review':'Review your saved comparison'}</small></span>
+       <ArrowRight size={19} aria-hidden="true"/>
+     </button>
+   </section>}
+   <Link className="home-text-button check-history-link" to="/app/periods">See previous pay periods <ArrowRight size={16}/></Link>
+ </>}
  {mode==='upload'&&<section className="home-card check-draft"><h2>Ready to read your statement?</h2><p className="check-filename">{file?.name}</p><p className="home-muted">DeepSeek processes this file to extract figures. You will review them before comparing. A successful extraction uses one free check unless you have Pro.</p><button className="home-primary" disabled={!!stage||offline} onClick={readFile}>{stage||'Read statement with AI'}</button>{stage&&<p role="status">{stage} Please keep this screen open.</p>}<button className="home-secondary" disabled={!!stage} onClick={()=>{setFile(null);manual();}}>Enter manually instead</button><button className="home-text-button" disabled={!!stage} onClick={reset}>Discard file</button></section>}
  {mode==='manual'&&<section className="home-card check-draft"><h2>{aiDraft?'Review extracted payout':'Statement totals'}</h2><p className="home-muted">Enter the contractor payout after contractor fees and charges, before your own business expenses.</p>{aiDraft&&<p className="home-banner">AI figures are unverified. {aiDraft.contractorPayout==null?'No clear final payout was found. Enter it from your statement.':'Check the amount against your statement.'} {aiDraft.currency!=='GBP'?'GBP could not be verified; do not compare a foreign-currency amount.':''} {(aiDraft.periodStart!==period.start||aiDraft.periodEnd!==period.end)?'The extracted period does not match or is missing. Verify both dates before continuing.':''} Nothing has been saved.</p>}<label className="home-field">Statement contractor payout (£)<input inputMode="decimal" value={amount} onChange={e=>{setAmount(e.target.value);setError('');}} placeholder="0.00"/></label><StatementWorkDetails value={details} onChange={setDetails} rows={summary.rows}/><label className="check-basis"><input type="checkbox" checked={basis} onChange={e=>setBasis(e.target.checked)}/><span>I checked that this is the same pay period, in GBP, after contractor charges and before my own expenses, with the same VAT/tax treatment as my records.</span></label><button className="home-primary" disabled={!ready||!basis||!amountValid(amount)} onClick={preview}>Compare with my records</button><button className="home-text-button" onClick={reset}>Cancel</button></section>}
  {mode==='saved'&&comparison.state==='matched'&&!previewStale&&ready&&<section className="home-card"><h2>Ready to invoice?</h2><p className="home-muted">Your checked statement and expected contractor payout agree. If you invoice your contractor, review the amount, VAT treatment and client before sharing.</p><Link to="/app/invoice" state={{periodId:period.id}} className="home-primary w-full mt-3">Prepare invoice <ArrowRight size={18}/></Link></section>}
