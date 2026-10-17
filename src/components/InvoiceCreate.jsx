@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { useInvoice } from "../contexts/InvoiceContext";
 import { Button } from "./ui/button";
@@ -22,6 +22,7 @@ const money = (n) => `£${(Number(n) || 0).toFixed(2)}`;
 export default function InvoiceCreate({ prefill }) {
   const {
     clients,
+    defaultClientId,
     saveClient,
     addInvoice,
     getNextInvoiceNumber,
@@ -40,9 +41,15 @@ export default function InvoiceCreate({ prefill }) {
   const [dateTo, setDateTo] = useState(prefill?.endDate || "");
   const [client, setClient] = useState(null);
 
+  const initialRecipientSelected = useRef(false);
   React.useEffect(() => {
-    if (!client && clients?.length === 1) setClient(clients[0]);
-  }, [clients, client]);
+    if (initialRecipientSelected.current || !clients?.length) return;
+    const candidate = clients.find(c=>c.id===defaultClientId) || (clients.length===1?clients[0]:null);
+    if (candidate) {
+      initialRecipientSelected.current = true;
+      setClient(candidate);
+    }
+  }, [clients,defaultClientId]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [newClient, setNewClient] = useState(null);
   const [notes, setNotes] = useState("");

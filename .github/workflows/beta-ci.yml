@@ -21,6 +21,10 @@ jobs:
           cache: npm
       - name: Install web dependencies
         run: npm install --ignore-scripts
+      # jsdom treats canvas as optional. With lifecycle scripts disabled the native
+      # canvas binary is not built, so remove the unusable optional package.
+      - name: Exclude unbuilt optional canvas from jsdom
+        run: node -e "require('fs').rmSync('node_modules/canvas',{recursive:true,force:true})"
       - name: Run web tests
         run: npm test
       - name: Build production web bundle

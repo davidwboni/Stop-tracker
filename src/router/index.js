@@ -1,5 +1,5 @@
 import React from 'react';
-import { createBrowserRouter, Navigate, useNavigate } from 'react-router-dom';
+import { createBrowserRouter, Navigate, useNavigate, useLocation } from 'react-router-dom';
 
 // Layout
 import Layout from '../components/Layout';
@@ -11,11 +11,13 @@ import DashboardWrapper from '../components/DashboardWrapper';
 import EntriesWrapper from '../components/EntriesWrapper';
 import StatsPage from '../components/StatsPage';
 import DocumentsPage from '../components/DocumentsPage';
+import RecordsHub from '../components/RecordsHub';
 import InvoicePage from '../components/InvoicePage';
 import CheckPayV4 from '../components/CheckPayV4';
 import PeriodHistoryV4 from '../components/PeriodHistoryV4';
 import ErrorBoundary from '../components/ErrorBoundary';
 import ProfileWrapper from '../components/ProfileWrapper';
+import BusinessSettings from '../components/BusinessSettings';
 import PaymentSettingsWrapper from '../components/PaymentSettingsWrapper';
 import UpgradeToPro from '../components/UpgradeToPro';
 import RoutePlannerWrapper from '../components/RoutePlannerWrapper';
@@ -28,6 +30,9 @@ import Auth from '../components/Auth';
 // Auth route protection
 import ProtectedRoute from './ProtectedRoute';
 import PublicRoute from './PublicRoute';
+
+// Give every navigation back to Pay a fresh screen state; unsaved drafts are protected by StatementDraftGuard.
+const PayRoot=()=>{const location=useLocation();return <CheckPayV4 key={location.key}/>;};
 
 // Create wrapper components for public routes with navigation
 const ContactUsPublic = () => {
@@ -85,16 +90,18 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <Navigate to="/app/dashboard" /> },
           { path: 'dashboard', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><DashboardWrapper /></React.Suspense></ErrorBoundary> },
+          { path: 'records', element: <ErrorBoundary><RecordsHub /></ErrorBoundary> },
           { path: 'entries', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><EntriesWrapper /></React.Suspense></ErrorBoundary> },
           { path: 'routes', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><RoutePlannerWrapper /></React.Suspense></ErrorBoundary> },
           { path: 'invoice', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><InvoicePage /></React.Suspense></ErrorBoundary> },
-          { path: 'check-pay', element: <ErrorBoundary><CheckPayV4 /></ErrorBoundary> },
+          { path: 'check-pay', element: <ErrorBoundary><PayRoot /></ErrorBoundary> },
           { path: 'periods', element: <ErrorBoundary><div className="max-w-2xl mx-auto pb-24 -mt-2"><div className="mb-4 flex items-center justify-between gap-3"><h1 className="text-2xl font-bold tracking-tight">Pay Periods</h1><span className="text-xs text-[#8e9ab2]">4-week history</span></div><PeriodHistoryV4 /></div></ErrorBoundary> },
           { path: 'money/expenses', element: <ErrorBoundary><ExpensesOverview /></ErrorBoundary> },
           { path: 'money', element: <ErrorBoundary><MoneyOverview /></ErrorBoundary> },
           { path: 'documents', element: <ErrorBoundary><DocumentsPage /></ErrorBoundary> },
           { path: 'stats', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><StatsPage /></React.Suspense></ErrorBoundary> },
           { path: 'profile', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><ProfileWrapper /></React.Suspense></ErrorBoundary> },
+          { path: 'business', element: <ErrorBoundary><BusinessSettings /></ErrorBoundary> },
           { path: 'settings', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><PaymentSettingsWrapper /></React.Suspense></ErrorBoundary> },
           { path: 'upgrade', element: <ErrorBoundary><UpgradeToPro /></ErrorBoundary> },
           { path: 'contact', element: <ContactUs /> },

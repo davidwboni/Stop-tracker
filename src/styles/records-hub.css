@@ -1,0 +1,9 @@
+.records-hub{max-width:990px;gap:16px}
+.records-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.records-tabs button{display:flex;justify-content:center;align-items:center;gap:7px;min-height:52px;padding:9px 6px;border-radius:12px;background:var(--card);border:1px solid var(--border);font-size:14px;font-weight:650;color:var(--muted-foreground)}
+.records-tabs button[aria-current=page]{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 13%,var(--card));color:var(--foreground)}
+.records-content{min-width:0}.records-content>.st-page,.records-content>.expense-page{max-width:none;margin:0;padding-bottom:42px}
+.records-hub .expense-page>header,.records-hub .expense-sections{display:none}
+.records-hub .st-page>header h1{font-size:clamp(20px,5vw,25px)}
+@media(max-width:390px){.records-tabs button{font-size:12px;gap:4px}}
+@media(prefers-reduced-motion:reduce){.records-tabs *{transition:none!important}}
