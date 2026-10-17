@@ -8,7 +8,7 @@
 .customer-avatar{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:color-mix(in srgb,var(--home-purple) 19%,var(--card));color:var(--home-purple);font-weight:750;font-size:17px;border:1px solid color-mix(in srgb,var(--home-purple) 32%,var(--border));}
 .customer-home-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;}
 .customer-home .home-card{padding:16px;border-radius:16px;}
-.customer-home .home-card h2,.customer-tools h2{font-size:18px;font-weight:700;line-height:1.2;}
+.customer-home .home-card h2{font-size:18px;font-weight:700;line-height:1.2;}
 .customer-home .home-badge{flex-shrink:0;font-size:11px;}
 .customer-today{border-color:color-mix(in srgb,var(--home-purple) 25%,var(--border));}
 .customer-money-label{font-size:13px;color:var(--home-muted);margin-top:11px;}
@@ -39,13 +39,6 @@
 .customer-period-money{color:var(--foreground);font-size:clamp(27px,7vw,36px);font-weight:760;line-height:1.25;letter-spacing:-.035em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;}
 .customer-period-cta{width:100%;margin-top:10px;min-height:47px;}
 .customer-period-cta svg{margin-left:auto;}
-.customer-tools{display:grid;gap:12px;margin-top:4px;}
-.customer-tools-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
-.customer-tool{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:3px;padding:11px;min-height:101px;text-align:left;border-radius:14px;border:1px solid var(--border);background:var(--card);}
-.customer-tool-icon{display:grid;place-items:center;width:34px;height:34px;background:color-mix(in srgb,var(--home-purple) 13%,var(--card));color:var(--home-purple);border-radius:10px;margin-bottom:3px;}
-.customer-tool strong{font-size:13px;font-weight:720;line-height:1.3;}
-.customer-tool small{font-size:11px;color:var(--home-muted);line-height:1.3;}
-.customer-tool:hover{border-color:color-mix(in srgb,var(--home-purple) 44%,var(--border));}
 .customer-recent .home-row{margin-bottom:8px;}
 .customer-header-link{display:flex;align-items:center;gap:3px;font-size:13px;color:var(--home-purple);font-weight:650;min-height:42px;}
 .customer-recent-row{display:flex;align-items:center;gap:10px;min-height:60px;width:100%;text-align:left;border-top:1px solid var(--border);padding:8px 0;}
@@ -60,13 +53,12 @@
  .customer-home-grid{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:18px;align-items:start;}
  .customer-today{grid-column:1;}
  .customer-period{grid-column:2;}
- .customer-recent{grid-column:2;}
- .customer-tools{grid-column:1;}
+ .customer-recent{grid-column:1/-1;}
  .customer-home .home-card{padding:19px;}
 }
-@media(max-width:375px){.customer-home-header h1{font-size:22px;}.customer-home .home-card{padding:16px;}.customer-today-metrics>div{padding:0 6px;}.customer-today-metrics strong{font-size:14px;}.customer-tools-grid{gap:6px;}.customer-tool{min-height:99px;padding:9px;}.customer-tool strong{font-size:12px;}}
+@media(max-width:375px){.customer-home-header h1{font-size:22px;}.customer-home .home-card{padding:16px;}.customer-today-metrics>div{padding:0 6px;}.customer-today-metrics strong{font-size:14px;}}
 @media(prefers-reduced-motion:reduce){.customer-home *, .customer-home *::before,.customer-home *::after{animation:none!important;transition:none!important;}}
 
-/* Compact overview: use the dedicated Today action, not a second Log shortcut. */
-.customer-home .customer-recent-row:active,.customer-home .customer-tool:active{transform:scale(.99)}
-@media(prefers-reduced-motion:reduce){.customer-home .customer-recent-row:active,.customer-home .customer-tool:active{transform:none}}
+/* Subtle feedback on tappable recent work; no motion when reduced motion is preferred. */
+.customer-home .customer-recent-row:active{transform:scale(.99)}
+@media(prefers-reduced-motion:reduce){.customer-home .customer-recent-row:active{transform:none}}
