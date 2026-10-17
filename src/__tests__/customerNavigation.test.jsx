@@ -1,5 +1,5 @@
 import React from 'react';
-import {describe,it,expect,vi} from 'vitest';
+import {beforeEach,describe,it,expect,vi} from 'vitest';
 import {fireEvent,render,screen} from '@testing-library/react';
 import {MemoryRouter,Routes,Route,useLocation} from 'react-router-dom';
 import AppNavigation from '../components/AppNavigation';
@@ -9,6 +9,7 @@ vi.mock('../components/EntriesPage',()=>({default:()=> <div>Daily work history v
 vi.mock('../components/ExpensesOverview',()=>({default:()=> <div>Expense records visible</div>}));
 vi.mock('../components/DocumentsPage',()=>({default:()=> <div>Statement and invoice documents visible</div>}));
 
+beforeEach(()=>{vi.stubGlobal('scrollTo',vi.fn());vi.stubGlobal('matchMedia',()=>({matches:false,addListener:()=>{},removeListener:()=>{}}));});
 const LocationLabel=()=>{const location=useLocation();return <output data-testid="location">{location.pathname+location.search}</output>};
 function mount(path){
  return render(<MemoryRouter initialEntries={[path]}>
