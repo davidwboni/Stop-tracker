@@ -13,12 +13,12 @@ function registerReceiptAI({ onCall, HttpsError, admin, secret, getEntitlement }
   const enabled = () => process.env.RECEIPT_AI_ENABLED === 'true';
   const status = onCall({ cors:true }, async request => {
     if (!request.auth) throw new HttpsError('unauthenticated','Sign in to scan a receipt.');
-    return { enabled:enabled(), isPro:(await getEntitlement(request.auth.uid)).isPro };
+    return { enabled:enabled(), isPro:(await getEntitlement(request.auth.uid, request.auth.token)).isPro };
   });
   const extract = onCall({ secrets:[secret], cors:true, memory:'512MiB', timeoutSeconds:110, maxInstances:10 }, async request => {
     if (!request.auth || request.auth.token.firebase?.sign_in_provider === 'anonymous') throw new HttpsError('unauthenticated','Use a permanent account to scan receipts.');
     if (!enabled()) throw new HttpsError('failed-precondition','Receipt scanning is not available yet. Manual entry is free.');
-    if (!(await getEntitlement(request.auth.uid)).isPro) throw new HttpsError('permission-denied','Receipt scanning requires Pro. Manual entry is free.');
+    if (!(await getEntitlement(request.auth.uid, request.auth.token)).isPro) throw new HttpsError('permission-denied','Receipt scanning requires Pro. Manual entry is free.');
     const images = request.data?.images;
     if (!Array.isArray(images) || !images.length || images.length > 4 || images.some(i => !['image/jpeg','image/png','image/webp'].includes(i?.mimeType) || typeof i.fileBase64 !== 'string' || !i.fileBase64.length || !/^[A-Za-z0-9+/]+={0,2}$/.test(i.fileBase64)) || images.reduce((n,i)=>n+i.fileBase64.length,0)>12_000_000) throw new HttpsError('invalid-argument','Choose up to 4 receipt pages within the size limit.');
     const usage = admin.firestore().collection('usage').doc(request.auth.uid);
