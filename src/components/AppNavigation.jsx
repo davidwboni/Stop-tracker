@@ -6,7 +6,7 @@ const items=[
  {path:'/app/dashboard',label:'Home',Icon:Home,active:p=>p==='/app'||p.startsWith('/app/dashboard')},
  {path:'/app/records',label:'Records',Icon:ClipboardList,active:p=>p.startsWith('/app/records')||p.startsWith('/app/entries')||p.startsWith('/app/documents')||p.startsWith('/app/money/expenses')},
  {path:'/app/check-pay',label:'Pay',Icon:Wallet,active:p=>p.startsWith('/app/check-pay')||p.startsWith('/app/money')&&!p.startsWith('/app/money/expenses')||p.startsWith('/app/periods')||p.startsWith('/app/invoice')||p.startsWith('/app/stats')},
- {path:'/app/routes',label:'Routes',Icon:MapPinned,active:p=>p.startsWith('/app/routes')}
+ {path:'/app/routes',label:'Routes',Icon:MapPin,active:p=>p.startsWith('/app/routes')}
 ];
 export default function AppNavigation(){
  const navigate=useNavigate(),location=useLocation();
