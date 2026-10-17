@@ -12,7 +12,7 @@
 // Dry run:
 //   node scripts/grant-owner-admin.js --email YOUR_EMAIL
 // Apply (requires project + email confirmation):
-//   node scripts/grant-owner-admin.js --email YOUR_EMAIL --apply --project stop-tracker-v1
+//   node scripts/grant-owner-admin.js --email YOUR_EMAIL --apply --project stop-tracker-v1 --confirm-email YOUR_EMAIL
 //
 // This grants the Firebase Auth custom claim 'stopTrackerAdmin' only; it does not grant
 // access to other users' Firestore data or change Stripe billing state.
@@ -40,7 +40,7 @@ async function main() {
   if (!user.emailVerified) throw new Error('Verify the account email in Firebase Authentication before granting admin access.');
   const claims = { ...(user.customClaims || {}) };
   if (claims.stopTrackerAdmin === true) {
-    process.stdout.write('Account already has Stop Tracker Stop Tracker admin custom claim. No changes needed.\n');
+    process.stdout.write('Account already has the Stop Tracker admin custom claim. No changes needed.\n');
     return;
   }
   process.stdout.write(`Project: ${projectId}. User found; account enabled and email verified.\n`);
@@ -51,7 +51,7 @@ async function main() {
   claims.stopTrackerAdmin = true;
   await admin.auth().setCustomUserClaims(user.uid, claims);
   const updated = await admin.auth().getUser(user.uid);
-  if (updated.customClaims?.admin !== true) throw new Error('Stop Tracker admin claim was not confirmed after write.');
+  if (updated.customClaims?.stopTrackerAdmin !== true) throw new Error('Stop Tracker admin claim was not confirmed after write.');
   process.stdout.write('Admin custom claim confirmed. User must sign out and sign back in to refresh the ID token.\n');
 }
 main().catch(err=>{
