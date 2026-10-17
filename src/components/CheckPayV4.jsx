@@ -129,9 +129,9 @@ export default function CheckPayV4() {
          <button data-tour="check-manual" className="home-primary" disabled={blocked} onClick={()=>manual()}>Enter manually <ArrowRight size={18}/></button>
        </section>
        <section className="home-card check-action check-action-ai">
-         <div className="check-action-top"><Sparkles aria-hidden="true" size={23}/><span className="money-badge">{entitlement?.isPro?'Pro':entitlement?'AI':'Verification'}</span></div>
+         <div className="check-action-top"><Sparkles aria-hidden="true" size={23}/><span className="money-badge">{entitlement?.isAdmin?'Admin':entitlement?.isPro?'Pro':entitlement?'AI':'Verification'}</span></div>
          <h3>Upload with AI</h3>
-         <p className="home-muted" role="status">{offline?'Connect to check AI access':entitlement?entitlement.isPro?'Included with Pro':entitlement.statementAiUses<3?`${3-entitlement.statementAiUses} free AI checks left`:'Free checks used · Pro required':entitlementError?'AI access could not be verified':'Checking AI access…'}</p>
+         <p className="home-muted" role="status">{offline?'Connect to check AI access':entitlement?entitlement.isAdmin?'Owner testing access enabled':entitlement.isPro?'Included with Pro':entitlement.statementAiUses<3?`${3-entitlement.statementAiUses} free AI checks left`:'Free checks used · Pro required':entitlementError?'AI access could not be verified':'Checking AI access…'}</p>
          {entitlementError&&<p className="check-ai-error home-muted text-xs" role="alert">{entitlementError==='auth'?'Your session needs refreshing. Please sign in again if retrying does not work.':entitlementError==='permission'?'This account could not access the AI status service. You can still enter figures manually.':'We could not reach the secure AI status service. You can still enter figures manually.'}</p>}
          {entitlementError?<button className="home-secondary" onClick={()=>setStatusRequest(n=>n+1)}>Retry AI availability</button>:
           entitlement&&!entitlement.isPro&&entitlement.statementAiUses>=3?<button className="home-secondary" onClick={()=>navigate('/app/upgrade')}>View Pro</button>:
