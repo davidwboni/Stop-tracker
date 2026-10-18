@@ -80,8 +80,8 @@ describe('Compact extra-work entry and keyboard layout', () => {
     fireEvent.click(screen.getByRole('switch', {name:/Extra work/}));
     expect(screen.getByRole('switch', {name:/Extra work/})).toHaveAttribute('aria-checked','true');
     expect(screen.getByLabelText(/Extra payment/)).toBeInTheDocument();
-    expect(screen.queryByRole('combobox',{name:'Type of extra work'})).not.toBeInTheDocument();
-    expect(screen.queryByRole('textbox',{name:'Work notes'})).not.toBeInTheDocument();
+    expect(screen.getByText('Work type (optional)').closest('details')).not.toHaveAttribute('open');
+    expect(screen.getByText('Add a note (optional)').closest('details')).not.toHaveAttribute('open');
     fireEvent.click(screen.getByText('Work type (optional)'));
     expect(screen.getByLabelText('Type of extra work')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Add a note (optional)'));
@@ -201,7 +201,7 @@ describe('Final quick entry friction pass',()=>{
   mount();
   expect(screen.getByRole('button',{name:/26 Sep/})).toHaveAttribute('aria-expanded','false');
   expect(screen.queryByLabelText('Entry date')).not.toBeInTheDocument();
-  expect(screen.queryByRole('textbox',{name:'Work notes'})).not.toBeInTheDocument();
+  expect(screen.getByText('Add a note (optional)').closest('details')).not.toHaveAttribute('open');
   fireEvent.click(screen.getByRole('button',{name:/Change/}));
   expect(screen.getByLabelText('Entry date')).toHaveValue('2026-09-26');
   fireEvent.click(screen.getByRole('button',{name:/Close/}));
