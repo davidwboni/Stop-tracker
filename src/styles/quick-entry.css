@@ -166,3 +166,20 @@
 @media(prefers-reduced-motion:reduce){
  .qe-switch>span,.qe-panel *{animation:none!important;transition:none!important}
 }
+
+
+/* Final quick entry: no native date input or optional fields until needed. */
+.qe-date-compact{display:grid;gap:8px;flex-shrink:0}
+.qe-date-trigger{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  min-height:46px;padding:7px 1px;text-align:left;border-bottom:1px solid var(--border)}
+.qe-date-trigger>span:first-child{display:inline-flex;align-items:center;gap:9px;font-size:14px;font-weight:600}
+.qe-date-trigger svg{width:18px;height:18px;color:var(--home-purple);flex-shrink:0}
+.qe-date-change{color:var(--home-purple);font-weight:650;font-size:13px}
+.qe-date-trigger:focus-visible{outline:3px solid var(--home-purple);outline-offset:2px;border-radius:7px}
+.qe-date-input{display:grid;gap:7px;padding:5px 0}
+.qe-date-input input{width:100%;min-width:0;min-height:44px;color-scheme:light}
+.dark .qe-date-input input{color-scheme:dark}
+.qe-extra-more{margin-top:2px;padding:0 2px}
+.qe-extra-more>summary{cursor:pointer;min-height:43px;display:flex;align-items:center;color:var(--home-purple);font-size:13px;font-weight:600}
+.qe-extra-more[open] .home-field{margin:4px 0 7px;display:grid;gap:7px}
+@media(prefers-reduced-motion:reduce){.qe-date-trigger,.qe-extra-more *{transition:none!important;animation:none!important}}
