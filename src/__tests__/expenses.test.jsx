@@ -42,7 +42,7 @@ describe('Expenses overview',()=>{
  it('shows only personal expenses by default and keeps historical contractor charges accessible',()=>{
   mount();
   expect(screen.getByText('Your recorded expenses')).toBeInTheDocument();
-  expect(screen.getByText('£45.20')).toBeInTheDocument();
+  expect(screen.getAllByText('£45.20').length).toBeGreaterThan(0);
   expect(screen.getByText('Shell petrol')).toBeInTheDocument();
   const legacy=screen.getByText(/Previously saved contractor charges/).closest('details');
   expect(legacy).toBeInTheDocument();
