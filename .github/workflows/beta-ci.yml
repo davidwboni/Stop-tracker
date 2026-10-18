@@ -27,8 +27,8 @@ jobs:
         run: node -e "require('fs').rmSync('node_modules/canvas',{recursive:true,force:true})"
       - name: Run web tests
         run: npm test
-      - name: Build production web bundle
-        run: npx --yes --package react-scripts@5.0.1 react-scripts build
+      - name: Build production web bundle with syntax and output gate
+        run: npm run build
         env:
           CI: "true"
 

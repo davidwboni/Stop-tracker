@@ -56,7 +56,9 @@
     "security-patch": "node patch-vulnerabilities.js",
     "dedupe": "npm dedupe",
     "force-patch": "node force-patch.js",
-    "audit-fix": "node package-audit-fix.js"
+    "audit-fix": "node package-audit-fix.js",
+    "prebuild": "node scripts/check-source-syntax.cjs",
+    "postbuild": "node scripts/check-build-output.cjs"
   },
   "eslintConfig": {
     "extends": [
