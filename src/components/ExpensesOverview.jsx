@@ -9,7 +9,7 @@ import HomeExpenseDialog from './HomeExpenseDialog';
 import ExpenseReceiptPreview from './ExpenseReceiptPreview';
 import { isoDate, listPeriods } from '../features/payperiod/periods';
 import { money } from '../features/home/homeModel';
-import { expenseSummary, recurringOccurrences } from '../features/expenses/expenseModel';
+import { SOURCES, expenseSummary, recurringOccurrences } from '../features/expenses/expenseModel';
 import { trackProductEvent as track } from '../services/productAnalytics';
 import '../styles/home.css';
 import '../styles/expenses.css';
