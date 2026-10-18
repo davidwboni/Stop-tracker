@@ -46,7 +46,7 @@ describe('Money to Check Pay integration',()=>{
  });
  it('opens a saved comparison and resolves it only after explicit confirmation',async()=>{
   f.data.periodRecords[period.id]=checked(await moneyRevision(logs,expenses,period));
-  open();await screen.findByText('Difference found');fireEvent.click(screen.getByRole('button',{name:'Review saved check'}));
+  open();await screen.findByText('Difference found');fireEvent.click(screen.getByRole('button',{name:/Review saved comparison/}));
   await screen.findByText('Checked · Unresolved');expect(f.save).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button',{name:'Mark comparison resolved'}));
   fireEvent.change(screen.getByLabelText('Outcome'),{target:{value:'explained_difference'}});
