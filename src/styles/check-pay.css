@@ -71,3 +71,20 @@
  .check-status{max-width:100%}
 }
 @media(prefers-reduced-motion:reduce){.check-previous-button{transition:none!important}}
+
+
+/* Pay workflow: next step first and a touch-friendly four-week picker. */
+.check-next-step{display:grid;gap:12px}
+.check-next-step h2{display:flex;align-items:center;gap:9px;font-size:18px}
+.check-next-step h2 svg{color:var(--home-money)}
+.check-next-step>.home-muted{line-height:1.5}
+.check-next-step .home-primary{margin-top:2px}
+.check-period-mobile{display:none;align-items:center;gap:5px;color:var(--home-purple);font-size:13px;font-weight:650;text-align:left;min-height:35px}
+.check-period-mobile svg{flex-shrink:0}
+.check-period-sheet-position{position:fixed;inset:0;display:flex;align-items:end;justify-content:center;pointer-events:none;padding-top:env(safe-area-inset-top)}
+.check-period-sheet{pointer-events:auto;width:min(100%,540px);background:var(--background);border:1px solid var(--border);border-radius:22px 22px 0 0;padding:20px 15px calc(20px + env(safe-area-inset-bottom));display:grid;gap:11px;max-height:92dvh;box-shadow:0 -9px 38px #0006}
+.check-period-sheet-options{min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.check-period-sheet-row{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;padding:14px 12px;min-height:55px;border-bottom:1px solid var(--border);font-size:14px;text-align:left}
+.check-period-sheet-row[aria-current=true]{color:var(--home-purple);background:color-mix(in srgb,var(--home-purple) 9%,transparent);border-radius:10px;font-weight:700}
+@media(max-width:699px){.check-period-control select,.check-period-desktop-chevron{display:none}.check-period-mobile{display:inline-flex}}
+@media(prefers-reduced-motion:reduce){.check-period-sheet-row{animation:none!important;transition:none!important}}

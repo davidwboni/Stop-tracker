@@ -1,8 +1,8 @@
 import React,{useState} from 'react';
-import {Download,FileText} from 'lucide-react';
+import {Download,FileText,Send} from 'lucide-react';
 import {useInvoice} from '../contexts/InvoiceContext';
 import {money} from '../features/home/homeModel';
-import {downloadSavedInvoice} from '../services/invoicePdf';
+import {downloadSavedInvoice,shareSavedInvoice} from '../services/invoicePdf';
 import {trackProductEvent as track} from '../services/productAnalytics';
 export default function InvoiceHistory({compact=false}){const {invoices=[],deleteInvoice}=useInvoice();const [query,setQuery]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(null);const rows=invoices.filter(i=>`${i.invoiceNumber} ${i.clientName||''}`.toLowerCase().includes(query.toLowerCase()));async function act(id,fn){setBusy(id);setError('');try{await fn();}catch(e){setError(e.message||'Could not complete this action.');}finally{setBusy(null);}}
  if(compact)return <div className="document-invoice-list">
@@ -18,7 +18,10 @@ export default function InvoiceHistory({compact=false}){const {invoices=[],delet
      </div>
      <div className="document-invoice-bottom">
        <span className="home-muted text-xs">{i.status==='sent'?'Shared':'Generated'} · Not proof of payment</span>
-       <button type="button" className="home-secondary document-download" disabled={!!busy||!i.senderSnapshot} onClick={()=>act(i.id,async()=>{await downloadSavedInvoice(i);track('document_viewed');})}><Download size={16} aria-hidden="true"/>{busy===i.id?'Working…':'Download PDF'}</button>
+       <div className="flex flex-wrap gap-2 justify-end">
+        <button type="button" className="home-secondary document-download" disabled={!!busy||!i.senderSnapshot||!i.clientEmail} onClick={()=>act(i.id,async()=>{await shareSavedInvoice(i);track('document_viewed');})}><Send size={16} aria-hidden="true"/>{busy===i.id?'Working…':'Email PDF'}</button>
+        <button type="button" className="home-secondary document-download" disabled={!!busy||!i.senderSnapshot} onClick={()=>act(i.id,async()=>{await downloadSavedInvoice(i);track('document_viewed');})}><Download size={16} aria-hidden="true"/>Download</button>
+       </div>
      </div>
      {!i.senderSnapshot&&<p className="home-muted text-xs">This older invoice can't be recreated because its original business details weren't stored.</p>}
      <details className="document-invoice-options"><summary>More options</summary>

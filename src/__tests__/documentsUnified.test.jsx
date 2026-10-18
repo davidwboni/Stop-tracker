@@ -8,7 +8,7 @@ import RecordsHub from '../components/RecordsHub';
 const f=vi.hoisted(()=>({data:{},invoice:{},download:vi.fn(),deleteInvoice:vi.fn()}));
 vi.mock('../contexts/DataContext',()=>({useData:()=>f.data}));
 vi.mock('../contexts/InvoiceContext',()=>({useInvoice:()=>f.invoice}));
-vi.mock('../services/invoicePdf',()=>({downloadSavedInvoice:(...a)=>f.download(...a)}));
+vi.mock('../services/invoicePdf',()=>({downloadSavedInvoice:(...a)=>f.download(...a),shareSavedInvoice:vi.fn()}));
 vi.mock('../services/productAnalytics',()=>({trackProductEvent:vi.fn()}));
 vi.mock('../components/EntriesPage',()=>({default:()=>null}));
 vi.mock('../components/ExpensesOverview',()=>({default:()=>null}));
@@ -31,7 +31,7 @@ describe('Documents on one page',()=>{
  });
  it('downloads a saved invoice directly in the same section',async()=>{
   mount();
-  fireEvent.click(screen.getByRole('button',{name:'Download PDF'}));
+  fireEvent.click(screen.getByRole('button',{name:'Download'}));
   await waitFor(()=>expect(f.download).toHaveBeenCalledWith(invoice));
  });
  it('keeps deletion deliberately behind secondary options',()=>{

@@ -9,3 +9,25 @@ export async function buildInvoicePdf(invoice){
 }
 
 export async function downloadSavedInvoice(invoice){const pdf=await buildInvoicePdf(invoice);pdf.save('Invoice_'+String(invoice.invoiceNumber).replace(/[^\w-]/g,'')+'.pdf');}
+
+
+/**
+ * Opens the device sharing / email app with an attached invoice PDF.
+ * No browser Web Share result establishes that the recipient received email.
+ * This does not update the invoice ledger's delivery status.
+ */
+export async function shareSavedInvoice(invoice){
+ if(!invoice?.clientEmail)throw new Error('This invoice has no saved billing email. Use Download PDF and send it manually.');
+ const pdf=await buildInvoicePdf(invoice);
+ const name='Invoice_'+String(invoice.invoiceNumber).replace(/[^\w-]/g,'')+'.pdf';
+ const file=new File([pdf.output('blob')],name,{type:'application/pdf'});
+ if(navigator.share&&navigator.canShare?.({files:[file]})){
+   await navigator.share({files:[file],title:'Invoice '+invoice.invoiceNumber,text:'Please email this invoice to '+invoice.clientEmail});
+   return 'shared'; // This means share handoff, not delivery.
+ }
+ pdf.save(name);
+ const subject=encodeURIComponent('Invoice INV-'+String(invoice.invoiceNumber).padStart(4,'0'));
+ const body=encodeURIComponent('Please find my invoice attached.\n\nAttach '+name+' from Downloads before sending.');
+ window.location.href='mailto:'+encodeURIComponent(invoice.clientEmail)+'?subject='+subject+'&body='+body;
+ return 'composer';
+}
