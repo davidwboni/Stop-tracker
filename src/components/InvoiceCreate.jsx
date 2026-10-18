@@ -9,6 +9,8 @@ import {
   Plus,
   Download,
   Share2,
+  Send,
+  Copy,
   Building2,
   Pencil,
   Save,
@@ -24,6 +26,7 @@ export default function InvoiceCreate({ prefill }) {
     clients,
     defaultClientId,
     saveClient,
+    setDefaultClientId,
     addInvoice,
     getNextInvoiceNumber,
     senderProfile,
@@ -58,6 +61,9 @@ export default function InvoiceCreate({ prefill }) {
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
   const [persisted, setPersisted] = useState(false);
+  const [shared, setShared] = useState(false);
+  const [shareCanceled, setShareCanceled] = useState(false);
+  const [emailCopied, setEmailCopied] = useState(false);
 
   const total = Number(invoiceAmount) || 0;
 
@@ -121,7 +127,14 @@ export default function InvoiceCreate({ prefill }) {
     setClient(c);
     setPickerOpen(false);
     setNewClient(null);
+    // An existing client becomes the reusable billing default once chosen.
+    if(c.id && clients.some(row=>row.id===c.id) && defaultClientId!==c.id)
+      setDefaultClientId(c.id).catch(()=>setError("Client selected, but the default could not be saved. Check your connection."));
   };
+  React.useEffect(()=>{
+    if(!client?.id || defaultClientId===client.id || !clients?.some(row=>row.id===client.id))return;
+    setDefaultClientId(client.id).catch(()=>{});
+  },[client?.id,defaultClientId,clients,setDefaultClientId]);
   const saveNewClient = async () => {
     if (!newClient?.name?.trim()) return setError("Add a client name.");
     setError(null);
@@ -145,7 +158,6 @@ export default function InvoiceCreate({ prefill }) {
 
       setSaved(true);
     } catch (e) {
-      console.error(e);
       setError(e?.message || "Couldn't generate the invoice.");
     } finally {
       setBusy(false);
@@ -153,37 +165,45 @@ export default function InvoiceCreate({ prefill }) {
   };
 
   const handleShare = async () => {
-    if (!canGenerate) return setError("Add a client and the amount you need to invoice.");
-    setBusy(true);
-    setError(null);
+    if (!canGenerate) return setError("Add a client and confirm the amount and billing period.");
+    if (!client?.email?.trim()) return setError("Add your contractor's billing email before sending.");
+    setBusy(true);setError(null);setShared(false);setShareCanceled(false);
     try {
+      // Store one immutable invoice record once; a cancelled share never creates a second number.
       const docPdf = await buildInvoicePdf(invoiceRecord());
-      const blob = docPdf.output("blob");
-      const file = new File([blob], `Invoice_${invoiceNumber}.pdf`, { type: "application/pdf" });
       await persist();
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: `Invoice ${invoiceNumber}`, text: `Invoice for ${client.name}` });
-      } else {
-        throw new Error("Sharing files is not supported by this browser. Use Download instead.");
+      const file = new File([docPdf.output("blob")], `Invoice_${invoiceNumber}.pdf`, {type:"application/pdf"});
+      if(navigator.share && navigator.canShare?.({files:[file]})){
+        await navigator.share({files:[file],title:`Invoice ${invoiceNumber}`,text:`Invoice ${invoiceNumber} for ${client.name}. Please email to ${client.email}.`});
+        // A resolved Web Share promise is NOT email delivery confirmation.
+        setShared(true);
+      }else{
+        // mailto can prefill the recipient but cannot attach a PDF.
+        // Download the exact saved PDF, then attach it in the email app.
+        docPdf.save(`Invoice_${invoiceNumber}.pdf`);
+        const subject=encodeURIComponent(`Invoice INV-${String(invoiceNumber).padStart(4,"0")} · ${dateFrom} – ${dateTo}`);
+        const body=encodeURIComponent(`Please find my invoice for ${dateFrom} – ${dateTo} attached.\n\nAttach Invoice_${invoiceNumber}.pdf from your downloads before sending.`);
+        window.location.href=`mailto:${encodeURIComponent(client.email)}?subject=${subject}&body=${body}`;
+        setShared(true);
       }
-
-
-      setSaved(true);
-    } catch (e) {
-      if (e?.name !== "AbortError") {
-        console.error(e);
-        setError(e?.message || "Couldn't share the invoice.");
-      }
-    } finally {
-      setBusy(false);
-    }
+    }catch(e){
+      if(e?.name==="AbortError")setShareCanceled(true);
+      else setError(e?.message||"Could not prepare or share your invoice. Try again, or download the PDF.");
+    }finally{setBusy(false);}
+  };
+  const copyRecipient = async () => {
+    try {await navigator.clipboard.writeText(client?.email||'');setEmailCopied(true);}
+    catch(_){setError("Copy isn't available on this device. You can select the email address above.");}
   };
 
-  if(persisted)return <section className="home-card space-y-3"><h2>Invoice record saved</h2><p>Your invoice record is in Documents. You can download another copy from invoice history.</p>{error&&<p role="alert" className="home-error">{error} Your record is saved.</p>}<a href="/app/documents" className="home-primary">Open Documents</a></section>;
   // ---------- Create form ----------
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-      {prefill?.periodId && <div className="rounded-[18px] border border-border bg-card p-4"><div className="text-xs font-bold uppercase tracking-wider text-primary">PAY PERIOD</div><div className="mt-1 font-semibold">{prefill.startDate} → {prefill.endDate}</div><div className="mt-1 text-sm text-muted-foreground">{prefill.stops || 0} stops in your Stop Tracker record · {money(prefill.amount)} expected</div></div>}
+      {prefill?.periodId && <div className="rounded-[18px] border border-border bg-card p-4">
+        <div className="text-xs font-bold uppercase tracking-wider text-primary">FOUR-WEEK PAY PERIOD</div>
+        <div className="mt-1 font-semibold">{prefill.startDate} → {prefill.endDate}</div>
+        <div className="mt-1 text-sm text-muted-foreground">{prefill.statementAmount != null ? "Checked statement amount prefilled. Review VAT and the recipient before sending." : "No verified statement amount. Review all invoice details before sending."}</div>
+      </div>
 
       {/* Header row: number + sender */}
       <div className="flex items-center justify-between">
@@ -214,7 +234,8 @@ export default function InvoiceCreate({ prefill }) {
             <button aria-label="Change client" className="min-h-[44px] min-w-[44px] grid place-items-center" onClick={() => setClient(null)}><X className="w-4 h-4 text-primary" /></button>
           </div>
           <div className="font-semibold text-primary">{client.name}</div>
-          {client.email && <div className="text-xs text-muted-foreground">{client.email}</div>}
+          {client.email && <div className="text-xs text-muted-foreground select-text">{client.email}</div>}
+          {client.email && <button className="home-text-button text-xs" type="button" onClick={copyRecipient}><Copy size={14}/> {emailCopied?'Copied':'Copy email'}</button>}
         </div>
       ) : pickerOpen ? (
         <div className="rounded-[14px] border border-border overflow-hidden">
@@ -252,7 +273,7 @@ export default function InvoiceCreate({ prefill }) {
       <div className="rounded-2xl border border-border bg-card p-4">
         <label htmlFor="invoice-amount" className="block text-xs font-bold uppercase tracking-[.14em] text-muted-foreground">Amount to invoice</label>
         <div className="mt-2 flex items-center rounded-xl border border-border bg-background px-4"><span className="text-xl text-muted-foreground">£</span><input id="invoice-amount" inputMode="decimal" value={invoiceAmount} onChange={e=>setInvoiceAmount(e.target.value)} placeholder="0.00" className="h-14 min-w-0 flex-1 bg-transparent px-2 text-2xl font-bold text-foreground outline-none"/></div>
-        <p className="mt-2 text-xs leading-5 text-muted-foreground">{prefill?.statementAmount != null ? "Prefilled from the statement you checked. Change it only if needed." : "Enter the agreed amount for this invoice. Check any required tax details with your contractor."}</p>
+        <p className="mt-2 text-xs leading-5 text-muted-foreground">{prefill?.statementAmount != null ? "From your checked statement. Confirm whether VAT should be added or is already included before sending." : "Enter the agreed amount and verify whether VAT should be shown separately."}</p>
       </div>
 
       <textarea aria-label="Invoice notes (optional)" maxLength={5000}
@@ -269,21 +290,22 @@ export default function InvoiceCreate({ prefill }) {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      {saved && (
+      {persisted && (
         <Alert className="bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
-          <AlertDescription>Invoice INV-{String(invoiceNumber).padStart(4, "0")} saved to History.</AlertDescription>
+          <AlertDescription>Invoice INV-{String(invoiceNumber).padStart(4, "0")} is saved in Records. {shared?'The share or email composer was opened; please confirm sending in your email app.':shareCanceled?'Sharing was cancelled. The invoice is saved; you can try again.':saved?'The PDF was downloaded.':'Choose an email app to send the PDF.'} Stop Tracker cannot confirm email delivery through device sharing.</AlertDescription>
         </Alert>
       )}
 
-      <div className="flex gap-2">
-        <Button onClick={handleDownload} disabled={busy || !canGenerate} className="flex-1 bg-primary text-primary-foreground">
-          {busy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
-          Download
+      <div className="space-y-2">
+        {!client?.email&&client&&<p className="text-xs text-amber-700 dark:text-amber-300">Add a billing email for this client to send the invoice. You can still download a PDF.</p>}
+        <Button onClick={handleShare} disabled={busy||!canGenerate||!client?.email} className="w-full min-h-[52px] bg-primary text-primary-foreground">
+          {busy?<Loader2 className="w-4 h-4 mr-2 animate-spin"/>:<Send className="w-4 h-4 mr-2"/>}Send invoice via email app
         </Button>
-        <Button onClick={handleShare} disabled={busy || !canGenerate} variant="outline" className="flex-1">
-          <Share2 className="w-4 h-4 mr-2" />
-          Share
+        <Button onClick={handleDownload} disabled={busy||!canGenerate} variant="outline" className="w-full min-h-[48px]">
+          <Download className="w-4 h-4 mr-2"/>Download PDF
         </Button>
+        <p className="text-xs text-muted-foreground">Your device opens the sharing or email app. Select email and confirm sending there. Delivery is not automatically verified.</p>
+        {persisted&&<a href="/app/records?tab=documents" className="home-text-button">View saved invoice in Records</a>}
       </div>
     </motion.div>
   );
