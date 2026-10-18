@@ -4,6 +4,7 @@ import {fireEvent,render,screen} from '@testing-library/react';
 import {MemoryRouter,Routes,Route,useLocation} from 'react-router-dom';
 import AppNavigation from '../components/AppNavigation';
 import RecordsHub from '../components/RecordsHub';
+vi.mock('../contexts/AuthContext',()=>({useAuth:()=>({user:{uid:'test',displayName:'Driver Example'}})}));
 
 vi.mock('../components/EntriesPage',()=>({default:()=> <div>Daily work history visible</div>}));
 vi.mock('../components/ExpensesOverview',()=>({default:()=> <div>Expense records visible</div>}));

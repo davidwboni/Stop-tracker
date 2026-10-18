@@ -4,6 +4,7 @@ import {fireEvent,render,screen,waitFor} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
 import DocumentsPage from '../components/DocumentsPage';
 import RecordsHub from '../components/RecordsHub';
+vi.mock('../contexts/AuthContext',()=>({useAuth:()=>({user:{uid:'test',displayName:'Driver Example'}})}));
 
 const f=vi.hoisted(()=>({data:{},invoice:{},download:vi.fn(),deleteInvoice:vi.fn()}));
 vi.mock('../contexts/DataContext',()=>({useData:()=>f.data}));

@@ -61,7 +61,9 @@ describe('Approved earnings-first Home',()=>{
   expect(today).toHaveTextContent('Not logged yet');
   expect(screen.getAllByRole('button',{name:/Log your day/})).toHaveLength(1);
   expect(home.querySelector('.customer-tools')).toBeNull();
-  expect(screen.queryByRole('button',{name:/Expenses/})).not.toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'View expenses'})).toBeInTheDocument();
+  expect(home.querySelector('.customer-expenses-quick')).toBeInTheDocument();
+  expect(home.querySelector('.customer-expenses-quick')).toHaveTextContent('1 recorded this period');
   expect(screen.queryByRole('button',{name:/Routes/})).not.toBeInTheDocument();
   expect(screen.getByRole('button',{name:/See all/})).toBeInTheDocument();
  });

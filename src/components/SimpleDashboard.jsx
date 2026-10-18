@@ -1,7 +1,8 @@
 import React,{useEffect,useMemo,useState} from 'react';
 import {createPortal} from 'react-dom';
 import {useLocation,useNavigate} from 'react-router-dom';
-import {Eye,EyeOff,Plus,ChevronRight,CheckCircle2,ChevronDown} from 'lucide-react';
+import {Plus,ChevronRight,CheckCircle2,ChevronDown,Receipt} from 'lucide-react';
+import HeaderControls from './HeaderControls';
 import {useAuth} from '../contexts/AuthContext';
 import {useData} from '../contexts/DataContext';
 import DailyQuickEntry from './DailyQuickEntry';
@@ -53,6 +54,9 @@ export default function SimpleDashboard(){
  const goRecords=()=>{track('records_opened',{source:'home'});navigate('/app/records')};
  const goPay=()=>{track('check_pay_opened',{source:'home'});navigate('/app/check-pay',period?{state:{periodId:period.id,start:period.start,end:period.end}}:{})};
  const goPeriods=()=>navigate('/app/periods');
+ const goExpenses=()=>navigate('/app/records?tab=expenses');
+ const expensesInPeriod=period?(costs.expenses||[]).filter(e=>e.source==='my_expense'&&e.date>=period.start&&e.date<=period.end):[];
+ const personalCostTotal=expensesInPeriod.reduce((sum,e)=>sum+(Number(e.amount)||0),0);
  function openEntry(date=today){setEntryDate(date);setQuickOpen(true);track('quick_entry_opened',{source:'home',mode:logs.some(r=>r.date===date)?'edit':'new'})}
  function reviewRecord(row){if(!row)return;if(logs.filter(r=>r.date===row.date).length>1){goRecords();return}setSelectedId(row.id)}
  async function deleteRecord(row){const result=await updateLogs(logs.filter(r=>r.id!==row.id),{strict:true});if(result?.success===false)throw new Error('Save rejected');setSelectedId(null);setNotice('Saved day deleted. Any previous pay checks may need reviewing.')}
@@ -69,10 +73,7 @@ export default function SimpleDashboard(){
    <header className="customer-home-header">
      <div className="home-row">
        <p className="customer-date">{now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}</p>
-       <div className="customer-header-actions">
-         <button className="home-icon" onClick={toggleHidden} aria-label={hidden?'Show monetary amounts':'Hide monetary amounts'} aria-pressed={hidden}>{hidden?<EyeOff/>:<Eye/>}</button>
-         <button className="customer-avatar" aria-label="Open profile" onClick={()=>navigate('/app/profile')}>{firstName[0]?.toUpperCase()||'D'}</button>
-       </div>
+       <HeaderControls hidden={hidden} onToggleMoney={toggleHidden}/>
      </div>
      <h1>{greeting}, {firstName}</h1>
      <p className="home-muted">Here's where your work stands.</p>
@@ -121,7 +122,7 @@ export default function SimpleDashboard(){
        <strong className="customer-period-money">{loading||costs.loading?'Loading…':loadError||costs.error?'Unavailable':periodTotalReady?moneyPence(periodInfo.payout):hasPeriodData?'Needs complete records':'No work logged yet'}</strong>
        <p className="home-muted text-xs">After contractor fees and charges · Before personal expenses and tax</p>
        {hasPeriodData&&<p className="home-muted text-xs">{periodInfo.rows.length} {periodInfo.rows.length===1?'day':'days'} recorded this period</p>}
-       <button className="home-secondary customer-period-cta" onClick={period?goPay:goPeriods}>{period?'Check your statement':'Set pay-period dates'}<ChevronRight size={18}/></button>
+       <button className="home-secondary customer-period-cta" onClick={period?goPay:goPeriods}>{!period?'Set pay-period dates':periodRecord?.needsReview?'Recheck your statement':periodRecord?.payoutComparison?'View your checked statement':period?.end<today?'Check your statement':'View your pay'}<ChevronRight size={18}/></button>
      </section>
      <section className="home-card customer-recent">
        <div className="home-row"><h2>Recent work</h2><button className="customer-header-link" onClick={goRecords}>See all <ChevronRight size={16}/></button></div>
@@ -129,6 +130,11 @@ export default function SimpleDashboard(){
          <span><strong>{fullDate(row.date)}</strong><small>{quantityFor(row,row.payStructureSnapshot?.model||row.payModel)}{row.totalParcels!=null?` · ${row.totalParcels} parcels`:''}</small></span>
          <span className="customer-recent-earnings">{row.total!=null&&Number.isFinite(Number(row.total))?cash(Number(row.total)):'Unavailable'}<small>Gross</small></span><ChevronRight size={18} aria-hidden="true"/></button>):<p className="home-muted text-sm">Your previously logged days will appear here.</p>}
      </section>
+     <button type="button" className="customer-expenses-quick" onClick={goExpenses} aria-label="View expenses">
+       <span className="customer-expenses-icon"><Receipt size={19} aria-hidden="true"/></span>
+       <span className="customer-expenses-copy"><strong>Expenses</strong><small>{costs.loading?'Loading expenses…':costs.error?'Expenses unavailable':expensesInPeriod.length===0?'No expenses recorded':`${expensesInPeriod.length} recorded this period · ${cash(personalCostTotal)}`}</small></span>
+       <ChevronRight size={18} aria-hidden="true"/>
+     </button>
    </div>
    <DayRecordSheet log={selected} hidden={hidden} duplicate={selected?logs.filter(r=>r.date===selected.date).length>1:false} onClose={()=>setSelectedId(null)} onEdit={()=>{const d=selected.date;setSelectedId(null);openEntry(d)}} onDelete={deleteRecord}/>
    {createPortal(<DailyQuickEntry open={quickOpen} initialDate={entryDate} onDateChange={setEntryDate} onClose={()=>setQuickOpen(false)} onSaved={(_record,result)=>{setQuickOpen(false);setNotice(user?.isGuest?'Saved on this device · guest record':result?.isOnline===false?'Saved on this device · waiting to sync':'Work saved')}}/>,document.body)}

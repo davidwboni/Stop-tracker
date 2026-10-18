@@ -1,0 +1,12 @@
+/* Shared account actions: one visual and interaction standard everywhere. */
+.st-header-controls{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-shrink:0}
+.st-profile-shortcut{width:44px;height:44px;min-width:44px;min-height:44px;display:grid;place-items:center;flex-shrink:0;overflow:hidden;
+ border:1px solid color-mix(in srgb,var(--home-purple,#9b8dff) 34%,var(--border));
+ border-radius:50%;background:color-mix(in srgb,var(--home-purple,#9b8dff) 18%,var(--card));
+ color:var(--home-purple,#9b8dff);font-weight:750;font-size:15px;letter-spacing:0;cursor:pointer}
+.st-profile-shortcut img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.st-profile-shortcut:focus-visible,.st-visibility-toggle:focus-visible{outline:3px solid var(--home-purple,#9b8dff);outline-offset:3px}
+.st-profile-shortcut:active{transform:scale(.98)}
+.st-visibility-toggle{width:44px;height:44px}
+.st-header-controls .home-icon svg{width:21px;height:21px}
+@media(prefers-reduced-motion:reduce){.st-profile-shortcut{transition:none;transform:none!important}}

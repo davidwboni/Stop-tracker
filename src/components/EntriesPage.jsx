@@ -74,7 +74,6 @@ export default function EntriesPage(){
    <button className="home-secondary" disabled={currentPage===maxPage} onClick={()=>setPage(v=>Math.min(maxPage,v+1))}>Next</button>
   </nav>}
   {error&&<p role="alert" className="home-error">{error}</p>}
-  <Link className="home-text-button" to="/app/dashboard">Back to Home</Link>
   <DayRecordSheet key={selected?.id||'closed'} log={selected} hidden={hidden} duplicate={duplicate} onClose={()=>setSelectedId(null)}
    onEdit={()=>{const date=selected.date;setSelectedId(null);setEditing(date)}} onDelete={remove}/>
   <DailyQuickEntry open={!!editing} initialDate={editing} onClose={()=>setEditing(null)} onSaved={()=>setEditing(null)}/>

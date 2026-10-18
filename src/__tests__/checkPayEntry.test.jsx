@@ -7,6 +7,7 @@ import {getPeriodForDate} from '../features/payperiod/periods';
 import {moneySummary,moneyRevision} from '../features/money/moneyModel';
 import CheckPayV4 from '../components/CheckPayV4';
 const f=vi.hoisted(()=>({data:{},costs:{},status:vi.fn(),extract:vi.fn(),save:vi.fn(),anchor:vi.fn()}));
+vi.mock('../contexts/AuthContext',()=>({useAuth:()=>({user:{uid:'test',displayName:'Driver Example'}})}));
 vi.mock('../contexts/DataContext',()=>({useData:()=>f.data}));
 vi.mock('../hooks/useExpenses',()=>({default:()=>f.costs}));
 vi.mock('../services/premium',()=>({getPremiumStatus:(...a)=>f.status(...a),extractStatement:(...a)=>f.extract(...a)}));
