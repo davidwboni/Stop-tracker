@@ -8,7 +8,6 @@ import {buildInvoicePdf} from '../services/invoicePdf';
 import {
   Plus,
   Download,
-  Share2,
   Send,
   Copy,
   Building2,
@@ -51,6 +50,8 @@ export default function InvoiceCreate({ prefill }) {
     if (candidate) {
       initialRecipientSelected.current = true;
       setClient(candidate);
+      setRecipientDraft(candidate.email||'');
+      setEditingRecipient(!candidate.email);
     }
   }, [clients,defaultClientId]);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -64,6 +65,8 @@ export default function InvoiceCreate({ prefill }) {
   const [shared, setShared] = useState(false);
   const [shareCanceled, setShareCanceled] = useState(false);
   const [emailCopied, setEmailCopied] = useState(false);
+  const [editingRecipient, setEditingRecipient] = useState(false);
+  const [recipientDraft, setRecipientDraft] = useState('');
 
   const total = Number(invoiceAmount) || 0;
 
@@ -125,6 +128,8 @@ export default function InvoiceCreate({ prefill }) {
   // ---------- Client actions ----------
   const chooseClient = (c) => {
     setClient(c);
+    setRecipientDraft(c.email||'');
+    setEditingRecipient(!c.email);
     setPickerOpen(false);
     setNewClient(null);
     // An existing client becomes the reusable billing default once chosen.
@@ -191,6 +196,18 @@ export default function InvoiceCreate({ prefill }) {
       else setError(e?.message||"Could not prepare or share your invoice. Try again, or download the PDF.");
     }finally{setBusy(false);}
   };
+  const saveRecipient = async () => {
+    const email=recipientDraft.trim();
+    if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))return setError("Enter a valid billing email.");
+    setBusy(true);setError(null);
+    try{
+      await saveClient({...client,email});
+      setClient(c=>({...c,email}));
+      setEditingRecipient(false);
+      setEmailCopied(false);
+    }catch(_){setError("Could not save this billing email. Retry when connected.");}
+    finally{setBusy(false);}
+  };
   const copyRecipient = async () => {
     try {await navigator.clipboard.writeText(client?.email||'');setEmailCopied(true);}
     catch(_){setError("Copy isn't available on this device. You can select the email address above.");}
@@ -235,7 +252,17 @@ export default function InvoiceCreate({ prefill }) {
           </div>
           <div className="font-semibold text-primary">{client.name}</div>
           {client.email && <div className="text-xs text-muted-foreground select-text">{client.email}</div>}
-          {client.email && <button className="home-text-button text-xs" type="button" onClick={copyRecipient}><Copy size={14}/> {emailCopied?'Copied':'Copy email'}</button>}
+          {editingRecipient?<div className="flex flex-col gap-2 mt-2">
+            <label className="text-xs text-muted-foreground">Billing email
+              <Input type="email" autoComplete="email" aria-label="Billing email" value={recipientDraft} onChange={e=>setRecipientDraft(e.target.value)} placeholder="billing@contractor.co.uk" className="mt-1 min-h-[44px]"/>
+            </label>
+            <Button type="button" disabled={busy} onClick={saveRecipient} className="min-h-[44px]">Save billing email</Button>
+            {client.email&&<button type="button" className="home-text-button text-xs" onClick={()=>setEditingRecipient(false)}>Cancel</button>}
+           </div>:
+           <div className="flex flex-wrap gap-3">
+             {client.email&&<button className="home-text-button text-xs" type="button" onClick={copyRecipient}><Copy size={14}/> {emailCopied?'Copied':'Copy email'}</button>}
+             <button type="button" className="home-text-button text-xs" onClick={()=>setEditingRecipient(true)}>Change billing email</button>
+           </div>}
         </div>
       ) : pickerOpen ? (
         <div className="rounded-[14px] border border-border overflow-hidden">
