@@ -204,7 +204,7 @@ describe('Final quick entry friction pass',()=>{
   expect(screen.getByText('Add a note (optional)').closest('details')).not.toHaveAttribute('open');
   fireEvent.click(screen.getByRole('button',{name:/Change/}));
   expect(screen.getByLabelText('Entry date')).toHaveValue('2026-09-26');
-  fireEvent.click(screen.getByRole('button',{name:/Close/}));
+  fireEvent.click(screen.getByRole('button',{name:/26 Sep.*Close/}));
   expect(screen.queryByLabelText('Entry date')).not.toBeInTheDocument();
  });
  it('keeps a single note when extra work is enabled or disabled',async()=>{
