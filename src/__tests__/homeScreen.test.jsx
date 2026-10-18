@@ -63,7 +63,7 @@ describe('Approved earnings-first Home',()=>{
   expect(home.querySelector('.customer-tools')).toBeNull();
   expect(screen.getByRole('button',{name:'View expenses'})).toBeInTheDocument();
   expect(home.querySelector('.customer-expenses-quick')).toBeInTheDocument();
-  expect(home.querySelector('.customer-expenses-quick')).toHaveTextContent('No expenses recorded');
+  expect(home.querySelector('.customer-expenses-quick')).toHaveTextContent('1 recorded this period');
   expect(screen.queryByRole('button',{name:/Routes/})).not.toBeInTheDocument();
   expect(screen.getByRole('button',{name:/See all/})).toBeInTheDocument();
  });
