@@ -1,7 +1,8 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {Dialog} from '@headlessui/react';
 import {Link, useLocation, useNavigate} from 'react-router-dom';
-import {Keyboard, Sparkles, ArrowRight, Eye, EyeOff,User,ChevronDown,FileCheck2, CheckCircle2} from 'lucide-react';
+import {Keyboard, Sparkles, ArrowRight,ChevronDown,FileCheck2, CheckCircle2} from 'lucide-react';
+import HeaderControls from './HeaderControls';
 import {useData} from '../contexts/DataContext';
 import useExpenses from '../hooks/useExpenses';
 import {isoDate, listPeriods, getPeriodForDate} from '../features/payperiod/periods';
@@ -92,10 +93,7 @@ export default function CheckPayV4() {
  return <main className="home-screen check-pay-page"><StatementDraftGuard dirty={dirty}/>
  <header className="home-row check-page-header">
   <div><h1>Your pay</h1><p className="home-muted">Know what you're owed. Check what you're paid.</p></div>
-  <div className="flex items-center gap-2">
-    <button className="home-icon" aria-label="Open profile" onClick={()=>navigate("/app/profile")}><User size={20} aria-hidden="true"/></button>
-    <button className="home-icon" aria-label={hidden?'Show monetary amounts':'Hide monetary amounts'} aria-pressed={hidden} onClick={()=>{setHidden(!hidden);try{localStorage.setItem('home-hide-money',hidden?'0':'1');}catch(_){}}}>{hidden?<EyeOff/>:<Eye/>}</button>
-  </div>
+  <HeaderControls hidden={hidden} onToggleMoney={()=>{setHidden(!hidden);try{localStorage.setItem('home-hide-money',hidden?'0':'1');}catch(_){}}}/>
  </header>
  <section className="home-card check-period" aria-label="Current pay period">
    <div className="check-period-top">
