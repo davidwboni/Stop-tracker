@@ -5,3 +5,18 @@
   .st-app-navigation button { flex:none; width:88px; min-height:68px; }
 }
 @media(prefers-reduced-motion:reduce) { .st-app-navigation * { transition:none!important; } }
+
+/* The fixed tab bar occupies 74px plus the system gesture inset.
+   Individual pages must not also add large independent bottom reserves. */
+.st-app-shell .st-content-container{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px))}
+.st-app-shell .st-content-container .st-page,
+.st-app-shell .st-content-container .customer-home,
+.st-app-shell .st-content-container .check-pay-page,
+.st-app-shell .st-content-container .simple-expenses,
+.st-app-shell .st-content-container .records-content>.st-page,
+.st-app-shell .st-content-container .records-content>.expense-page{
+  padding-bottom:0;
+}
+@media(min-width:1024px){
+ .st-app-shell .st-content-container{padding-bottom:24px}
+}
