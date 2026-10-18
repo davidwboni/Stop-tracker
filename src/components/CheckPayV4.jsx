@@ -40,7 +40,7 @@ export default function CheckPayV4() {
  const busy=loading||costs.loading, unavailable=busy||!!loadError||!!costs.error;
  const fullPeriod=!!payPeriodAnchor&&getPeriodForDate(payPeriodAnchor,period.start).id===period.id;
  const ready=fullPeriod&&!unavailable&&summary.rows.length>0&&summary.payout!=null;
- const recordsKey=JSON.stringify([logs,costs.expenses,period.start,period.end]);
+ const recordsKey=JSON.stringify([logs,costs.expenses.filter(e=>e.source==='contractor_charge'),period.start,period.end]);
  const previewStale=!!previewSnapshot&&previewSnapshot.key!==recordsKey;
  const previewExpected=previewSnapshot?.payout??summary.payout;
  const comparison=payoutComparison(periodRecords[period.id],period,summary,revision,unavailable);
