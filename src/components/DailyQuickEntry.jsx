@@ -268,7 +268,7 @@ function ReadyEditor({ date, rows, logs, paymentConfig, transfer, updateLogs, on
               {draft.extraWork && <motion.div id="qe-extras" initial={reducedMotion ? false : { opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={transition} className="qe-extra-fields">
                 <label className="home-field">Extra payment (£)<input {...inputProps('amount')} inputMode="decimal" placeholder="e.g. 30.00" autoComplete="off"/></label>
                 {error('amount')}
-                <details className="qe-extra-more" open={undefined} key={editing && draft.extraType?'existing':'new'} defaultOpen={!!draft.extraType}>
+                <details className="qe-extra-more" defaultOpen={!!draft.extraType}>
                   <summary>Work type (optional){draft.extraType?' · '+draft.extraType:''}</summary>
                   <label className="home-field">Type of extra work
                     <select {...inputProps('extraType')}><option value="">Not specified</option>{Array.from(new Set(['Extra run','Collection','Return','Extra route','Other',draft.extraType].filter(Boolean))).map(type=><option key={type}>{type}</option>)}</select>
