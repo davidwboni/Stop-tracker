@@ -159,7 +159,7 @@ export default function CheckPayV4() {
      <p className="home-muted text-sm">You already checked this statement. Review the difference and accept the agreed figures before preparing an invoice.</p>
      <button type="button" className="home-primary w-full" onClick={viewSaved}>Review saved comparison <ArrowRight size={18}/></button>
    </section>}
-   {checkedAlready&&!showAnotherCheck&&<button type="button" className="home-text-button check-again-toggle" aria-expanded={false} onClick={()=>setShowAnotherCheck(true)}>Check a different statement <ChevronDown size={16} aria-hidden="true"/></button>}
+   {checkedAlready&&<button type="button" className="home-text-button check-again-toggle" aria-expanded={showAnotherCheck} onClick={()=>setShowAnotherCheck(v=>!v)}>{showAnotherCheck?'Hide new comparison options':'Check a different statement'} <ChevronDown size={16} aria-hidden="true"/></button>}
    {(!checkedAlready||showAnotherCheck)&&<section className="check-start" aria-label="Check your statement">
      <h2 className="check-question">{canInvoice?"Check again":"Check your statement"}</h2>
      <p className="home-muted text-sm">Choose how you'd like to compare your contractor's statement with your work.</p>
