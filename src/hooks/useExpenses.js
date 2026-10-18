@@ -2,13 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { collection, doc, onSnapshot, writeBatch } from 'firebase/firestore';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
-import { getPeriodForDate } from '../features/payperiod/periods';
+import { expenseReviewPatches } from '../features/expenses/reviewImpact';
 import { splitExpenseRecords, validateExpense, validDate } from '../features/expenses/expenseModel';
 import { db } from '../services/firebase';
 
 export default function useExpenses() {
   const { user } = useAuth();
-  const { payPeriodAnchor, periodRecords = {}, adoptPeriodRecords } = useData();
+  const { logs = [], payPeriodAnchor, periodRecords = {}, adoptPeriodRecords } = useData();
   const [state, setState] = useState({ owner:null, expenses:[], rules:[], loading:true, error:'', pending:false });
   const [retry, setRetry] = useState(0);
   const key = `expenses_${user?.uid}`;
@@ -37,13 +37,15 @@ export default function useExpenses() {
     if (!user?.uid) throw new Error('Sign in before saving.');
     if (!user.isGuest && !navigator.onLine) throw new Error('Connect before changing expenses.');
     const changedAt=new Date().toISOString();
-    const patches={};
-    if (payPeriodAnchor) for (const date of affectedDates.filter(validDate)) {
-      const period=getPeriodForDate(payPeriodAnchor,date);
-      const old=periodRecords[period.id];
-      if (old && ['reconciled','checked','needs_review'].includes(old.status)) patches[period.id]={...old,status:'needs_review',needsReview:true,updatedAt:changedAt};
-    }
     const records=writes.map(e=>({...e,updatedAt:changedAt}));
+    const nextExpenses=[
+      ...records.filter(r=>r.kind!=='recurring_rule'),
+      ...state.expenses.filter(r=>r.id!==removeId&&!records.some(w=>w.kind!=='recurring_rule'&&w.id===r.id))
+    ];
+    const patches=await expenseReviewPatches({
+      logs,before:state.expenses,after:nextExpenses,dates:affectedDates,
+      anchor:payPeriodAnchor,periodRecords,updatedAt:changedAt
+    });
     if(user.isGuest){
       const periodKey=`periodRecords_${user.uid}`;
       const before=localStorage.getItem(key), beforePeriods=localStorage.getItem(periodKey);
@@ -66,7 +68,7 @@ export default function useExpenses() {
       await batch.commit();
     }
     if(Object.keys(patches).length)adoptPeriodRecords?.(patches);
-  },[user?.uid,user?.isGuest,key,payPeriodAnchor,periodRecords,adoptPeriodRecords]);
+  },[user?.uid,user?.isGuest,key,payPeriodAnchor,periodRecords,adoptPeriodRecords,logs,state.expenses]);
   const stopRecurring=useCallback(async id=>{
     const rule=state.rules.find(r=>r.id===id);
     if(!rule)throw new Error('Recurring cost not found.');
