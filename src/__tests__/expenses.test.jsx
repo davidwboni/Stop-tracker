@@ -39,11 +39,24 @@ describe('Expense accounting',()=>{
  });
 });
 describe('Expenses overview',()=>{
- it('filters the list without altering the period total',()=>{
-  mount();fireEvent.click(screen.getByRole('button',{name:'My expenses'}));
-  expect(screen.getByText('£920.60')).toBeInTheDocument();
+ it('shows only personal expenses by default and keeps historical contractor charges accessible',()=>{
+  mount();
+  expect(screen.getByText('Your recorded expenses')).toBeInTheDocument();
+  expect(screen.getByText('£45.20')).toBeInTheDocument();
   expect(screen.getByText('Shell petrol')).toBeInTheDocument();
-  expect(screen.queryByText('Lease')).not.toBeInTheDocument();
+  const legacy=screen.getByText(/Previously saved contractor charges/).closest('details');
+  expect(legacy).toBeInTheDocument();
+  expect(legacy).not.toHaveAttribute('open');
+  fireEvent.click(legacy.querySelector('summary'));
+  expect(legacy).toHaveAttribute('open');
+  expect(screen.getByText('Lease')).toBeInTheDocument();
+ });
+ it('offers one Add expense action rather than repeated source filters and totals',()=>{
+  mount();
+  expect(screen.getAllByRole('button',{name:'Add expense'})).toHaveLength(1);
+  expect(screen.queryByRole('group',{name:'Expense source'})).not.toBeInTheDocument();
+  expect(screen.queryByText('My expenses')).not.toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'Add expense'})).toBeEnabled();
  });
  it('masks amounts in records and expected costs',()=>{
   mount();fireEvent.click(screen.getByRole('button',{name:'Hide monetary amounts'}));
