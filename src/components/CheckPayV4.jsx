@@ -1,4 +1,5 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
+import {Dialog} from '@headlessui/react';
 import {Link, useLocation, useNavigate} from 'react-router-dom';
 import {Keyboard, Sparkles, ArrowRight, Eye, EyeOff,User,ChevronDown,FileCheck2, CheckCircle2} from 'lucide-react';
 import {useData} from '../contexts/DataContext';
@@ -24,7 +25,7 @@ export default function CheckPayV4() {
  const [previewSnapshot,setPreviewSnapshot]=useState(null),[resolved,setResolved]=useState(false);
  const [review,setReview]=useState(null),[reviewedStatement,setReviewedStatement]=useState(null);
  const [details,setDetails]=useState(emptyStatementDetails);
- const [selected,setSelected]=useState(null),[mode,setMode]=useState('idle');
+ const [selected,setSelected]=useState(null),[mode,setMode]=useState('idle'),[periodPickerOpen,setPeriodPickerOpen]=useState(false);
  const [amount,setAmount]=useState(''),[basis,setBasis]=useState(false),[error,setError]=useState('');
  const [file,setFile]=useState(null),[aiDraft,setAiDraft]=useState(null),[stage,setStage]=useState(''),[saving,setSaving]=useState(false);
  const [entitlement,setEntitlement]=useState(null),[entitlementError,setEntitlementError]=useState(false),[statusRequest,setStatusRequest]=useState(0);
@@ -97,7 +98,11 @@ export default function CheckPayV4() {
    <div className="check-period-top">
      <label className="check-period-picker">
        <span>Pay period</span>
-       <span className="check-period-control"><select aria-label="Check Pay period" value={period.id} disabled={mode!=='idle'} onChange={e=>{setSelected(choices.find(p=>p.id===e.target.value));setError('');track('check_pay_period_changed');}}>{choices.map(p=><option key={p.id} value={p.id}>{fmt(p.start)} – {fmt(p.end)}</option>)}</select><ChevronDown size={17} aria-hidden="true"/></span>
+       <span className="check-period-control">
+          <button className="check-period-mobile" type="button" disabled={mode!=='idle'} onClick={()=>setPeriodPickerOpen(true)} aria-label="Choose four-week pay period">{fmt(period.start)} – {fmt(period.end)} <ChevronDown size={17} aria-hidden="true"/></button>
+          <select aria-label="Check Pay period" value={period.id} disabled={mode!=='idle'} onChange={e=>{setSelected(choices.find(p=>p.id===e.target.value));setError('');track('check_pay_period_changed');}}>{choices.map(p=><option key={p.id} value={p.id}>{fmt(p.start)} – {fmt(p.end)}</option>)}</select>
+          <ChevronDown size={17} aria-hidden="true" className="check-period-desktop-chevron"/>
+         </span>
      </label>
      <span className="money-badge check-status">{label}</span>
    </div>
@@ -117,6 +122,22 @@ export default function CheckPayV4() {
    }
    {summary.payout==null&&!unavailable&&summary.rows.length>0&&<p className="home-banner">Some work records need their saved pay details checked before a payout can be calculated.</p>}
  </section>
+ <Dialog open={periodPickerOpen} onClose={()=>setPeriodPickerOpen(false)} className="relative z-[90]">
+   <div className="fixed inset-0 bg-black/65" aria-hidden="true"/>
+   <div className="check-period-sheet-position">
+    <Dialog.Panel className="check-period-sheet home-screen">
+      <Dialog.Title className="text-lg font-bold">Choose a pay period</Dialog.Title>
+      <p className="home-muted text-xs">Each period covers four weeks.</p>
+      <div className="check-period-sheet-options">
+        {choices.map((p,i)=><button type="button" key={p.id} className="check-period-sheet-row" aria-current={p.id===period.id?'true':undefined} onClick={()=>{setSelected(p);setPeriodPickerOpen(false);setError('');track('check_pay_period_changed');}}>
+          <span>{fmt(p.start)} – {fmt(p.end)}{i===0?' · Current':''}</span>
+          {p.id===period.id&&<CheckCircle2 size={18} aria-hidden="true"/>}
+        </button>)}
+      </div>
+      <button type="button" className="home-secondary w-full" onClick={()=>setPeriodPickerOpen(false)}>Close</button>
+    </Dialog.Panel>
+   </div>
+ </Dialog>
  {(offline||costs.cached)&&<p className="home-banner" role="status">Showing cached records. {offline?'AI requires a connection. Unsaved drafts stay here while this screen is open.':'Refresh before relying on the comparison.'}</p>}
  {(loadError||costs.error)&&<div className="home-banner" role="alert">Records could not be loaded. <button className="home-text-button" onClick={()=>{costs.retry?.();forceSync?.();}}>Retry records</button></div>}
  {mode==='idle'&&<>
