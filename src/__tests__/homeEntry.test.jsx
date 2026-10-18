@@ -115,3 +115,70 @@ describe('Compact extra-work entry and keyboard layout', () => {
     }
   });
 });
+
+describe('Correcting date without losing a new workday',()=>{
+ it('keeps stops, parcels, extra run amount and notes when changing to another empty day',async()=>{
+  fixture.saved.mockResolvedValue({success:true});
+  const onDateChange=vi.fn();
+  render(<DailyQuickEntry open initialDate="2026-09-26" onDateChange={onDateChange} onClose={vi.fn()} onSaved={vi.fn()}/>);
+  fireEvent.change(screen.getByRole('textbox',{name:'Stops'}),{target:{value:'120'}});
+  fireEvent.change(screen.getByLabelText(/Total parcels/),{target:{value:'158'}});
+  fireEvent.click(screen.getByRole('switch',{name:/Extra work/}));
+  fireEvent.change(screen.getByLabelText('What type of work?'),{target:{value:'Extra run'}});
+  fireEvent.change(screen.getByLabelText(/Extra payment/),{target:{value:'30'}});
+  fireEvent.change(screen.getByLabelText(/What was it for/),{target:{value:'Second collection'}});
+  fireEvent.change(screen.getByLabelText('Entry date'),{target:{value:'2026-09-25'}});
+  expect(onDateChange).toHaveBeenCalledWith('2026-09-25');
+  expect(screen.queryByText('Discard unsaved changes?')).not.toBeInTheDocument();
+  expect(screen.getByRole('textbox',{name:'Stops'})).toHaveValue('120');
+  expect(screen.getByLabelText(/Total parcels/)).toHaveValue('158');
+  expect(screen.getByRole('switch',{name:/Extra work/})).toHaveAttribute('aria-checked','true');
+  expect(screen.getByLabelText(/Extra payment/)).toHaveValue('30');
+  expect(screen.getByLabelText(/What was it for/)).toHaveValue('Second collection');
+  fireEvent.click(screen.getByRole('button',{name:'Save day'}));
+  await waitFor(()=>expect(fixture.saved).toHaveBeenCalledTimes(1));
+  expect(fixture.saved.mock.calls[0][0][0]).toMatchObject({
+    date:'2026-09-25',stops:120,totalParcels:158,extra:30,extraType:'Extra run',notes:'Second collection'
+  });
+ });
+ it('does not let an echoed date prop clear the transferred draft',()=>{
+  function Parent(){
+    const [date,setDate]=React.useState('2026-09-26');
+    return <DailyQuickEntry open initialDate={date} onDateChange={setDate} onClose={vi.fn()}/>;
+  }
+  render(<Parent/>);
+  fireEvent.change(screen.getByRole('textbox',{name:'Stops'}),{target:{value:'88'}});
+  fireEvent.change(screen.getByLabelText('Entry date'),{target:{value:'2026-09-25'}});
+  expect(screen.getByLabelText('Entry date')).toHaveValue('2026-09-25');
+  expect(screen.getByRole('textbox',{name:'Stops'})).toHaveValue('88');
+ });
+ it('warns before opening a date with existing work and never copies the draft over it',()=>{
+  fixture.data.logs=[{id:'existing',date:'2026-09-25',stops:155,quantity:155,total:322.4,payStructureSnapshot:config}];
+  mount();
+  fireEvent.change(screen.getByRole('textbox',{name:'Stops'}),{target:{value:'120'}});
+  fireEvent.change(screen.getByLabelText('Entry date'),{target:{value:'2026-09-25'}});
+  expect(screen.getByText('This date already has work saved')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Keep editing'}));
+  expect(screen.getByRole('textbox',{name:'Stops'})).toHaveValue('120');
+  expect(screen.getByLabelText('Entry date')).toHaveValue('2026-09-26');
+  fireEvent.change(screen.getByLabelText('Entry date'),{target:{value:'2026-09-25'}});
+  fireEvent.click(screen.getByRole('button',{name:'Open saved workday'}));
+  expect(screen.getByRole('textbox',{name:'Stops'})).toHaveValue('155');
+  expect(screen.getByRole('button',{name:'Save changes'})).toBeInTheDocument();
+  expect(fixture.saved).not.toHaveBeenCalled();
+ });
+ it('never carries edited saved-day work to a different date without permission',()=>{
+  fixture.data.logs=[{id:'current-record',date:'2026-09-26',stops:130,quantity:130,total:270.4,payStructureSnapshot:config}];
+  mount();
+  fireEvent.change(screen.getByRole('textbox',{name:'Stops'}),{target:{value:'148'}});
+  fireEvent.change(screen.getByLabelText('Entry date'),{target:{value:'2026-09-25'}});
+  expect(screen.getByText('Discard edits to this workday?')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Keep editing'}));
+  expect(screen.getByRole('textbox',{name:'Stops'})).toHaveValue('148');
+  fireEvent.change(screen.getByLabelText('Entry date'),{target:{value:'2026-09-25'}});
+  fireEvent.click(screen.getByRole('button',{name:'Discard edits and change date'}));
+  expect(screen.getByRole('textbox',{name:'Stops'})).toHaveValue('');
+  expect(screen.getByRole('button',{name:'Save day'})).toBeInTheDocument();
+  expect(fixture.saved).not.toHaveBeenCalled();
+ });
+});

@@ -15,12 +15,30 @@ import '../styles/quick-entry.css';
 
 export default function DailyQuickEntry({ open, initialDate, onDateChange, onClose, onSaved }) {
   const [date, setDate] = useState(initialDate || isoDate(new Date()));
-  useEffect(() => { if (open) setDate(initialDate || isoDate(new Date())); }, [open, initialDate]);
+  const [transfer, setTransfer] = useState(null);
+  const echoedDate = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    // Home mirrors the date into initialDate. Don't erase the draft on that echo.
+    if (echoedDate.current === initialDate) { echoedDate.current = null; return; }
+    echoedDate.current = null;
+    setDate(initialDate || isoDate(new Date()));
+    setTransfer(null);
+  }, [open, initialDate]);
   if (!open) return null;
-  return <EntryEditor key={date} date={date} onDateChange={value => { setDate(value); onDateChange?.(value); }} onClose={onClose} onSaved={onSaved} />;
+  function changeDate(value, carriedDraft) {
+    setTransfer(carriedDraft ? { date:value, ...carriedDraft } : null);
+    setDate(value);
+    if (onDateChange) {
+      echoedDate.current = value;
+      onDateChange(value);
+    }
+  }
+  return <EntryEditor key={date} date={date} transfer={transfer?.date===date?transfer:null}
+    onDateChange={changeDate} onClose={onClose} onSaved={onSaved} />;
 }
 
-function EntryEditor({ date, onDateChange, onClose, onSaved }) {
+function EntryEditor({ date, transfer, onDateChange, onClose, onSaved }) {
   const { logs = [], paymentConfig, updateLogs, loading, loadError, hasSavedPayStructure, payStructureVersions = [], payHistoryLoading, payHistoryError } = useData();
   const rows = logs.filter(row => row.date === date);
   const [chosen,setChosen]=useState(null);
@@ -29,7 +47,7 @@ function EntryEditor({ date, onDateChange, onClose, onSaved }) {
   if (loading || loadError) return <Dialog open onClose={onClose} className="qe-root"><div className="qe-backdrop" /><div className="qe-position"><Dialog.Panel className="home-screen qe-panel"><Dialog.Title>Quick Entry</Dialog.Title><p role={loadError ? 'alert' : 'status'}>{loadError || 'Loading your work…'}</p><button className="home-secondary" onClick={onClose}>Close</button></Dialog.Panel></div></Dialog>;
   if (!rows.length && hasSavedPayStructure===false) return <Dialog open onClose={onClose} className="qe-root"><div className="qe-backdrop"/><div className="qe-position"><Dialog.Panel className="home-screen qe-panel qe-discard"><Dialog.Title>Set up your pay first</Dialog.Title><p>Choose how you get paid before calculating a new entry.</p><a className="home-primary" href="/app/settings">Set up pay structure</a><button className="home-secondary" onClick={onClose}>Close</button></Dialog.Panel></div></Dialog>;
   if(pastNew && hasSavedPayStructure===true && !chosen) return <HistoricalRateChoice versions={payStructureVersions} current={paymentConfig} loading={payHistoryLoading} error={payHistoryError} onChoose={setChosen} onClose={onClose}/>;
-  return <ReadyEditor date={date} rows={rows} logs={logs} paymentConfig={chosen||paymentConfig} updateLogs={updateLogs} onDateChange={onDateChange} onClose={onClose} onSaved={onSaved} />;
+  return <ReadyEditor date={date} rows={rows} logs={logs} paymentConfig={chosen||paymentConfig} transfer={transfer} updateLogs={updateLogs} onDateChange={onDateChange} onClose={onClose} onSaved={onSaved} />;
 }
 
 function HistoricalRateChoice({versions,current,loading,error,onChoose,onClose}){
@@ -38,12 +56,24 @@ function HistoricalRateChoice({versions,current,loading,error,onChoose,onClose})
  return <Dialog open onClose={onClose} className="qe-root"><div className="qe-backdrop"/><div className="qe-position"><Dialog.Panel className="home-screen qe-panel qe-discard"><Dialog.Title>Which rates applied that day?</Dialog.Title><p>This is a new entry for a past day. Choose the applicable arrangement before logging work.</p>{loading?<p role="status">Loading saved rates…</p>:error?<p role="alert">{error} Close and reopen to retry.</p>:<><label className="home-field">Pay structure<select value={id} onChange={e=>setId(e.target.value)}><option value="">Choose rates</option>{choices.map(v=><option key={v.id} value={v.id}>{v.label} · {describePayStructure(v.config)}</option>)}</select></label><button className="home-primary" disabled={!id} onClick={()=>onChoose(choices.find(v=>v.id===id).config)}>Use these rates</button></>}<button className="home-secondary" onClick={onClose}>Cancel</button></Dialog.Panel></div></Dialog>;
 }
 
-function ReadyEditor({ date, rows, logs, paymentConfig, updateLogs, onDateChange, onClose, onSaved }) {
+function ReadyEditor({ date, rows, logs, paymentConfig, transfer, updateLogs, onDateChange, onClose, onSaved }) {
   const original = useRef(rows[0]);
   const config = useRef(original.current?.payStructureSnapshot || paymentConfig).current;
   const meta = PAY_MODELS.find(model => model.id === config?.model);
   const baseline = useRef(draftFromLog(original.current, config?.model)).current;
-  const [draft, setDraft] = useState(baseline);
+  const [draft, setDraft] = useState(() => {
+    // Only carry fields into another EMPTY workday. Never replace a saved record's data.
+    if (original.current || !transfer?.draft) return baseline;
+    const fields = { ...transfer.draft };
+    // A historic pay structure can describe a different unit of work (stops vs
+    // hours/days/miles). Keep optional extras, but never silently reinterpret quantity.
+    if (transfer.model && transfer.model !== config?.model) {
+      fields.quantity = '';
+      fields.parcels = '';
+      fields.miles = '';
+    }
+    return fields;
+  });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [pending, setPending] = useState(null);
@@ -140,11 +170,22 @@ function ReadyEditor({ date, rows, logs, paymentConfig, updateLogs, onDateChange
   }
   function changeDate(value) {
     if (!value || value === date) return;
-    if (dirty) setPending({ kind: 'date', value });
-    else onDateChange(value);
+    const destination = logs.filter(row => row.date === value);
+    if (destination.length) {
+      // A saved day must always open its own record, never inherit unsaved fields.
+      setPending({ kind:'saved-date', value });
+    } else if (editing && dirty) {
+      // Moving away from an edited existing record can discard genuine changes.
+      setPending({ kind:'discard-edit', value });
+    } else if (editing) {
+      onDateChange(value, null);
+    } else {
+      // Correcting the date on a new entry must not reset its work fields.
+      onDateChange(value, { draft, model:config?.model });
+    }
   }
   function discard() {
-    if (pending.kind === 'date') onDateChange(pending.value);
+    if (pending.kind === 'saved-date' || pending.kind === 'discard-edit') onDateChange(pending.value, null);
     else { track('quick_entry_dismissed', { mode: editing ? 'edit' : 'new' }); onClose(); }
     setPending(null);
   }
@@ -192,7 +233,12 @@ function ReadyEditor({ date, rows, logs, paymentConfig, updateLogs, onDateChange
     <div className="qe-position" style={viewport ? { height: viewport.height, top: viewport.top } : undefined}>
       <Dialog.Panel as={motion.div} initial={reducedMotion ? false : { opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={transition} className="home-screen qe-panel">
         <header className="qe-header"><div><Dialog.Title ref={titleRef} tabIndex={-1} className="qe-title">{editing ? 'Edit workday' : 'Log your day'}</Dialog.Title></div><button type="button" className="home-icon" aria-label="Close Quick Entry" disabled={saving} onClick={() => closeHandler.current?.()}><X /></button></header>
-        {pending ? <div className="qe-discard" role="alert"><h3>Discard unsaved changes?</h3><p>Your changes have not been saved.</p><button className="home-primary w-full" onClick={() => setPending(null)}>Keep editing</button><button className="home-secondary w-full" onClick={discard}>{pending.kind === 'date' ? 'Discard and change date' : 'Discard changes'}</button></div> :
+        {pending ? <div className="qe-discard" role="alert">
+          <h3>{pending.kind==='saved-date'?'This date already has work saved':pending.kind==='discard-edit'?'Discard edits to this workday?':'Discard unsaved changes?'}</h3>
+          <p>{pending.kind==='saved-date'?'Open the saved workday instead? Your current unsaved entry will not be copied over it.':pending.kind==='discard-edit'?'Switching dates will discard the changes to this saved workday.':'Your changes have not been saved.'}</p>
+          <button type="button" className="home-primary w-full" onClick={() => setPending(null)}>Keep editing</button>
+          <button type="button" className="home-secondary w-full" onClick={discard}>{pending.kind==='saved-date'?'Open saved workday':pending.kind==='discard-edit'?'Discard edits and change date':'Discard changes'}</button>
+        </div> :
         <form ref={formRef} onSubmit={save} noValidate className="qe-form">
           <fieldset ref={scrollRef} disabled={saving} className="qe-scroll" onFocusCapture={event => revealField(event.target)}>
             <label className="home-field qe-date"><span><CalendarDays size={18} aria-hidden="true" />Entry date</span><input aria-label="Entry date" type="date" max={today} value={date} onChange={event => changeDate(event.target.value)} /></label>{error('date')}
