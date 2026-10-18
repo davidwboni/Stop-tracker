@@ -25,7 +25,6 @@ export default function InvoiceCreate({ prefill }) {
     clients,
     defaultClientId,
     saveClient,
-    setDefaultClientId,
     addInvoice,
     getNextInvoiceNumber,
     senderProfile,
@@ -132,14 +131,8 @@ export default function InvoiceCreate({ prefill }) {
     setEditingRecipient(!c.email);
     setPickerOpen(false);
     setNewClient(null);
-    // An existing client becomes the reusable billing default once chosen.
-    if(c.id && clients.some(row=>row.id===c.id) && defaultClientId!==c.id)
-      setDefaultClientId(c.id).catch(()=>setError("Client selected, but the default could not be saved. Check your connection."));
   };
-  React.useEffect(()=>{
-    if(!client?.id || defaultClientId===client.id || !clients?.some(row=>row.id===client.id))return;
-    setDefaultClientId(client.id).catch(()=>{});
-  },[client?.id,defaultClientId,clients,setDefaultClientId]);
+
   const saveNewClient = async () => {
     if (!newClient?.name?.trim()) return setError("Add a client name.");
     setError(null);
@@ -148,7 +141,7 @@ export default function InvoiceCreate({ prefill }) {
 
   // ---------- Generate PDF ----------
   const invoiceRecord = () => ({invoiceNumber,senderSnapshot:{...sender},clientSnapshot:{...client},notes,issuedDate:new Date().toISOString().slice(0,10),clientName:client.name,clientEmail:client.email||'',invoiceAmount:total.toFixed(2),dateFrom,dateTo,lines:[{desc:'Delivery services',qty:'1',rate:String(total)}],periodId:prefill?.periodId||null,status:'generated'});
-  const persist = async () => { if(persisted)return; await addInvoice(invoiceRecord());setPersisted(true); };
+  const persist = async () => { if(persisted)return; await addInvoice(invoiceRecord(),{defaultClientId:client?.id});setPersisted(true); };
 
   const canGenerate = client && total > 0 && /^\d+(\.\d{1,2})?$/.test(invoiceAmount) && Number.isSafeInteger(Math.round(total*100)) && dateFrom && dateTo && dateFrom<=dateTo;
 
