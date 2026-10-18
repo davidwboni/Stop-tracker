@@ -21,11 +21,11 @@ export default function InvoicePage(){
  const checked=fromPay?payoutComparison(record,p,summary,revision,loading||expenses.loading||!!loadError||!!expenses.error):null;
  const allowed=fromPay&&(checked?.state==='matched'||checked?.state==='reconciled');
  const prior=(invoice.invoices||[]).filter(i=>i.periodId===p.id);
- const blocked=loading||expenses.loading||invoice.loading;
+ const blocked=loading||expenses.loading||invoice.loading||(fromPay&&revision===null);
  useEffect(()=>{
    if(!fromPay){setRevision(null);return;}
    let active=true;setRevision(null);
-   moneyRevision(logs,expenses.expenses,p).then(value=>{if(active)setRevision(value);}).catch(()=>{if(active)setRevision(null);});
+   moneyRevision(logs,expenses.expenses,p).then(value=>{if(active)setRevision(value);}).catch(()=>{if(active)setRevision('');});
    return()=>{active=false;};
  },[fromPay,logs,expenses.expenses,p.start,p.end]);
  const prefill={
