@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Dialog } from '@headlessui/react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Plus, ChevronRight, Repeat, Clock, X, Receipt } from 'lucide-react';
+import { Eye, EyeOff, Plus, ChevronRight, Repeat, X, Receipt } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import useExpenses from '../hooks/useExpenses';
@@ -9,7 +9,7 @@ import HomeExpenseDialog from './HomeExpenseDialog';
 import ExpenseReceiptPreview from './ExpenseReceiptPreview';
 import { isoDate, listPeriods } from '../features/payperiod/periods';
 import { money } from '../features/home/homeModel';
-import { SOURCES, expenseSummary, recurringOccurrences } from '../features/expenses/expenseModel';
+import { expenseSummary, recurringOccurrences } from '../features/expenses/expenseModel';
 import { trackProductEvent as track } from '../services/productAnalytics';
 import '../styles/home.css';
 import '../styles/expenses.css';
@@ -23,11 +23,9 @@ export default function ExpensesOverview(){
   const nav=useNavigate();
   const location=useLocation();
   const [hidden,setHidden]=useState(maskPreference);
-  const [filter,setFilter]=useState('all');
   const [selectedPeriod,setSelectedPeriod]=useState(null);
   const [selected,setSelected]=useState(null);
   const [editor,setEditor]=useState(null);
-  const [showExpected,setShowExpected]=useState(false);
   const today=isoDate(new Date());
   const periods=useMemo(()=>payPeriodAnchor?listPeriods(logs,payPeriodAnchor,13):[],[logs,payPeriodAnchor]);
   const currentMonth={id:'month',start:today.slice(0,7)+'-01',end:isoDate(new Date(new Date().getFullYear(),new Date().getMonth()+1,0))};
@@ -35,34 +33,52 @@ export default function ExpensesOverview(){
   const period=selectedPeriod||requested||periods[0]||currentMonth;
   const choices=periods.some(p=>p.start===period.start&&p.end===period.end)?periods:[period,...periods];
   const summary=expenseSummary(costs.expenses,period);
-  const rows=summary.records.filter(e=>filter==='all'||e.source===filter);
+  const rows=summary.records.filter(e=>e.source==='my_expense');
+  const legacyCharges=summary.records.filter(e=>e.source==='contractor_charge');
   const upcoming=recurringOccurrences(costs.rules||[],costs.expenses,period);
   const cash=value=>hidden?'••••':money(value);
   const record=periodRecords[period.id];
-  useEffect(()=>{track('expense_overview_viewed',{source:'money'});},[]);
+  useEffect(()=>{track('expense_overview_viewed',{source:'records'});},[]);
   const toggleHidden=()=>{const next=!hidden;setHidden(next);try{localStorage.setItem('home-hide-money',next?'1':'0');}catch(_){}};
-  const applyFilter=value=>{setFilter(value);track('expense_source_filtered',{filter:value});};
-  return <div className="home-screen expense-page">
-    <header className="home-row"><h1 className="text-3xl font-bold">Money</h1><div className="flex gap-2"><button className="home-icon" aria-label={hidden?'Show monetary amounts':'Hide monetary amounts'} aria-pressed={hidden} onClick={toggleHidden}>{hidden?<EyeOff/>:<Eye/>}</button><button className="home-icon" aria-label="Open profile" onClick={()=>nav('/app/profile')}>{user?.displayName?.[0]||'D'}</button></div></header>
-    <nav className="expense-sections" aria-label="Money sections"><Link to="/app/money" state={period}>Overview</Link><Link to="/app/money/expenses" aria-current="page">Expenses</Link><Link to="/app/stats">Insights</Link></nav>
-    <label className="home-field expense-period">{payPeriodAnchor?'Pay period':'This month'}<select aria-label="Expense period" value={period.id} onChange={e=>{setSelectedPeriod(choices.find(p=>p.id===e.target.value));setFilter('all');}}>{choices.map(p=><option key={p.id} value={p.id}>{fmt(p.start)} – {fmt(p.end)}{p.id===periods[0]?.id?' · Current':''}</option>)}</select></label>
-    {!payPeriodAnchor&&<Link className="home-text-button" to="/app/periods">Set your pay-period dates</Link>}
+  const add=()=>{setEditor({});track('expense_opened',{source:'records'})};
+  function rowButton(e){return <button key={e.id} className="expense-row" onClick={()=>{setSelected(e);track('expense_record_opened',{source:'records'});}}>
+    <Receipt size={21} aria-hidden="true"/>
+    <span className="expense-row-copy"><strong>{e.description||e.category||'Expense'}</strong><small>{fmt(e.date)}{e.recurringRuleId?' · Recurring':''}</small>{e.receipt&&<small>Receipt attached</small>}</span>
+    <strong className="expense-row-amount">{cash(e.amount)}</strong><ChevronRight size={18} aria-hidden="true"/>
+   </button>}
+  return <div className="home-screen expense-page simple-expenses">
+    <header className="home-row"><h1 className="text-3xl font-bold">Expenses</h1><div className="flex gap-2"><button className="home-icon" aria-label={hidden?'Show monetary amounts':'Hide monetary amounts'} aria-pressed={hidden} onClick={toggleHidden}>{hidden?<EyeOff/>:<Eye/>}</button><button className="home-icon" aria-label="Open profile" onClick={()=>nav('/app/profile')}>{user?.displayName?.[0]||'D'}</button></div></header>
+    <div className="home-row simple-expenses-title"><h2>Expenses</h2><button className="home-primary" onClick={add} disabled={costs.loading||!!costs.error}><Plus size={18}/>Add expense</button></div>
+    <label className="home-field expense-period">{payPeriodAnchor?'Pay period':'This month'}
+     <select aria-label="Expense period" value={period.id} onChange={e=>setSelectedPeriod(choices.find(p=>p.id===e.target.value))}>
+       {choices.map(p=><option key={p.id} value={p.id}>{fmt(p.start)} – {fmt(p.end)}{p.id===periods[0]?.id?' · Current':''}</option>)}
+     </select>
+    </label>
+    {!payPeriodAnchor&&<Link className="home-text-button text-sm" to="/app/periods">Set your pay-period dates</Link>}
     {costs.cached&&<p className="home-banner" role="status">Showing cached expense records{costs.pending?' · changes waiting to sync':''}.</p>}
-    {record?.needsReview&&<p className="home-banner" role="status">Expenses changed after this period was checked. <Link to="/app/check-pay" state={{periodId:period.id}} className="underline">Recheck this period</Link></p>}
-    <div className="expense-columns"><aside>
-      <section className="home-card expense-summary" aria-busy={costs.loading}><h2>Recorded expenses</h2><p className="expense-total">{costs.loading?'…':costs.error?'Unavailable':cash(summary.total)}</p><p className="home-muted text-sm">Added to your records this period</p><dl className="expense-source-totals"><div><dd>{costs.loading?'…':costs.error?'—':cash(summary.contractor)}</dd><dt>Contractor charges</dt></div><div><dd>{costs.loading?'…':costs.error?'—':cash(summary.own)}</dd><dt>My expenses</dt></div></dl></section>
-      <p className="home-muted text-xs mt-3">Your percentage contractor fee is shown in Overview.</p>
-    </aside><section className="space-y-4">
-      <div className="expense-filters" role="group" aria-label="Expense source">{[['all','All'],['contractor_charge','Contractor charges'],['my_expense','My expenses']].map(([value,label])=><button key={value} aria-pressed={filter===value} onClick={()=>applyFilter(value)}>{label}</button>)}</div>
-      <div className="home-row"><h2 className="font-bold text-lg">{filter==='all'?'Recent expenses':filter==='contractor_charge'?'Contractor charges':'My expenses'}</h2><span className="home-muted text-sm">{rows.length} {rows.length===1?'record':'records'}</span></div>
-      {costs.error&&<div role="alert" className="home-banner">{costs.error}<button className="home-text-button underline ml-2" onClick={costs.retry}>Retry</button></div>}
-      {costs.loading&&!rows.length?<div className="home-skeleton" role="status" aria-label="Loading expenses"/>:rows.length?<div className="expense-list" key={filter}>{rows.map(e=><button key={e.id} className="expense-row" onClick={()=>{setSelected(e);track('expense_record_opened',{source:'money'});}}><Receipt size={22} aria-hidden="true"/><span className="expense-row-copy"><strong>{e.description||e.category}</strong><small>{SOURCES[e.source]} · {fmt(e.date)}</small>{e.recurringRuleId&&<small className="expense-recurring"><Repeat size={14}/>Recurring</small>}</span><strong className="expense-row-amount">{cash(e.amount)}</strong><ChevronRight size={18}/></button>)}</div>:!costs.error&&<div className="home-card home-empty"><h3>{filter==='all'?'No expenses recorded this period':'No matching expenses'}</h3><p className="home-muted">{filter==='all'?'Add a cost below to keep your records complete.':'Choose All to see your other recorded costs.'}</p>{filter!=='all'&&<button className="home-text-button" onClick={()=>applyFilter('all')}>Show all expenses</button>}</div>}
-      {!!upcoming.length&&!costs.error&&<button className="home-card expense-upcoming" onClick={()=>setShowExpected(true)}><Clock size={22}/><span><strong>Expected recurring {upcoming.length===1?'cost':'costs'}</strong><small>{upcoming[0].description||upcoming[0].category} · {fmt(upcoming[0].date)} · Not included above</small>{upcoming.length>1&&<small>{upcoming.length} expected costs in this period</small>}</span><strong>{cash(upcoming[0].amount)}</strong><ChevronRight size={18}/></button>}
-    </section></div>
-    <div className="expense-add-dock"><button className="home-primary w-full" disabled={costs.loading||!!costs.error} onClick={()=>{setEditor({});track('expense_opened',{source:'money'});}}><Plus/>Add expense</button></div>
-    {editor&&<HomeExpenseDialog open isGuest={user?.isGuest} eventSource="money" initialSource={filter==='contractor_charge'?'contractor_charge':'my_expense'} initialExpense={editor.id?editor:null} confirmExpected={!!editor.expectedConfirmation} save={async e=>{const {expectedConfirmation,...record}=e;await costs.save(record);}} onClose={()=>setEditor(null)}/>}
-    {selected&&<ExpenseDetails expense={selected} costs={costs} hidden={hidden} onClose={()=>setSelected(null)} onEdit={()=>{setEditor(selected);setSelected(null);}}/>}
-    {showExpected&&<Dialog open onClose={()=>setShowExpected(false)} className="relative z-[90]"><div className="fixed inset-0 bg-black/70"/><div className="home-dialog-position"><Dialog.Panel className="home-dialog home-screen"><div className="home-row"><Dialog.Title className="text-xl font-bold">Expected costs</Dialog.Title><button className="home-icon" aria-label="Close expected costs" onClick={()=>setShowExpected(false)}><X/></button></div><p className="home-muted my-3">Not included in recorded totals. Only record a cost once it has been charged. Check existing records first.</p>{upcoming.map(e=><div className="home-card space-y-2 mb-3" key={e.id}><strong>{e.description||e.category}</strong><p>{fmt(e.date)} · {cash(e.amount)}</p><button className="home-secondary w-full" onClick={()=>{setShowExpected(false);setEditor({...e,expectedConfirmation:true});}}>Review and record</button></div>)}</Dialog.Panel></div></Dialog>}
+    {record?.needsReview&&<p className="home-banner" role="status">Expenses changed after this pay period was checked. <Link to="/app/check-pay" state={{periodId:period.id}} className="underline">Recheck pay</Link></p>}
+    <section className="home-card simple-expenses-total" aria-busy={costs.loading}>
+      <p className="home-muted text-sm">Your recorded expenses</p>
+      <strong className="expense-total">{costs.loading?'…':costs.error?'Unavailable':cash(summary.own)}</strong>
+      {!costs.loading&&!costs.error&&<p className="home-muted text-xs">{rows.length} {rows.length===1?'expense':'expenses'} recorded in this period</p>}
+    </section>
+    {costs.error&&<p role="alert" className="home-banner">{costs.error} <button className="home-text-button underline" onClick={costs.retry}>Retry</button></p>}
+    <section className="simple-expenses-history" aria-label="Your expenses">
+      <div className="home-row"><h3>Your expenses</h3><span className="home-muted text-xs">Tap to view</span></div>
+      {costs.loading?<div className="home-skeleton" role="status" aria-label="Loading expenses"/>:rows.length?<div className="expense-list">{rows.map(rowButton)}</div>:!costs.error&&<div className="home-card home-empty"><h3>No expenses recorded this period</h3><p className="home-muted text-sm">Tap Add expense to keep track of what you've spent.</p></div>}
+    </section>
+    {!!legacyCharges.length&&!costs.error&&<details className="simple-legacy">
+      <summary>Previously saved contractor charges <span>{cash(summary.contractor)}</span></summary>
+      <p className="home-muted text-xs">Older contractor charges are preserved separately from the expenses you paid yourself. Check these against your contractor's statement in Pay.</p>
+      <div className="expense-list">{legacyCharges.map(rowButton)}</div>
+    </details>}
+    {!!upcoming.length&&!costs.error&&<details className="simple-legacy">
+      <summary>Expected recurring costs <span>{upcoming.length}</span></summary>
+      <p className="home-muted text-xs">Not included in recorded totals. Review before recording a cost.</p>
+      <div className="expense-list">{upcoming.map(row=><div key={row.id} className="simple-expected-row"><div><strong>{row.description||row.category||'Expected cost'}</strong><p className="home-muted text-xs">{fmt(row.date)} · {cash(row.amount)}</p></div><button className="home-secondary" onClick={()=>setEditor({...row,expectedConfirmation:true})}>Record</button></div>)}</div>
+    </details>}
+    {editor&&<HomeExpenseDialog open isGuest={user?.isGuest} eventSource="records" initialSource={editor.source||'my_expense'} initialExpense={editor.id?editor:null} confirmExpected={!!editor.expectedConfirmation} save={async e=>{const {expectedConfirmation,...record}=e;await costs.save(record)}} onClose={()=>setEditor(null)}/>}
+    {selected&&<ExpenseDetails expense={selected} costs={costs} hidden={hidden} onClose={()=>setSelected(null)} onEdit={()=>{setEditor(selected);setSelected(null)}}/>}
   </div>;
 }
 
