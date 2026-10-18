@@ -17,7 +17,7 @@ export default function RecordsHub(){
     <Icon size={18} aria-hidden="true"/><span>{label}</span></button>)}
   </nav>
   <section className="records-content" key={tab} aria-label={tabs.find(t=>t.id===tab).label}>
-   {tab==='work'?<EntriesPage/>:tab==='expenses'?<ExpensesOverview/>:<DocumentsPage/>}
+   {tab==='work'?<EntriesPage/>:tab==='expenses'?<ExpensesOverview/>:<DocumentsPage embedded/>}
   </section>
  </div>;
 }
