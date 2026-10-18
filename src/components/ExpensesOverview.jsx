@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Dialog } from '@headlessui/react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Plus, ChevronRight, Repeat, X, Receipt } from 'lucide-react';
+import { Plus, ChevronRight, Repeat, X, Receipt } from 'lucide-react';
+import HeaderControls from './HeaderControls';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import useExpenses from '../hooks/useExpenses';
@@ -47,7 +48,7 @@ export default function ExpensesOverview(){
     <strong className="expense-row-amount">{cash(e.amount)}</strong><ChevronRight size={18} aria-hidden="true"/>
    </button>}
   return <div className="home-screen expense-page simple-expenses">
-    <header className="home-row"><h1 className="text-3xl font-bold">Expenses</h1><div className="flex gap-2"><button className="home-icon" aria-label={hidden?'Show monetary amounts':'Hide monetary amounts'} aria-pressed={hidden} onClick={toggleHidden}>{hidden?<EyeOff/>:<Eye/>}</button><button className="home-icon" aria-label="Open profile" onClick={()=>nav('/app/profile')}>{user?.displayName?.[0]||'D'}</button></div></header>
+    <header className="home-row"><h1 className="text-3xl font-bold">Expenses</h1><HeaderControls hidden={hidden} onToggleMoney={toggleHidden}/></header>
     <div className="home-row simple-expenses-title"><h2>Expenses</h2><button className="home-primary" onClick={add} disabled={costs.loading||!!costs.error}><Plus size={18}/>Add expense</button></div>
     <label className="home-field expense-period">{payPeriodAnchor?'Pay period':'This month'}
      <select aria-label="Expense period" value={period.id} onChange={e=>setSelectedPeriod(choices.find(p=>p.id===e.target.value))}>
