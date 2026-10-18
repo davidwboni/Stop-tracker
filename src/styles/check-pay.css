@@ -88,3 +88,15 @@
 .check-period-sheet-row[aria-current=true]{color:var(--home-purple);background:color-mix(in srgb,var(--home-purple) 9%,transparent);border-radius:10px;font-weight:700}
 @media(max-width:699px){.check-period-control select,.check-period-desktop-chevron{display:none}.check-period-mobile{display:inline-flex}}
 @media(prefers-reduced-motion:reduce){.check-period-sheet-row{animation:none!important;transition:none!important}}
+
+
+/* One next step at a time. Work-period access stays visible without nested navigation. */
+.check-completed-period{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;text-align:left;padding:14px 17px!important;min-height:76px;border-radius:16px}
+.check-completed-period>span:first-child{display:grid;gap:5px;min-width:0}
+.check-completed-period strong{font-size:14px;font-weight:740}
+.check-completed-period small{font-size:12px;color:var(--home-muted);line-height:1.4}
+.check-completed-action{display:inline-flex;gap:5px;align-items:center;flex-shrink:0;font-size:13px;font-weight:680;color:var(--home-purple)}
+.check-again-toggle{justify-self:center;min-height:44px;font-size:13px;display:flex;align-items:center;gap:6px}
+.check-difference-amount{display:block;font-size:clamp(19px,5vw,24px);font-weight:760;color:var(--home-money);font-variant-numeric:tabular-nums}
+.check-next-step>.home-row h2{font-size:18px}
+@media(max-width:360px){.check-completed-period{padding:12px!important}.check-completed-action{font-size:12px}}

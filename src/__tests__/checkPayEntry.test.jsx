@@ -3,6 +3,8 @@ import {beforeEach,describe,it,expect,vi} from 'vitest';
 import {render,screen,fireEvent,waitFor} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
 import {webcrypto} from 'node:crypto';
+import {getPeriodForDate} from '../features/payperiod/periods';
+import {moneySummary,moneyRevision} from '../features/money/moneyModel';
 import CheckPayV4 from '../components/CheckPayV4';
 const f=vi.hoisted(()=>({data:{},costs:{},status:vi.fn(),extract:vi.fn(),save:vi.fn(),anchor:vi.fn()}));
 vi.mock('../contexts/DataContext',()=>({useData:()=>f.data}));
@@ -48,6 +50,43 @@ describe('Check Pay entry',()=>{
  it('shows an empty state instead of a zero expected payout',()=>{f.data.logs=[];open();expect(screen.getByText('No work logged yet')).toBeInTheDocument();expect(screen.queryByText('£0.00')).not.toBeInTheDocument();expect(screen.getByRole('button',{name:'Enter manually'})).toBeDisabled();});
  it('shows loading and errors without interim amounts',()=>{f.costs.loading=true;open();expect(screen.getByLabelText('Loading expected payout')).toBeInTheDocument();expect(screen.queryByText('£94.00')).not.toBeInTheDocument();});
  it('does not save on extraction or use gross earnings as payout',async()=>{f.extract.mockResolvedValue({statementAmount:100,contractorPayout:null,currency:'GBP'});open();await screen.findByText('2 free AI checks left');fireEvent.change(screen.getByLabelText('Choose statement file'),{target:{files:[new File(['image'],'statement.png',{type:'image/png'})]}});fireEvent.click(screen.getByRole('button',{name:'Read statement with AI'}));await screen.findByText('Review statement');expect(screen.getByLabelText('Final contractor payout (£)')).toHaveValue('');expect(f.save).not.toHaveBeenCalled();});
+
+ it('a saved difference has one next step instead of duplicated AI and manual cards',async()=>{
+   const current=getPeriodForDate(f.data.payPeriodAnchor,new Date());
+   f.data.logs=[{date:current.start,total:100,payStructureSnapshot:{contractorFeePercent:6}}];
+   const expected=moneySummary(f.data.logs,f.costs.expenses,current).payout;
+   f.data.periodRecords[current.id]={status:'checked',needsReview:false,payoutComparison:{
+     scope:'contractor_payout',currency:'GBP',taxBasis:'same_as_records',basisConfirmed:true,
+     start:current.start,end:current.end,statementPence:expected+1000,
+     expectedPence:expected,revision:await moneyRevision(f.data.logs,f.costs.expenses,current)
+   }};
+   render(<MemoryRouter initialEntries={['/app/check-pay']}><CheckPayV4/></MemoryRouter>);
+   await screen.findByRole('heading',{name:'Review the payout difference'});
+   expect(screen.getByRole('button',{name:/Review saved comparison/})).toBeEnabled();
+   expect(screen.queryByRole('heading',{name:'Check your statement'})).not.toBeInTheDocument();
+   expect(screen.queryByText('AI access could not be verified')).not.toBeInTheDocument();
+   expect(screen.queryByLabelText('Previous comparison')).not.toBeInTheDocument();
+   fireEvent.click(screen.getByRole('button',{name:/Check a different statement/}));
+   expect(screen.getByRole('heading',{name:'Check your statement'})).toBeInTheDocument();
+   expect(screen.getByRole('button',{name:'Enter manually'})).toBeEnabled();
+   fireEvent.click(screen.getByRole('button',{name:/Hide new comparison options/}));
+   expect(screen.queryByRole('heading',{name:'Check your statement'})).not.toBeInTheDocument();
+ });
+ it('provides one-tap access to the last completed four-week period',async()=>{
+   const current=getPeriodForDate(f.data.payPeriodAnchor,new Date());
+   const previousDate=new Date(current.start+'T12:00:00');
+   previousDate.setDate(previousDate.getDate()-1);
+   const previous=getPeriodForDate(f.data.payPeriodAnchor,previousDate);
+   f.data.logs=[
+     {date:current.start,total:100,payStructureSnapshot:{contractorFeePercent:6}},
+     {date:previous.start,total:120,payStructureSnapshot:{contractorFeePercent:6}}
+   ];
+   render(<MemoryRouter initialEntries={['/app/check-pay']}><CheckPayV4/></MemoryRouter>);
+   const shortcut=await screen.findByRole('button',{name:/Last completed period/});
+   expect(shortcut).toHaveTextContent(previous.start.slice(8));
+   fireEvent.click(shortcut);
+   expect(screen.getByText('£112.80')).toBeInTheDocument();
+ });
  it('does not label foreign extracted money as GBP',async()=>{f.extract.mockResolvedValue({statementAmount:100,contractorPayout:94,currency:'EUR'});open();await screen.findByText('2 free AI checks left');fireEvent.change(screen.getByLabelText('Choose statement file'),{target:{files:[new File(['image'],'statement.png',{type:'image/png'})]}});fireEvent.click(screen.getByRole('button',{name:'Read statement with AI'}));await screen.findByText('Review statement');expect(screen.getByLabelText('Final contractor payout (£)')).toHaveValue('');expect(screen.getByLabelText('Gross work earnings (£)')).toHaveValue('');});
  it('requires explicit confirmation after preview before saving',async()=>{open();fireEvent.click(screen.getByRole('button',{name:'Enter manually'}));fireEvent.change(screen.getByLabelText('Statement contractor payout (£)'),{target:{value:'90'}});fireEvent.click(screen.getByRole('checkbox'));fireEvent.click(screen.getByRole('button',{name:'Compare with my records'}));expect(f.save).not.toHaveBeenCalled();fireEvent.click(screen.getByRole('button',{name:'Confirm and save check'}));await waitFor(()=>expect(f.save).toHaveBeenCalledTimes(1));expect(f.save.mock.calls[0][1].payoutComparison.expectedPence).toBe(9400);});
  it('reviews an AI draft before saving, then preserves its verified structured fields',async()=>{f.extract.mockResolvedValue({statementAmount:100,contractorPayout:94,contractorFee:6,contractorCharges:0,currency:'GBP',taxBasis:'excluded',periodStart:period.start,periodEnd:period.end});open();await screen.findByText('2 free AI checks left');fireEvent.change(screen.getByLabelText('Choose statement file'),{target:{files:[new File(['image'],'statement.png',{type:'image/png'})]}});fireEvent.click(screen.getByRole('button',{name:'Read statement with AI'}));await screen.findByText('Review statement');expect(f.save).not.toHaveBeenCalled();expect(screen.getByRole('button',{name:'Continue to comparison'})).toBeDisabled();fireEvent.click(screen.getByRole('checkbox'));fireEvent.click(screen.getByRole('button',{name:'Continue to comparison'}));expect(f.save).not.toHaveBeenCalled();fireEvent.click(screen.getByRole('button',{name:'Looks good — save and prepare invoice'}));await waitFor(()=>expect(f.save).toHaveBeenCalledTimes(1));expect(f.save.mock.calls[0][1].reviewedStatement).toMatchObject({payoutPence:9400,taxBasis:'excluded',reviewed:true});expect(f.extract).toHaveBeenCalledTimes(1);});

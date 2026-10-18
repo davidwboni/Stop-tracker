@@ -25,7 +25,7 @@ export default function CheckPayV4() {
  const [previewSnapshot,setPreviewSnapshot]=useState(null),[resolved,setResolved]=useState(false);
  const [review,setReview]=useState(null),[reviewedStatement,setReviewedStatement]=useState(null);
  const [details,setDetails]=useState(emptyStatementDetails);
- const [selected,setSelected]=useState(null),[mode,setMode]=useState('idle'),[periodPickerOpen,setPeriodPickerOpen]=useState(false);
+ const [selected,setSelected]=useState(null),[mode,setMode]=useState('idle'),[periodPickerOpen,setPeriodPickerOpen]=useState(false),[showAnotherCheck,setShowAnotherCheck]=useState(false);
  const [amount,setAmount]=useState(''),[basis,setBasis]=useState(false),[error,setError]=useState('');
  const [file,setFile]=useState(null),[aiDraft,setAiDraft]=useState(null),[stage,setStage]=useState(''),[saving,setSaving]=useState(false);
  const [entitlement,setEntitlement]=useState(null),[entitlementError,setEntitlementError]=useState(false),[statusRequest,setStatusRequest]=useState(0);
@@ -46,6 +46,9 @@ export default function CheckPayV4() {
  const previewExpected=previewSnapshot?.payout??summary.payout;
  const comparison=payoutComparison(periodRecords[period.id],period,summary,revision,unavailable);
  const canInvoice=comparison.state==='matched'||comparison.state==='reconciled';
+ const checkedAlready=['matched','difference','reconciled'].includes(comparison.state);
+ const previousComplete=periods[1]?.end<today?periods[1]:null;
+ const offerPrevious=mode==='idle'&&period.id===periods[0]?.id&&previousComplete&&(previousComplete.daysLogged>0||!!periodRecords[previousComplete.id]);
  const invoicePath={pathname:'/app/invoice',state:{fromPay:true,periodId:period.id}};
  const label={none:period.end<today?'Awaiting statement':'Tracking',incomplete:'Review statement',unavailable:'Comparison unavailable',stale:'Needs recheck',matched:'Checked · figures match',difference:'Difference found',reconciled:'Period reconciled'}[comparison.state];
  const cash=p=>hidden?'••••':money(p/100);
@@ -74,7 +77,7 @@ export default function CheckPayV4() {
   return()=>{active=false;};
  },[statusRequest,offline]);
  useEffect(()=>{let active=true;setRevision(null);moneyRevision(logs,costs.expenses,period).then(r=>{if(active)setRevision(r);}).catch(()=>{});return()=>{active=false;};},[logs,costs.expenses,period.start,period.end]);
- function reset(){if(dirty&&!window.confirm('Discard this unsaved statement draft?'))return;setMode('idle');setResolved(false);setReview(null);setReviewedStatement(null);setDetails(emptyStatementDetails());setAmount('');setBasis(false);setFile(null);setAiDraft(null);setError('');}
+ function reset(){if(dirty&&!window.confirm('Discard this unsaved statement draft?'))return;setMode('idle');setResolved(false);setReview(null);setReviewedStatement(null);setDetails(emptyStatementDetails());setAmount('');setBasis(false);setFile(null);setAiDraft(null);setError('');setShowAnotherCheck(false);}
  function manual(saved=false){setResolved(false);const previous=periodRecords[period.id];if(saved&&previous?.reviewedStatement){const r=previous.reviewedStatement;const daily=previous.statementWorkDetails?.daily||{};setDetails(previous.statementWorkDetails||emptyStatementDetails());setReview({...createStatementReview({periodStart:r.start,periodEnd:r.end,currency:r.currency,taxBasis:r.taxBasis,contractorPayout:r.payoutPence/100,statementAmount:r.grossPence==null?null:r.grossPence/100,contractorFee:r.feePence==null?null:r.feePence/100,contractorCharges:r.chargesPence==null?null:r.chargesPence/100,charges:r.charges.map(i=>({label:i.label,amount:i.amountPence/100}))}),items:r.charges.map((i,index)=>({id:String(index),label:i.label,amount:String(i.amountPence/100),reviewed:true}))});setReviewedStatement(null);setAiDraft({currency:r.currency,daily:Object.entries(daily).map(([date,d])=>({date,stops:d.stops===''?null:Number(d.stops),amount:d.amount===''?null:Number(d.amount)}))});setFile(null);setBasis(false);setError('');setMode('review');return;}setReview(null);setReviewedStatement(null);setAiDraft(null);setDetails(saved?(periodRecords[period.id]?.statementWorkDetails||{...emptyStatementDetails(),stops:periodRecords[period.id]?.statementStops==null?'':String(periodRecords[period.id].statementStops),gross:periodRecords[period.id]?.statementAmount==null?'':String(periodRecords[period.id].statementAmount),extras:periodRecords[period.id]?.extraPayments==null?'':String(periodRecords[period.id].extraPayments),charges:periodRecords[period.id]?.charges==null?'':String(periodRecords[period.id].charges),vat:periodRecords[period.id]?.vat==null?'':String(periodRecords[period.id].vat)}):emptyStatementDetails());setAmount(saved&&comparison.statement!=null?String(comparison.statement/100):'');setBasis(false);setError('');setMode('manual');track('statement_manual_started');}
  function viewSaved(){const record=periodRecords[period.id];if(!record?.payoutComparison||!['matched','difference','reconciled'].includes(comparison.state)){manual(true);return;}setReview(null);setReviewedStatement(record.reviewedStatement||null);setDetails(record.statementWorkDetails||emptyStatementDetails());setAmount(String(record.payoutComparison.statementPence/100));setBasis(true);setPreviewSnapshot({key:recordsKey,payout:record.payoutComparison.expectedPence});setResolved(comparison.state==='reconciled');setError('');setMode('saved');}
  function chooseFile(f){if(!f)return;setError('');if(f.size>12*1024*1024){setError('Choose a file under 12 MB.');return;}if(!['application/pdf','image/jpeg','image/png','image/webp'].includes(f.type)&&!f.name.toLowerCase().endsWith('.pdf')){setError('Choose a PDF, JPEG, PNG or WebP file. Export a spreadsheet as PDF first.');return;}setFile(f);setMode('upload');}
@@ -100,7 +103,7 @@ export default function CheckPayV4() {
        <span>Pay period</span>
        <span className="check-period-control">
           <button className="check-period-mobile" type="button" disabled={mode!=='idle'} onClick={()=>setPeriodPickerOpen(true)} aria-label="Choose four-week pay period">{fmt(period.start)} – {fmt(period.end)} <ChevronDown size={17} aria-hidden="true"/></button>
-          <select aria-label="Check Pay period" value={period.id} disabled={mode!=='idle'} onChange={e=>{setSelected(choices.find(p=>p.id===e.target.value));setError('');track('check_pay_period_changed');}}>{choices.map(p=><option key={p.id} value={p.id}>{fmt(p.start)} – {fmt(p.end)}</option>)}</select>
+          <select aria-label="Check Pay period" value={period.id} disabled={mode!=='idle'} onChange={e=>{setSelected(choices.find(p=>p.id===e.target.value));setShowAnotherCheck(false);setError('');track('check_pay_period_changed');}}>{choices.map(p=><option key={p.id} value={p.id}>{fmt(p.start)} – {fmt(p.end)}</option>)}</select>
           <ChevronDown size={17} aria-hidden="true" className="check-period-desktop-chevron"/>
          </span>
      </label>
@@ -122,6 +125,10 @@ export default function CheckPayV4() {
    }
    {summary.payout==null&&!unavailable&&summary.rows.length>0&&<p className="home-banner">Some work records need their saved pay details checked before a payout can be calculated.</p>}
  </section>
+ {offerPrevious&&<button type="button" className="home-card check-completed-period" onClick={()=>{setSelected(previousComplete);setShowAnotherCheck(false);setError('');track('check_pay_period_changed');}}>
+   <span><strong>Last completed period</strong><small>{fmt(previousComplete.start)} – {fmt(previousComplete.end)} · {previousComplete.daysLogged} days logged</small></span>
+   <span className="check-completed-action">Open <ArrowRight size={17} aria-hidden="true"/></span>
+ </button>}
  <Dialog open={periodPickerOpen} onClose={()=>setPeriodPickerOpen(false)} className="relative z-[90]">
    <div className="fixed inset-0 bg-black/65" aria-hidden="true"/>
    <div className="check-period-sheet-position">
@@ -129,7 +136,7 @@ export default function CheckPayV4() {
       <Dialog.Title className="text-lg font-bold">Choose a pay period</Dialog.Title>
       <p className="home-muted text-xs">Each period covers four weeks.</p>
       <div className="check-period-sheet-options">
-        {choices.map((p,i)=><button type="button" key={p.id} className="check-period-sheet-row" aria-current={p.id===period.id?'true':undefined} onClick={()=>{setSelected(p);setPeriodPickerOpen(false);setError('');track('check_pay_period_changed');}}>
+        {choices.map((p,i)=><button type="button" key={p.id} className="check-period-sheet-row" aria-current={p.id===period.id?'true':undefined} onClick={()=>{setSelected(p);setPeriodPickerOpen(false);setShowAnotherCheck(false);setError('');track('check_pay_period_changed');}}>
           <span>{fmt(p.start)} – {fmt(p.end)}{i===0?' · Current':''}</span>
           {p.id===period.id&&<CheckCircle2 size={18} aria-hidden="true"/>}
         </button>)}
@@ -143,14 +150,17 @@ export default function CheckPayV4() {
  {mode==='idle'&&<>
    {canInvoice&&<section className="home-card check-next-step" aria-label="Next step after checking">
      <div className="home-row"><h2><CheckCircle2 size={20} aria-hidden="true"/> Statement checked</h2><span className="money-badge">Ready</span></div>
-     <p className="home-muted text-sm">Your reviewed contractor payout is saved for this period. Prepare an invoice with your saved billing details.</p>
+     <p className="home-muted text-sm">Your checked statement is saved. Review the invoice amount and recipient before sending.</p>
      <Link to={invoicePath.pathname} state={invoicePath.state} className="home-primary w-full">Looks good — prepare invoice <ArrowRight size={18}/></Link>
    </section>}
-   {comparison.state==='difference'&&<section className="home-card check-next-step">
-     <h2>Difference needs reviewing</h2><p className="home-muted text-sm">Review the difference and confirm your agreed figures before issuing an invoice.</p>
-     <button type="button" className="home-primary w-full" onClick={viewSaved}>Review difference <ArrowRight size={18}/></button>
+   {comparison.state==='difference'&&<section className="home-card check-next-step" aria-label="Next step after checking">
+     <h2>Review the payout difference</h2>
+     <strong className="check-difference-amount">{cash(Math.abs(comparison.difference))} {comparison.difference<0?'less':'more'} than expected</strong>
+     <p className="home-muted text-sm">You already checked this statement. Review the difference and accept the agreed figures before preparing an invoice.</p>
+     <button type="button" className="home-primary w-full" onClick={viewSaved}>Review saved comparison <ArrowRight size={18}/></button>
    </section>}
-   <section className="check-start" aria-label="Check your statement">
+   {checkedAlready&&<button type="button" className="home-text-button check-again-toggle" aria-expanded={showAnotherCheck} onClick={()=>setShowAnotherCheck(v=>!v)}>{showAnotherCheck?'Hide new comparison options':'Check a different statement'} <ChevronDown size={16} aria-hidden="true"/></button>}
+   {(!checkedAlready||showAnotherCheck)&&<section className="check-start" aria-label="Check your statement">
      <h2 className="check-question">{canInvoice?"Check again":"Check your statement"}</h2>
      <p className="home-muted text-sm">Choose how you'd like to compare your contractor's statement with your work.</p>
      <div className="check-actions">
@@ -171,8 +181,8 @@ export default function CheckPayV4() {
        </section>
      </div>
      <p className="home-muted check-privacy">AI supports PDF or photos, up to 12 MB. Review the figures before comparing. Files aren't saved to your account.</p>
-   </section>
-   {hasSaved&&<section className="check-previous" aria-label="Previous comparison">
+   </section>}
+   {hasSaved&&!checkedAlready&&<section className="check-previous" aria-label="Previous comparison">
      <button className="check-previous-button" aria-label="Review saved check" onClick={viewSaved} disabled={blocked}>
        <span className="check-previous-icon"><FileCheck2 size={20}/></span>
        <span><strong>{comparison.state==='stale'?'Previous check needs reviewing':'Previous comparison'}</strong><small>{comparison.state==='stale'?'Your records changed since the last check.':comparison.state==='difference'?'Difference recorded · Tap to review':comparison.state==='matched'?'Figures matched · Tap to review':'Review your saved comparison'}</small></span>
