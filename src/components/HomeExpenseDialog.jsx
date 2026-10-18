@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Dialog } from '@headlessui/react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { X, Paperclip, ScanLine } from 'lucide-react';
+import { X, Paperclip, ScanLine, Pencil, ArrowLeft, ChevronRight } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { App as NativeApp } from '@capacitor/app';
 import { useAuth } from '../contexts/AuthContext';
@@ -17,10 +17,10 @@ const receipts = () => import('../services/expenseReceipts');
 export default function HomeExpenseDialog({ open, onClose, save, isGuest, initialExpense = null, confirmExpected = false, initialSource = 'my_expense', eventSource = 'home' }) {
   const { user } = useAuth();
   const [id] = useState(() => initialExpense?.id || crypto.randomUUID());
-  const [initial] = useState(() => ({date:initialExpense?.date || isoDate(new Date()),amount:initialExpense ? String(initialExpense.amount) : '',source:initialExpense?.source || initialSource,category:initialExpense?.category || 'Other',description:initialExpense?.description || '',notes:initialExpense?.notes || ''}));
+  const [initial] = useState(() => ({date:initialExpense?.date || isoDate(new Date()),amount:initialExpense ? String(initialExpense.amount) : '',source:initialExpense?.source || (confirmExpected ? initialSource : 'my_expense'),category:initialExpense?.category || 'Other',description:initialExpense?.description || '',notes:initialExpense?.notes || ''}));
   const [draft, setDraft] = useState(initial);
-  const [mode, setMode] = useState('manual');
-  const [showNotes, setShowNotes] = useState(!!initial.notes);
+  const [mode, setMode] = useState(initialExpense || confirmExpected ? 'manual' : 'choice');
+  const [changeDate, setChangeDate] = useState(false);
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState('');
   const [retain, setRetain] = useState(!!initialExpense?.receipt);
@@ -28,11 +28,12 @@ export default function HomeExpenseDialog({ open, onClose, save, isGuest, initia
   const [reviewed, setReviewed] = useState(false);
   const [review, setReview] = useState(false);
   const [status, setStatus] = useState(null);
+  const [statusRetry, setStatusRetry] = useState(0);
   const [error, setError] = useState('');
   const [phase, setPhase] = useState('idle');
   const [discard, setDiscard] = useState(false);
   const [viewport, setViewport] = useState(null);
-  const lock = useRef(false), closeRef = useRef(), input = useRef(), attached = useRef(null);
+  const lock = useRef(false), closeRef = useRef(), input = useRef(), attached = useRef(null), scrollRef = useRef(null);
   const reduce = useReducedMotion();
   const busy = phase !== 'idle';
   const dirty = JSON.stringify(draft) !== JSON.stringify(initial) || !!file || existing !== (initialExpense?.receipt || null) || retain !== !!initialExpense?.receipt || review;
@@ -40,11 +41,23 @@ export default function HomeExpenseDialog({ open, onClose, save, isGuest, initia
   closeRef.current = () => { if (lock.current) return; if (discard) setDiscard(false); else if (dirty) setDiscard(true); else onClose(); };
   useEffect(() => {
     const view = window.visualViewport;
-    if (!view) return;
-    const update = () => setViewport({height:view.height,top:view.offsetTop});
-    update(); view.addEventListener('resize',update); view.addEventListener('scroll',update);
-    return () => {view.removeEventListener('resize',update);view.removeEventListener('scroll',update);};
+    const update = () => setViewport({height:Math.max(240,view?.height || window.innerHeight),top:view?.offsetTop||0});
+    update();
+    view?.addEventListener('resize',update);view?.addEventListener('scroll',update);window.addEventListener('resize',update);
+    return () => {view?.removeEventListener('resize',update);view?.removeEventListener('scroll',update);window.removeEventListener('resize',update);};
   },[]);
+  const revealField=target=>{
+    const region=scrollRef.current;
+    if(!region || !region.contains(target))return;
+    const align=()=>{
+      if(!scrollRef.current?.contains(target))return;
+      const visible=region.getBoundingClientRect(), rect=target.getBoundingClientRect();
+      if(rect.bottom>visible.bottom-18)region.scrollTop+=rect.bottom-visible.bottom+18;
+      else if(rect.top<visible.top+18)region.scrollTop-=visible.top-rect.top+18;
+    };
+    requestAnimationFrame(align);setTimeout(align,180);
+  };
+  useEffect(()=>{const active=document.activeElement;if(active?.matches?.('input,textarea,select'))revealField(active);},[viewport?.height,viewport?.top]);
   useEffect(() => {
     if (!dirty) return;
     const prevent = event => {event.preventDefault();event.returnValue='';};
@@ -69,7 +82,7 @@ export default function HomeExpenseDialog({ open, onClose, save, isGuest, initia
     let active=true;setStatus(null);
     receipts().then(service=>service.getReceiptStatus()).then(value=>{if(active)setStatus(value);}).catch(()=>{if(active)setStatus({error:true});});
     return ()=>{active=false;};
-  },[mode,isGuest]);
+  },[mode,isGuest,statusRetry]);
   async function attach(event) {
     const next=event.target.files?.[0];event.target.value='';if(!next)return;
     try { (await receipts()).validateReceipt(next);setFile(next);attached.current=null;setRetain(false);setError('');setReviewed(false);setReview(false); }
@@ -114,37 +127,81 @@ export default function HomeExpenseDialog({ open, onClose, save, isGuest, initia
     }finally{lock.current=false;setPhase('idle');}
   }
   const canScan=status?.enabled&&status?.isPro&&!isGuest;
-  return <Dialog open={open} onClose={()=>closeRef.current?.()} className="qe-root"><div className="qe-backdrop" aria-hidden="true"/>
+  const displayDate=value=>validDate(value)?new Date(value+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'Choose date';
+  const dayLabel=draft.date===isoDate(new Date())?'Today · '+displayDate(draft.date):displayDate(draft.date);
+  return <Dialog open={open} onClose={()=>closeRef.current?.()} className="qe-root">
+    <div className="qe-backdrop" aria-hidden="true"/>
     <div className="qe-position" style={viewport?{height:viewport.height,top:viewport.top,bottom:'auto'}:undefined}>
       <Dialog.Panel as={motion.div} initial={{opacity:0,y:reduce?0:12}} animate={{opacity:1,y:0}} transition={{duration:reduce?0:.2}} tabIndex={0} className="qe-panel home-screen ae-panel">
-        <header className="qe-header"><div><Dialog.Title className="qe-title">{discard?'Discard unsaved changes?':confirmExpected?'Record expected cost':initialExpense?'Edit expense':'Add expense'}</Dialog.Title><p className="home-muted">Keep track of your business costs.</p></div><button type="button" className="home-icon" aria-label="Close expense" disabled={busy} onClick={()=>closeRef.current?.()}><X/></button></header>
-        {discard?<div className="qe-discard"><p>Your unsaved changes will be lost.</p><button className="home-primary" onClick={()=>setDiscard(false)}>Keep editing</button><button className="home-secondary" onClick={()=>{track('expense_dismissed',{source:eventSource});onClose();}}>Discard changes</button></div>:<form className="qe-form" onSubmit={submit} noValidate>
-          <div className="qe-scroll">
-            {!initialExpense&&<div className="qe-worked" role="group" aria-label="Entry method"><button type="button" disabled={busy} aria-pressed={mode==='manual'} onClick={()=>setMode('manual')}>Manual <small>Free</small></button><button type="button" disabled={busy} aria-pressed={mode==='ai'} onClick={()=>setMode('ai')}>Scan with AI <small>Pro</small></button></div>}
-            {mode==='ai'&&!review&&<div className="qe-summary space-y-3"><ScanLine aria-hidden="true"/><h3>Read a receipt, then review</h3><p className="home-muted text-sm">Send this receipt to DeepSeek to extract the date, total and merchant. Check every field before saving. Storage is a separate choice below.</p>
-              {isGuest?<p className="home-banner">Sign in to a permanent account and use Pro to scan. Manual entry is free. <a className="underline" href="/app/profile">Open profile</a></p>:status===null?<p role="status">Checking receipt scanning…</p>:status.error?<p role="alert">Could not check scanning availability. Switch to Manual, or reopen Scan with AI to retry.</p>:!status.enabled?<p className="home-banner">Receipt scanning isn’t available yet. You can enter this expense manually.</p>:!status.isPro?<p className="home-banner">Receipt scanning requires Pro. <a className="underline" href="/app/upgrade">View Pro</a>, or use Manual for free.</p>:null}
+        <header className="qe-header">
+          <div><Dialog.Title className="qe-title">{discard?'Discard changes?':confirmExpected?'Record expected cost':initialExpense?'Edit expense':'Add expense'}</Dialog.Title></div>
+          <button type="button" className="home-icon" aria-label="Close expense" disabled={busy} onClick={()=>closeRef.current?.()}><X/></button>
+        </header>
+        {discard?<div className="qe-discard"><p>Your unsaved changes will be lost.</p>
+          <button className="home-primary" onClick={()=>setDiscard(false)}>Keep editing</button>
+          <button className="home-secondary" onClick={()=>{track('expense_dismissed',{source:eventSource});onClose();}}>Discard changes</button>
+        </div>:<form className="qe-form" onSubmit={submit} noValidate>
+          <div ref={scrollRef} className="qe-scroll ae-simple-scroll" onFocusCapture={event=>revealField(event.target)}>
+            {mode==='choice'&&<div className="ae-choice" role="group" aria-label="How to add an expense">
+              <p className="home-muted text-sm">Choose the easiest way to record your cost.</p>
+              <button type="button" className="ae-choice-card ae-choice-scan" onClick={()=>setMode('ai')} disabled={busy}>
+                <span className="ae-choice-icon"><ScanLine size={24} aria-hidden="true"/></span>
+                <span><strong>Scan receipt with AI</strong><small>Photo or PDF · Extract details for review</small></span><ChevronRight aria-hidden="true" size={19}/>
+              </button>
+              <button type="button" className="ae-choice-card" onClick={()=>setMode('manual')} disabled={busy}>
+                <span className="ae-choice-icon"><Pencil size={24} aria-hidden="true"/></span>
+                <span><strong>Enter manually</strong><small>Amount and optional description · Free</small></span><ChevronRight aria-hidden="true" size={19}/>
+              </button>
             </div>}
-            {review&&<div className="home-banner" role="status"><strong>Review extracted details</strong><p>Nothing has been saved. Check the amount, date, source and category against your receipt.</p></div>}
-            {(mode==='manual'||review)&&<fieldset disabled={busy} className="ae-fields">
+            {mode!=='choice'&&!initialExpense&&!confirmExpected&&<button type="button" className="ae-back home-text-button" onClick={()=>{setMode('choice');setError('');}} disabled={busy}><ArrowLeft size={17}/> Choose another method</button>}
+            {mode==='ai'&&!review&&<section className="ae-scan-home">
+              <div className="ae-scan-icon"><ScanLine size={32} aria-hidden="true"/></div>
+              <h3>Scan your receipt</h3>
+              <p className="home-muted text-sm">Choose a photo or PDF. AI will try to read the amount, date and what you bought. Review the result before saving.</p>
+              {isGuest?<p className="home-banner">Sign in to a permanent Pro account to scan. Manual entry is free.</p>:
+                status===null?<p role="status" className="home-muted text-sm">Checking scanning access…</p>:
+                status.error?<p role="alert" className="home-banner">Scanning access could not be checked. You can retry or enter manually.</p>:
+                !status.enabled?<p className="home-banner">Receipt scanning isn't available right now. You can enter it manually.</p>:
+                !status.isPro?<p className="home-banner">Scanning requires Pro. <a className="underline" href="/app/upgrade">View Pro</a> or enter it manually.</p>:null}
+              {status?.error&&<button type="button" className="home-secondary" onClick={()=>setStatusRetry(n=>n+1)}>Retry availability</button>}
+              <p className="home-muted text-xs">Scanning uses an external AI service. Nothing is saved until you confirm.</p>
+            </section>}
+            {mode==='ai'&&review&&<p className="home-banner" role="status"><strong>Review AI-extracted details</strong><span className="block text-sm">Check the amount, date and description against the receipt before saving.</span></p>}
+            {(mode==='manual'||review)&&<fieldset disabled={busy} className="ae-fields ae-simple-fields">
               <label className="home-field ae-amount">Amount (£)<input inputMode="decimal" autoComplete="off" value={draft.amount} onChange={e=>change('amount',e.target.value)} placeholder="0.00" required/></label>
-              <label className="home-field qe-date">Date<input type="date" value={draft.date} onChange={e=>change('date',e.target.value)} required/></label>
-              <div><p className="mb-2 font-semibold" id="expense-source-label">Source</p><div className="qe-worked" role="group" aria-labelledby="expense-source-label">{[['my_expense','My expense'],['contractor_charge','Contractor charge']].map(([value,label])=><button type="button" key={value} aria-pressed={draft.source===value} onClick={()=>change('source',value)}>{label}</button>)}</div></div>
-              <p className="home-muted text-sm">Only add costs not already recorded. Your percentage contractor fee is calculated separately.</p>
-              <label className="home-field">Category<select value={draft.category} onChange={e=>change('category',e.target.value)}>{[...new Set([...categories,draft.category])].map(c=><option key={c}>{c}</option>)}</select></label>
-              <label className="home-field">Merchant or description (optional)<input maxLength={200} value={draft.description} onChange={e=>change('description',e.target.value)}/></label>
-              {showNotes?<label className="home-field">Notes (optional)<textarea maxLength={1000} rows={3} value={draft.notes} onChange={e=>change('notes',e.target.value)}/></label>:<button type="button" className="home-text-button ae-note" onClick={()=>setShowNotes(true)}>+ Add a note</button>}
+              <label className="home-field">What was it for? <span className="home-muted text-xs">(optional)</span><input maxLength={200} value={draft.description} onChange={e=>change('description',e.target.value)} placeholder="e.g. Fuel, repair, parking"/></label>
+              <div className="ae-date-choice">
+                <button type="button" className="ae-date-toggle" aria-expanded={changeDate||!validDate(draft.date)} onClick={()=>setChangeDate(value=>!value)}>
+                  <span>{dayLabel}</span><span className="ae-date-action">{changeDate?'Close':'Change date'}</span>
+                </button>
+                {(changeDate||!validDate(draft.date))&&<label className="home-field">Date<input type="date" value={draft.date} required onChange={e=>change('date',e.target.value)}/></label>}
+              </div>
+              {initial.source==='contractor_charge'&&<p className="home-banner text-xs">This older record was saved as a contractor charge. The charge type is preserved when you edit it; new contractor deductions belong in Pay.</p>}
             </fieldset>}
-            <div className="ae-receipt">
+            <div className={'ae-receipt '+(mode==='manual'?'ae-manual-receipt':'')}>
               <input ref={input} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={attach} className="sr-only" tabIndex={-1} aria-label="Receipt file" disabled={busy}/>
-              {!file&&!existing?<button type="button" disabled={busy} className="home-secondary w-full" onClick={()=>input.current?.click()}><Paperclip size={18}/> {mode==='ai'?'Choose receipt':'Attach receipt (optional)'}</button>:<><div className="home-row">{preview&&<img src={preview} alt="Selected receipt preview" className="ae-thumbnail"/>}<p>{file?(file.type==='application/pdf'?'PDF receipt attached':'Photo attached'):'Saved receipt attached'}</p><button type="button" disabled={busy} className="home-text-button" onClick={()=>{setFile(null);setExisting(null);setRetain(false);attached.current=null;}}>Remove</button></div><label className="ae-checkbox"><input type="checkbox" checked={retain} disabled={busy} onChange={e=>setRetain(e.target.checked)}/>Save receipt to my records</label><p className="home-muted text-xs">{retain?(isGuest?'Receipt stays on this device only. Clearing browser data removes it.':'Receipt is retained with this expense until you remove it.'):'The receipt will not be saved to your records.'}</p></>}
-              <p className="home-muted text-xs mt-2">Photo, screenshot or PDF · Up to 8 MB{mode==='ai'?' · 4 pages maximum':''}</p>
+              {mode==='ai'&&!review&&<button type="button" disabled={busy} className="home-secondary w-full" onClick={()=>input.current?.click()}><Paperclip size={18}/> {file?'Change receipt':'Choose receipt'}</button>}
+              {mode==='manual'&&!file&&!existing&&<button type="button" disabled={busy} className="home-text-button ae-attach" onClick={()=>input.current?.click()}><Paperclip size={17}/> Attach receipt (optional)</button>}
+              {(file||existing)&&<div className="ae-attached">
+                <div className="home-row">{preview&&<img src={preview} alt="Selected receipt preview" className="ae-thumbnail"/>}<span className="text-sm">{file?(file.type==='application/pdf'?'PDF selected':'Photo selected'):'Receipt already attached'}</span>
+                  <button type="button" disabled={busy} className="home-text-button" onClick={()=>{setFile(null);setExisting(null);setRetain(false);attached.current=null;setReviewed(false);if(mode==='ai')setReview(false);}}>Remove</button>
+                </div>
+                <label className="ae-checkbox"><input type="checkbox" checked={retain} disabled={busy} onChange={e=>setRetain(e.target.checked)}/>Save receipt with expense</label>
+                <p className="home-muted text-xs">{retain?(isGuest?'Saved only on this device.':'Saved privately with this expense.'):'The receipt will not be stored.'}</p>
+              </div>}
+              {mode==='ai'&&<p className="home-muted text-xs">JPEG, PNG, WebP or PDF · Up to 8 MB · 4 PDF pages maximum</p>}
             </div>
-            {review&&<label className="ae-checkbox"><input type="checkbox" disabled={busy} checked={reviewed} onChange={e=>setReviewed(e.target.checked)}/>I checked these details against the receipt</label>}
+            {review&&<label className="ae-checkbox"><input type="checkbox" disabled={busy} checked={reviewed} onChange={e=>setReviewed(e.target.checked)}/>I've checked these details against my receipt</label>}
             {error&&<p role="alert" className="home-error">{error}</p>}
-            {isGuest&&<p className="home-muted text-sm">Guest records are saved on this device only.</p>}
+            {isGuest&&mode!=='choice'&&<p className="home-muted text-xs">Guest records are stored on this device only.</p>}
           </div>
-          <footer className="qe-footer">{mode==='ai'&&!review?<><button type="button" className="home-primary w-full" disabled={busy||!file||!canScan} onClick={scan}>{phase==='extracting'?'Reading receipt…':'Extract for review'}</button><button type="button" className="home-text-button w-full ae-note" disabled={busy} onClick={()=>setMode('manual')}>Enter manually for free</button></>:<button type="submit" className="home-primary w-full" disabled={busy || (review&&!reviewed)}>{phase==='saving'?'Saving…':confirmExpected?'Record expense':initialExpense?'Save changes':review?'Confirm and save expense':'Save expense'}</button>}<p className="home-muted text-xs" role="status">{busy?(phase==='saving'?'Saving your record. Please keep this open.':'Reading fields. You’ll review them next.'):'A saved expense is a record, not a confirmed payment.'}</p></footer>
+          {mode!=='choice'&&<footer className="qe-footer">
+            {mode==='ai'&&!review?
+              <button type="button" className="home-primary w-full" disabled={busy||!file||!canScan} onClick={scan}>{phase==='extracting'?'Reading receipt…':'Extract for review'}</button>:
+              <button type="submit" className="home-primary w-full" disabled={busy||(review&&!reviewed)}>{phase==='saving'?'Saving…':confirmExpected?'Record expense':initialExpense?'Save changes':review?'Confirm and save expense':'Save expense'}</button>}
+          </footer>}
         </form>}
       </Dialog.Panel>
-    </div></Dialog>;
+    </div>
+  </Dialog>;
 }

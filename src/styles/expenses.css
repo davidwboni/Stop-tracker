@@ -31,3 +31,27 @@
 .expense-list{animation:expense-reveal 180ms ease-out}
 @keyframes expense-reveal{from{opacity:.4;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){.expense-page *{animation:none!important;transition:none!important}}
+
+
+/* Minimal personal expenses page, with historical contractor costs safely tucked away. */
+.simple-expenses{max-width:760px;display:grid;gap:14px;padding-bottom:calc(105px + env(safe-area-inset-bottom))}
+.simple-expenses .simple-expenses-title h2{font-size:20px;font-weight:730}
+.simple-expenses .simple-expenses-title .home-primary{min-height:46px;padding:9px 13px;white-space:nowrap}
+.simple-expenses .expense-period{margin-bottom:0;max-width:100%}
+.simple-expenses .simple-expenses-total{padding:17px;border-radius:16px}
+.simple-expenses-total .expense-total{display:block;margin:8px 0 5px;font-size:clamp(29px,8vw,36px)}
+.simple-expenses-history{display:grid;gap:9px}
+.simple-expenses-history h3{font-size:16px;font-weight:700}
+.simple-expenses .expense-row{min-height:70px;padding:12px}
+.simple-expenses .expense-row-amount{font-size:15px}
+.simple-expenses .expense-row-copy strong{font-size:14px}
+.simple-legacy{border:1px solid var(--border);border-radius:14px;padding:0 14px 14px;background:var(--card)}
+.simple-legacy summary{min-height:48px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;font-weight:600}
+.simple-legacy>p{margin-bottom:12px;line-height:1.5}
+.simple-legacy .expense-list{border-radius:10px}
+.simple-expected-row{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:70px;padding:12px}
+.simple-expected-row+.simple-expected-row{border-top:1px solid var(--border)}
+.simple-expected-row strong{font-size:13px}
+.simple-expected-row .home-secondary{min-height:42px}
+@media(min-width:768px){.simple-expenses{padding-bottom:36px}}
+@media(max-width:350px){.simple-expenses .simple-expenses-title h2{font-size:17px}.simple-expenses .simple-expenses-title .home-primary{font-size:13px}.simple-expenses .expense-row-amount{font-size:13px}}

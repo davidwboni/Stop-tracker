@@ -12,3 +12,36 @@
 .ae-panel small { display:inline-block; font-size:11px; margin-left:4px; color:var(--home-muted); }
 .ae-panel button:active:not(:disabled) { transform:scale(.98); }
 @media(max-width:639px) { .qe-position:has(.ae-panel) { padding:env(safe-area-inset-top) 0 0; } .ae-panel { height:100%; border-radius:0; } .ae-panel .qe-form { flex:1; } .ae-panel .qe-scroll { flex:1; } .ae-panel .qe-footer { padding-bottom:max(12px,env(safe-area-inset-bottom)); } }
+
+
+/* Driver-first expense entry: choose a path, enter an amount, save. */
+.ae-simple-scroll{display:flex;flex-direction:column;flex:1 1 0%;min-height:0;overflow-y:auto;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding-bottom:25px}
+.ae-choice{display:grid;gap:12px;padding-top:18px}
+.ae-choice>p{margin-bottom:2px}
+.ae-choice-card{display:flex;align-items:center;gap:13px;min-height:94px;width:100%;padding:16px;background:var(--card);border:1px solid var(--border);border-radius:16px;text-align:left}
+.ae-choice-card>span:nth-child(2){flex:1;min-width:0}
+.ae-choice-card strong{font-size:15px;display:block;font-weight:700;line-height:1.3}
+.ae-choice-card small{font-size:12px;display:block;line-height:1.5;margin:3px 0 0}
+.ae-choice-card>svg{color:var(--home-muted)}
+.ae-choice-scan{background:color-mix(in srgb,var(--home-purple) 11%,var(--card));border-color:color-mix(in srgb,var(--home-purple) 48%,var(--border))}
+.ae-choice-icon,.ae-scan-icon{display:grid;place-items:center;flex-shrink:0;width:43px;height:43px;border-radius:12px;background:color-mix(in srgb,var(--home-purple) 14%,var(--card));color:var(--home-purple)}
+.ae-back{display:flex;align-items:center;gap:6px;min-height:45px;font-size:13px;justify-content:flex-start}
+.ae-simple-fields{gap:17px;padding-top:10px}
+.ae-simple-fields .ae-amount input{font-size:30px;min-height:62px}
+.ae-simple-fields .home-field input{font-size:16px}
+.ae-date-toggle{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;padding:8px 0;min-height:45px;text-align:left;border-top:1px solid var(--border)}
+.ae-date-toggle>span:first-child{color:var(--foreground);font-size:14px}
+.ae-date-action{color:var(--home-purple);font-size:13px;font-weight:650}
+.ae-date-choice>.home-field{margin-top:6px}
+.ae-manual-receipt{padding:0;border:0}
+.ae-attach{display:flex;align-items:center;gap:8px;min-height:43px;font-size:13px}
+.ae-attached{border:1px solid var(--border);padding:11px;border-radius:12px}
+.ae-scan-home{display:grid;gap:13px;align-items:center;text-align:center;padding:15px 0 8px}
+.ae-scan-home .ae-scan-icon{width:60px;height:60px;margin:0 auto;border-radius:18px}
+.ae-scan-home h3{font-size:19px;font-weight:700}
+.ae-scan-home .home-secondary{width:100%}
+.ae-panel .qe-form{display:flex;flex:1 1 auto;min-height:0;flex-direction:column;overflow:hidden}
+.ae-panel .qe-header{flex-shrink:0}
+.ae-panel .qe-footer{position:relative;flex-shrink:0}
+@media(max-height:540px){.ae-choice{padding-top:2px}.ae-choice-card{min-height:74px;padding:10px}.ae-simple-fields{gap:10px}}
+@media(prefers-reduced-motion:reduce){.ae-choice-card,.ae-choice-card *{transition:none!important;animation:none!important}}
