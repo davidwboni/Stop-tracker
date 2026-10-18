@@ -34,3 +34,19 @@ it('changing account immediately removes the previous account invoice list',asyn
  expect(screen.queryByText('Account A')).not.toBeInTheDocument();await screen.findByText('Ready');
  expect(screen.getByTestId('names')).toBeEmptyDOMElement();
 });
+
+function DefaultClientHarness(){
+ const invoice=useInvoice(),[error,setError]=React.useState('');
+ return <><span>{invoice.loading?'Loading':'Ready'}</span><button onClick={()=>invoice.addInvoice({invoiceNumber:7,clientName:'Sample contractor',clientSnapshot:{id:'c-one'}},{defaultClientId:'c-one'}).catch(e=>setError(e.message))}>Create with saved client</button><p>{error}</p></>;
+}
+it('remembers the contractor in the same write as the invoice',async()=>{
+ localStorage.setItem('invoiceData_a',JSON.stringify({revision:0,invoices:[],clients:[{id:'c-one',name:'Sample contractor'}],lastInvoiceNumber:6}));
+ render(<InvoiceProvider><DefaultClientHarness/></InvoiceProvider>);
+ await screen.findByText('Ready');
+ fireEvent.click(screen.getByRole('button',{name:'Create with saved client'}));
+ await waitFor(()=>expect(JSON.parse(localStorage.getItem('invoiceData_a')).invoices).toHaveLength(1));
+ const stored=JSON.parse(localStorage.getItem('invoiceData_a'));
+ expect(stored.defaultClientId).toBe('c-one');
+ expect(stored.lastInvoiceNumber).toBe(7);
+ expect(stored.revision).toBe(1);
+});
