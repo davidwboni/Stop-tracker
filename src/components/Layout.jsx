@@ -38,7 +38,7 @@ const Layout = () => {
         {/* Full-width scroll area; an inner block owns the max-width + centering
             so it stays centred on iOS WebKit (a flex item with max-width can
             left-bias under align-items:stretch). */}
-        <div className="w-full max-w-6xl mx-auto pt-3 pb-24 px-4">
+        <div className="st-content-container w-full max-w-6xl mx-auto pt-3 px-4">
           <ErrorBoundary>
             <motion.div
               key={location.pathname}
