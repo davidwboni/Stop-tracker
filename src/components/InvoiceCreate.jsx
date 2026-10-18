@@ -213,7 +213,7 @@ export default function InvoiceCreate({ prefill }) {
         <div className="text-xs font-bold uppercase tracking-wider text-primary">FOUR-WEEK PAY PERIOD</div>
         <div className="mt-1 font-semibold">{prefill.startDate} → {prefill.endDate}</div>
         <div className="mt-1 text-sm text-muted-foreground">{prefill.statementAmount != null ? "Checked statement amount prefilled. Review VAT and the recipient before sending." : "No verified statement amount. Review all invoice details before sending."}</div>
-      </div>
+      </div>}
 
       {/* Header row: number + sender */}
       <div className="flex items-center justify-between">
