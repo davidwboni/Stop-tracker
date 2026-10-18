@@ -49,7 +49,7 @@ describe('Add Expense',()=>{
  it('keeps the id and draft on failed save, cleans orphan upload, and retries',async()=>{
   fixture.save.mockRejectedValueOnce(new Error('failed'));mount();fireEvent.click(screen.getByRole('button',{name:/Enter manually/}));await file();
   fireEvent.change(screen.getByLabelText('Amount (£)'),{target:{value:'45.20'}});
-  fireEvent.click(screen.getByLabelText('Save receipt to my records'));
+  fireEvent.click(screen.getByLabelText('Save receipt with expense'));
   fireEvent.click(screen.getByRole('button',{name:'Save expense'}));
   await screen.findByText(/Couldn’t save/);
   expect(fixture.remove).toHaveBeenCalled();expect(screen.getByLabelText('Amount (£)')).toHaveValue('45.20');
@@ -66,19 +66,19 @@ describe('Add Expense',()=>{
   expect(fixture.save).not.toHaveBeenCalled();
   expect(screen.getByRole('button',{name:'Confirm and save expense'})).toBeDisabled();
   fireEvent.change(screen.getByLabelText('Amount (£)'),{target:{value:'46.20'}});
-  fireEvent.click(screen.getByLabelText('I checked these details against the receipt'));
+  fireEvent.click(screen.getByLabelText("I've checked these details against my receipt"));
   fireEvent.click(screen.getByRole('button',{name:'Confirm and save expense'}));
   await waitFor(()=>expect(fixture.save).toHaveBeenCalled());
   expect(fixture.save.mock.calls[0][0]).toMatchObject({amount:46.2,category:'Fuel',receipt:null});
  });
  it('does not offer the statement trial for receipt scans',async()=>{
   fixture.status.mockResolvedValue({enabled:true,isPro:false});mount();
-  fireEvent.click(screen.getByRole('button',{name:'Scan with AI Pro'}));
+  fireEvent.click(screen.getByRole('button',{name:/Scan receipt with AI/}));
   await screen.findByText(/Scanning requires Pro/);
   expect(screen.getByRole('button',{name:'Extract for review'})).toBeDisabled();
  });
  it('requires confirmation to discard and prevents duplicate saves while pending',async()=>{
-  let finish;fixture.save.mockImplementation(()=>new Promise(resolve=>{finish=resolve;}));mount();
+  let finish;fixture.save.mockImplementation(()=>new Promise(resolve=>{finish=resolve;}));mount();fireEvent.click(screen.getByRole('button',{name:/Enter manually/}));
   fireEvent.change(screen.getByLabelText('Amount (£)'),{target:{value:'45.20'}});
   fireEvent.click(screen.getByRole('button',{name:'Close expense'}));
   expect(screen.getByText('Discard changes?')).toBeInTheDocument();
