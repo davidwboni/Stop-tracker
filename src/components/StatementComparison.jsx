@@ -6,7 +6,7 @@ export function comparisonLines(review,summary){
  const fields=[['Work earnings','grossPence',summary.gross],['Contractor fee','feePence',summary.fee],['Contractor charges','chargesPence',pennies(summary.costs.contractor)]];
  return fields.map(([label,key,expected])=>({label,expected,statement:review?.[key],difference:Number.isSafeInteger(expected)&&Number.isSafeInteger(review?.[key])?review[key]-expected:null}));
 }
-export default function StatementComparison({period,expected,statement,summary,review,workDetails,saved,resolved,stale,unavailable,hidden,saving,error,onSave,onEdit,onBack,onResolve}){
+export default function StatementComparison({period,expected,statement,summary,review,workDetails,saved,resolved,stale,unavailable,hidden,saving,error,onSave,onSaveAndInvoice,onEdit,onBack,onResolve}){
  const [confirm,setConfirm]=useState(false),[reason,setReason]=useState('');
  const cash=v=>hidden?'••••':money(v/100),difference=statement-expected;
  const lines=comparisonLines(review,summary);
@@ -56,7 +56,7 @@ export default function StatementComparison({period,expected,statement,summary,r
  {stale&&<p role="alert" className="home-banner">Records changed since this preview. Edit statement figures to review the updated comparison.</p>}
  {resolved&&<p role="status" className="home-banner">You marked this comparison resolved. This does not confirm that payment arrived.</p>}
  {error&&<p role="alert" className="home-error">{error}</p>}
- {!saved?<button className="home-primary w-full" disabled={saving||stale||unavailable} onClick={onSave}>{saving?'Saving check…':'Confirm and save check'}</button>:!resolved&&!confirm?<button className="home-secondary w-full" disabled={stale||unavailable} onClick={()=>{setConfirm(true);track('reconciliation_started');}}>Mark comparison resolved</button>:null}
+ {!saved?<button className="home-primary w-full" disabled={saving||stale||unavailable} onClick={difference===0&&onSaveAndInvoice?onSaveAndInvoice:onSave}>{saving?'Saving check…':difference===0&&onSaveAndInvoice?'Looks good — save and prepare invoice':'Confirm and save check'}</button>:!resolved&&!confirm?<button className="home-secondary w-full" disabled={stale||unavailable} onClick={()=>{setConfirm(true);track('reconciliation_started');}}>Mark comparison resolved</button>:null}
  {saved&&!resolved&&confirm&&<section className="home-card space-y-3"><h2>Resolve this comparison?</h2><p className="home-muted">Only continue once you have checked the difference and are satisfied with the outcome. The original figures remain in your records.</p><label className="home-field">Outcome<select value={reason} onChange={e=>setReason(e.target.value)}><option value="">Choose an outcome</option><option value="figures_verified">Figures verified and accepted</option><option value="explained_difference">Difference explained and accepted</option></select></label><button className="home-primary w-full" disabled={!reason||saving||stale||unavailable} onClick={()=>onResolve(reason)}>{saving?'Saving resolution…':'Confirm resolved'}</button><button className="home-text-button" disabled={saving} onClick={()=>setConfirm(false)}>Keep unresolved</button></section>}
  <button className="home-secondary w-full" disabled={saving} onClick={onEdit}>Edit statement figures</button><button className="home-text-button" disabled={saving} onClick={onBack}>Back to Check Pay</button><p className="home-muted text-sm">Saving records this check. Payment receipt and personal taxes are separate.</p>
  </section>;
