@@ -77,6 +77,7 @@ function ReadyEditor({ date, rows, logs, paymentConfig, transfer, updateLogs, on
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [pending, setPending] = useState(null);
+  const [showDate, setShowDate] = useState(false);
   const [viewport, setViewport] = useState(null);
   const saveLock = useRef(false);
   const id = useRef(original.current?.id || crypto.randomUUID());
@@ -86,6 +87,8 @@ function ReadyEditor({ date, rows, logs, paymentConfig, transfer, updateLogs, on
   const closeHandler = useRef(null);
   const reducedMotion = useReducedMotion();
   const today = isoDate(new Date());
+  const dateLabel = date===today?'Today · '+new Date(date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})
+    :new Date(date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
   const editing = !!original.current;
   const dirty = JSON.stringify(draft) !== JSON.stringify(baseline);
   const parcelsRelevant = ['flat_stops', 'tiered_stops', 'sliding_scale'].includes(config?.model) && Number(config?.excessParcelRate) > 0;
@@ -241,7 +244,16 @@ function ReadyEditor({ date, rows, logs, paymentConfig, transfer, updateLogs, on
         </div> :
         <form ref={formRef} onSubmit={save} noValidate className="qe-form">
           <fieldset ref={scrollRef} disabled={saving} className="qe-scroll" onFocusCapture={event => revealField(event.target)}>
-            <label className="home-field qe-date"><span><CalendarDays size={18} aria-hidden="true" />Entry date</span><input aria-label="Entry date" type="date" max={today} value={date} onChange={event => changeDate(event.target.value)} /></label>{error('date')}
+            <div className="qe-date-compact">
+              <button type="button" className="qe-date-trigger" aria-expanded={showDate} aria-controls="qe-date-selector" onClick={()=>setShowDate(value=>!value)}>
+                <span><CalendarDays size={18} aria-hidden="true"/>{dateLabel}</span>
+                <span className="qe-date-change">{showDate?'Close':'Change'}</span>
+              </button>
+              {showDate&&<label id="qe-date-selector" className="home-field qe-date-input">Entry date
+                <input aria-label="Entry date" type="date" max={today} value={date} onChange={event=>changeDate(event.target.value)}/>
+              </label>}
+              {error('date')}
+            </div>
             <h3 className="qe-question">{config?.model === "per_day" ? question : config?.model === "hourly" ? "Hours worked" : config?.model === "per_mile" ? "Miles driven" : "Your deliveries"}</h3>
             {meta?.primary.field === 'day' ? <div className="qe-worked" role="group" aria-label="Worked today"><button type="button" aria-pressed={draft.quantity === '1'} onClick={() => change('quantity', '1')}>Yes, I worked</button><button type="button" aria-pressed={draft.quantity === '0'} onClick={() => change('quantity', '0')}>No work today</button></div> :
             <div className={parcelsRelevant ? 'qe-counts' : 'qe-counts qe-single'}><label className="home-field">{primaryLabel}<input {...inputProps('quantity')} inputMode={meta?.primary.field === 'stops' ? 'numeric' : 'decimal'} placeholder="0" autoComplete="off" /></label>{parcelsRelevant && <label className="home-field">Total parcels<input {...inputProps('parcels')} inputMode="numeric" placeholder="Optional" autoComplete="off" /></label>}</div>}
@@ -254,16 +266,20 @@ function ReadyEditor({ date, rows, logs, paymentConfig, transfer, updateLogs, on
                 <span className={'qe-switch ' + (draft.extraWork ? 'qe-switch-on' : '')} aria-hidden="true"><span /></span>
               </button>
               {draft.extraWork && <motion.div id="qe-extras" initial={reducedMotion ? false : { opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={transition} className="qe-extra-fields">
-                <label className="home-field">What type of work?<select {...inputProps('extraType')}><option value="">Choose a type (optional)</option>{Array.from(new Set(['Extra run', 'Collection', 'Return', 'Extra route', 'Other', draft.extraType].filter(Boolean))).map(type => <option key={type}>{type}</option>)}</select></label>
-                <label className="home-field">Extra payment (£)<input {...inputProps('amount')} inputMode="decimal" placeholder="e.g. 30.00" autoComplete="off" /></label>
+                <label className="home-field">Extra payment (£)<input {...inputProps('amount')} inputMode="decimal" placeholder="e.g. 30.00" autoComplete="off"/></label>
                 {error('amount')}
-                <label className="home-field">What was it for? (optional)<textarea {...inputProps('notes')} rows={2} maxLength={1000} placeholder="e.g. Second collection at depot" /></label>
+                <details className="qe-extra-more" defaultOpen={!!draft.extraType}>
+                  <summary>Work type (optional){draft.extraType?' · '+draft.extraType:''}</summary>
+                  <label className="home-field">Type of extra work
+                    <select {...inputProps('extraType')}><option value="">Not specified</option>{Array.from(new Set(['Extra run','Collection','Return','Extra route','Other',draft.extraType].filter(Boolean))).map(type=><option key={type}>{type}</option>)}</select>
+                  </label>
+                </details>
               </motion.div>}
             </section>
-            {!draft.extraWork && <details className="qe-optional-note" defaultOpen={!!baseline.notes}>
-              <summary>Add a note (optional){draft.notes ? ' · saved' : ''}</summary>
-              <label className="home-field">Work notes<textarea {...inputProps('notes')} rows={2} maxLength={1000} placeholder="Anything to remember about this day?" /></label>
-            </details>}
+            <details className="qe-optional-note" defaultOpen={!!draft.notes}>
+              <summary>Add a note (optional){draft.notes ? ' · added' : ''}</summary>
+              <label className="home-field">Work notes<textarea {...inputProps('notes')} rows={2} maxLength={1000} placeholder="Anything to remember about this day?"/></label>
+            </details>
             <details className="qe-breakdown"><summary>View pay breakdown</summary>
               <dl>
                 <div><dt>Gross earnings</dt><dd>{grossKnown && draft.quantity !== '' && !Object.keys(validity).length ? money(gross) : '—'}</dd></div>
