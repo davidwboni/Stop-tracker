@@ -187,7 +187,7 @@ export default function CheckPayV4() {
    <h2><CheckCircle2 size={20} aria-hidden="true"/> Ready to invoice</h2>
    <p className="home-muted text-sm">Your check is saved. Review the recipient, checked amount and VAT before sending.</p>
    <Link to={invoicePath.pathname} state={invoicePath.state} className="home-primary w-full mt-3">Looks good — prepare invoice <ArrowRight size={18}/></Link>
-  </section>
+  </section>}
  {['preview','saved'].includes(mode)&&<StatementComparison period={period} expected={previewExpected} statement={pennies(Number(amount))} summary={summary} review={reviewedStatement} workDetails={details} saved={mode==='saved'} resolved={resolved} stale={previewStale} unavailable={!ready} hidden={hidden} saving={saving} error={error} onSave={()=>save(false)} onSaveAndInvoice={()=>save(true)} onEdit={()=>{if(mode==='saved'){manual(true);return;}setBasis(false);setMode(review?'review':'manual');}} onBack={reset} onResolve={resolveComparison}/>}
 
  {error&&!['preview','saved'].includes(mode)&&<p role="alert" className="home-banner home-error">{error}</p>}
