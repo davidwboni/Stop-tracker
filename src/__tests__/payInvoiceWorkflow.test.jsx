@@ -67,6 +67,7 @@ describe('Pay → Invoice handoff',()=>{
  it('guards manual invoices against accidentally billing the same period twice',async()=>{
   f.invoice.invoices=[{id:'previous',invoiceNumber:12,periodId:period.id}];
   mount({});
+  fireEvent.change(screen.getByRole('combobox',{name:'Pay period'}),{target:{value:period.id}});
   fireEvent.click(screen.getByRole('button',{name:'Prepare invoice'}));
   expect(await screen.findByText('Invoice already prepared for this period')).toBeInTheDocument();
   expect(screen.queryByText('InvoiceCreate')).not.toBeInTheDocument();
