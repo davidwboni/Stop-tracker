@@ -7,3 +7,20 @@
 .records-hub .st-page>header h1{font-size:clamp(20px,5vw,25px)}
 @media(max-width:390px){.records-tabs button{font-size:12px;gap:4px}}
 @media(prefers-reduced-motion:reduce){.records-tabs *{transition:none!important}}
+
+
+/* Final Work records pass: two levels (Records and Your days), not two page titles. */
+.work-records{display:grid;gap:14px;min-width:0}
+.work-history-header h2{font-size:clamp(18px,5vw,22px);font-weight:730}
+.work-history-header p{margin-top:2px;line-height:1.35}
+.work-history-header .home-primary{min-height:44px;white-space:nowrap;padding:9px 13px;font-size:14px}
+.work-search{padding:0 13px 12px!important}
+.work-search>summary{cursor:pointer;display:flex;align-items:center;min-height:48px;font-weight:650;font-size:13px}
+.work-search .home-field{margin-top:10px}
+.work-search .review-fields{margin-top:5px;gap:9px}
+.work-search .home-text-button{min-height:40px}
+.work-entry-list .day-record-card>button{min-height:74px;padding:12px}
+.work-entry-list .day-record-copy strong{font-size:14px}
+.work-entry-list .day-record-copy small{font-size:12px;line-height:1.4}
+.work-entry-list .day-record-total{font-size:15px}
+@media(max-width:360px){.work-history-header .home-primary{padding:8px 10px}.work-entry-list .day-record-card>button{padding:11px 9px;gap:8px}.work-entry-list .day-record-total{font-size:13px}}

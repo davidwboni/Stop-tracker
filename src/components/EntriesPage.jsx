@@ -14,7 +14,7 @@ function workLabel(r){
 }
 const displayDate=date=>new Date(date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
 const moneyPreference=()=>{try{return localStorage.getItem('home-hide-money')==='1'}catch(_){return false}};
-export default function EntriesPage(){
+export default function EntriesPage({privacyHidden}){
  const {logs=[],loading,loadError,updateLogs}=useData();
  const loc=useLocation();
  const [query,setQuery]=useState('');
@@ -25,7 +25,8 @@ export default function EntriesPage(){
  const [error,setError]=useState('');
  const [busy,setBusy]=useState(false);
  const [page,setPage]=useState(0);
- const [hidden]=useState(moneyPreference);
+ const [localHidden]=useState(moneyPreference);
+ const hidden=privacyHidden??localHidden;
  const rows=logs.filter(r=>(!from||r.date>=from)&&(!to||r.date<=to)&&(!query||`${r.date} ${r.stops??''} ${r.notes||''}`.toLowerCase().includes(query.toLowerCase()))).sort((a,b)=>b.date.localeCompare(a.date));
  const perPage=10,maxPage=Math.max(0,Math.ceil(rows.length/perPage)-1),currentPage=Math.min(page,maxPage),pagedRows=rows.slice(currentPage*perPage,(currentPage+1)*perPage);
  const selected=logs.find(r=>r.id===selectedId)||null;
@@ -43,21 +44,21 @@ export default function EntriesPage(){
  }
  const updateFilter=(setter,value)=>{setter(value);setPage(0)};
  return <div className="home-screen st-page work-records">
-  <header className="home-row"><div><h1>Work history</h1><p className="home-muted">Tap a day to see what you recorded.</p></div>
-   <button className="home-primary" onClick={()=>setEditing(isoDate(new Date()))} disabled={loading||!!loadError}><Plus size={19}/>Add day</button>
+  <header className="home-row work-history-header"><div><h2>Your days</h2><p className="home-muted text-xs">{loading?'Loading days…':loadError?'Records unavailable':`${logs.length} ${logs.length===1?'day':'days'} recorded`}</p></div>
+   <button className="home-primary" onClick={()=>setEditing(isoDate(new Date()))} disabled={loading||!!loadError}><Plus size={18}/>Add day</button>
   </header>
   {loc.state?.walkthrough?<div className="home-card" data-tour="entry-example"><h2>Example work day</h2><p>150 stops · 185 parcels</p><p className="home-muted">Temporary example; nothing is saved.</p></div>:<>
-   <details className="home-card"><summary>Find an earlier day</summary>
+   <details className="home-card work-search"><summary>Find a day{from||to||query?' · Filters active':''}</summary>
     <label className="home-field">Search date, stops or notes<input value={query} onChange={e=>updateFilter(setQuery,e.target.value)}/></label>
     <div className="review-fields">
       <label className="home-field">From<input type="date" value={from} onChange={e=>updateFilter(setFrom,e.target.value)}/></label>
       <label className="home-field">To<input type="date" value={to} onChange={e=>updateFilter(setTo,e.target.value)}/></label>
     </div>
-    <button className="home-text-button" onClick={()=>{setQuery('');setFrom('');setTo('');setPage(0)}}>Clear filters</button>
+    {(from||to||query)&&<button type="button" className="home-text-button" onClick={()=>{setQuery('');setFrom('');setTo('');setPage(0)}}>Clear filters</button>}
    </details>
    {loading?<div className="home-skeleton" role="status" aria-label="Loading work history"/>:
    loadError?<p role="alert" className="home-banner">{loadError}</p>:
-   rows.length?<div className="st-list" data-tour="entries-ledger">{pagedRows.map(r=>
+   rows.length?<div className="st-list work-entry-list" data-tour="entries-ledger">{pagedRows.map(r=>
      <article className="home-card day-record-card" key={r.id}>
       <button type="button" aria-label={`View work for ${displayDate(r.date)}`} onClick={()=>setSelectedId(r.id)} disabled={busy}>
        <span className="day-record-copy"><strong>{displayDate(r.date)}</strong><small>{workLabel(r)}{r.totalParcels!=null?` · ${r.totalParcels} parcels`:''}{r.extraWork||Number(r.extra)>0?' · Extra work':''}</small></span>
