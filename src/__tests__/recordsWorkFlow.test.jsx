@@ -1,6 +1,6 @@
 import React from 'react';
 import {beforeEach,describe,it,expect,vi} from 'vitest';
-import {render,screen,fireEvent} from '@testing-library/react';
+import {render,screen,fireEvent,waitFor} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
 import RecordsHub from '../components/RecordsHub';
 const f=vi.hoisted(()=>({data:{},expenses:vi.fn()}));
@@ -63,6 +63,44 @@ describe('Driver-first Work records',()=>{
   expect(screen.getByTestId('expenses-private')).toHaveTextContent('hidden');
   fireEvent.click(screen.getByRole('button',{name:'Work'}));
   expect(document.querySelector('.work-entry-list')).toHaveTextContent('••••');
+ });
+ it('asks to delete a day in a centered dialog without hiding controls below work details',async()=>{
+  mount();
+  fireEvent.click(screen.getByRole('button',{name:/View work for Sat, 12 Sept 2026/}));
+  expect(screen.getByRole('button',{name:'Edit this day'})).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Delete record'}));
+  const confirmation=screen.getByRole('dialog',{name:'Delete saved day?'});
+  expect(confirmation).toHaveClass('drs-root');
+  expect(document.querySelector('.drs-confirm-panel')).toBeInTheDocument();
+  expect(document.querySelector('.drs-confirm-position')).toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:'Edit this day'})).not.toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'Keep day'})).toBeEnabled();
+  expect(screen.getByRole('button',{name:'Delete day'})).toBeEnabled();
+  expect(f.data.updateLogs).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button',{name:'Keep day'}));
+  expect(screen.queryByRole('heading',{name:'Delete saved day?'})).not.toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'Edit this day'})).toBeInTheDocument();
+  expect(f.data.updateLogs).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button',{name:'Delete record'}));
+  fireEvent.click(screen.getByRole('button',{name:'Delete day'}));
+  await waitFor(()=>expect(f.data.updateLogs).toHaveBeenCalledTimes(1));
+  expect(f.data.updateLogs.mock.calls[0][0]).toHaveLength(11);
+  expect(f.data.updateLogs.mock.calls[0][0].some(item=>item.id==='log-12')).toBe(false);
+  await waitFor(()=>expect(screen.queryByRole('dialog',{name:'Delete saved day?'})).not.toBeInTheDocument());
+ });
+ it('preserves the record and lets the driver retry if deletion fails',async()=>{
+  f.data.updateLogs.mockRejectedValueOnce(new Error('Offline'));
+  mount();
+  fireEvent.click(screen.getByRole('button',{name:/View work for Sat, 12 Sept 2026/}));
+  fireEvent.click(screen.getByRole('button',{name:'Delete record'}));
+  fireEvent.click(screen.getByRole('button',{name:'Delete day'}));
+  expect(await screen.findByText('This day could not be deleted. Please try again.')).toBeInTheDocument();
+  expect(screen.getByRole('dialog',{name:'Delete saved day?'})).toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'Keep day'})).toBeEnabled();
+  expect(screen.getByRole('button',{name:'Delete day'})).toBeEnabled();
+  fireEvent.click(screen.getByRole('button',{name:'Keep day'}));
+  expect(screen.getByRole('button',{name:'Edit this day'})).toBeInTheDocument();
+  expect(screen.getByText('12 days recorded')).toBeInTheDocument();
  });
  it('still opens a saved day for inspection without immediately changing it',()=>{
   mount();
