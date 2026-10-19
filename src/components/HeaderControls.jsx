@@ -9,14 +9,13 @@ import '../styles/app-header.css';
  * The same 44px avatar represents the current account everywhere.
  * An accessible image is used if available; otherwise initials are shown.
  */
+export function ProfileAvatar({name='Driver',photoURL}){
+ const initials=String(name||'Driver').trim().split(/\s+/).slice(0,2).map(x=>x?.[0]||'').join('').toUpperCase()||'D';
+ return photoURL?<img src={photoURL} alt="" referrerPolicy="no-referrer"/>:<span aria-hidden="true">{initials}</span>;
+}
 export function ProfileShortcut(){
- const {user}=useAuth();
- const navigate=useNavigate();
- const name=(user?.displayName||'Driver').trim();
- const initials=name.split(/\s+/).slice(0,2).map(x=>x?.[0]||'').join('').toUpperCase()||'D';
- return <button type="button" className="st-profile-shortcut" aria-label="Open profile" title="Profile" onClick={()=>navigate('/app/profile')}>
-  {user?.photoURL?<img src={user.photoURL} alt="" referrerPolicy="no-referrer"/>:<span aria-hidden="true">{initials}</span>}
- </button>;
+ const {user}=useAuth(),navigate=useNavigate();
+ return <button type="button" className="st-profile-shortcut" aria-label="Open profile" title="Profile" onClick={()=>navigate('/app/profile')}><ProfileAvatar name={user?.displayName} photoURL={user?.photoURL}/></button>;
 }
 
 export default function HeaderControls({hidden,onToggleMoney}){

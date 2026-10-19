@@ -15,6 +15,7 @@ const steps=[
  {path:"/app/records",target:'[data-tour="records-tabs"]',title:"Find what you need",body:"Work opens first. Switch to Expenses for receipts or Documents for statement checks and invoices.",action:"Continue"},
  {path:"/app/records",target:'[data-tour="nav-pay"]',title:"Check your pay",body:"Select a four-week period and compare the contractor statement with your own records.",action:"Explore Pay",nextPath:"/app/check-pay"},
  {path:"/app/check-pay",target:'[data-tour="check-manual"]',title:"Manual or AI",body:"Manual comparison is always available. AI helps extract statement figures, which you review before saving.",action:"Continue"},
+  {path:"/app/check-pay",title:"Finish the four-week cycle",body:"Once the statement is checked and any difference resolved, prepare an invoice from the verified payout if your contractor requires one. Confirm sending it yourself in your email app.",action:"Continue"},
  {path:"/app/check-pay",target:'[data-tour="nav-routes"]',title:"Plan your route",body:"Add an address and watch it appear on the map. Full optimisation is a Pro feature after free trial uses.",action:"Explore Routes",nextPath:"/app/routes"},
  {path:"/app/routes",target:'[data-tour="route-search"]',title:"Add delivery stops",body:"See your stops on the map and adjust the order. You can always return here from the Routes tab.",action:"Finish tour",nextPath:"/app/dashboard"},
  {path:"/app/dashboard",title:"You're ready",body:"Return to Home to start recording your real work. You can skip the guidance at any time.",action:"Start tracking"}
@@ -30,6 +31,15 @@ export default function AppWalkthrough(){
  const [open,setOpen]=useState(false);
  const [rect,setRect]=useState(null);
  const [targetMissing,setTargetMissing]=useState(false);
+
+ useEffect(()=>{
+   const replay=()=>{
+     setStep(0);setOpen(true);track('walkthrough_started');
+     nav(steps[0].path,{replace:true,state:{walkthrough:true}});
+   };
+   window.addEventListener('st-walkthrough-replay',replay);
+   return()=>window.removeEventListener('st-walkthrough-replay',replay);
+ },[nav]);
 
  useEffect(()=>{
    if(loading)return;
@@ -124,7 +134,7 @@ export default function AppWalkthrough(){
       <p className="mt-1 text-sm leading-5 text-[#a5afc0]">{s.body}</p>
       <div className="mt-4 flex items-center gap-3">
         <div className="flex flex-1 gap-1">{steps.map((_,i)=><span key={i} className={`h-1 flex-1 rounded-full ${i<=step?"bg-[#7567ff]":"bg-[#293249]"}`}/>)}</div>
-        {!s.target&&<button onClick={()=>finish(true)} className="min-h-[44px] rounded-xl bg-[#7567ff] px-5 py-2.5 text-sm font-bold text-white">{s.action}</button>}
+        {!s.target&&<button onClick={step===steps.length-1?()=>finish(true):advance} className="min-h-[44px] rounded-xl bg-[#7567ff] px-5 py-2.5 text-sm font-bold text-white">{s.action}</button>}
         {s.target&&<button onClick={advance} className="min-h-[44px] rounded-xl bg-[#7567ff] px-4 py-2 text-xs font-bold text-white">{targetMissing?'Continue':'Next'}</button>}
 
       </div>
