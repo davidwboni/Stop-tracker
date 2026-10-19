@@ -3,8 +3,8 @@ import {Link,useLocation} from 'react-router-dom';
 import {useData} from '../contexts/DataContext';
 import {useInvoice} from '../contexts/InvoiceContext';
 import useExpenses from '../hooks/useExpenses';
-import {isoDate,listPeriods} from '../features/payperiod/periods';
-import {moneyRevision,moneySummary,payoutComparison} from '../features/money/moneyModel';
+import {isoDate,listPeriods,getPeriodForDate,summarizePeriod} from '../features/payperiod/periods';
+import {moneyRevision,moneySummary,payoutComparison,validRange} from '../features/money/moneyModel';
 import InvoiceCreate from './InvoiceCreate';
 import {shareSavedInvoice} from '../services/invoicePdf';
 import {money} from '../features/home/homeModel';
@@ -16,7 +16,14 @@ export default function InvoicePage(){
  const [selected,setSelected]=useState(null),[creating,setCreating]=useState(false),[createDuplicate,setCreateDuplicate]=useState(false);
  const [revision,setRevision]=useState(null),[sending,setSending]=useState(false),[sendError,setSendError]=useState('');
  const periods=useMemo(()=>listPeriods(logs,payPeriodAnchor||isoDate(new Date()),13),[logs,payPeriodAnchor]);
- const p=periods.find(row=>row.id===(selected||loc.state?.periodId))||periods[0];
+ const requestedId=loc.state?.periodId;
+ // A checked period may be older than the 13 shown in the picker. Retain
+ // its original four-week dates instead of silently switching to today.
+ const savedRange=fromPay?periodRecords[requestedId]?.payoutComparison:null;
+ const archivedPeriod=savedRange&&validRange(savedRange)&&requestedId===savedRange.start+'_'+savedRange.end&&
+  getPeriodForDate(savedRange.start,savedRange.start).end===savedRange.end?
+  summarizePeriod(logs,{id:requestedId,start:savedRange.start,end:savedRange.end}):null;
+ const p=periods.find(row=>row.id===(selected||requestedId))||archivedPeriod||periods[0];
  const summary=useMemo(()=>moneySummary(logs,expenses.expenses,p),[logs,expenses.expenses,p.start,p.end]);
  const record=periodRecords[p.id];
  const checked=fromPay?payoutComparison(record,p,summary,revision,loading||expenses.loading||!!loadError||!!expenses.error):null;
@@ -49,7 +56,7 @@ export default function InvoicePage(){
      <p className="home-muted">{checked?.state==='stale'?'Your work or contractor figures changed since the check. Review them before preparing an invoice.':checked?.state==='difference'?'The payout difference needs reviewing and accepting before creating an invoice.':'A valid saved pay comparison is required before this invoice can be prepared.'}</p>
      <Link className="home-primary w-full" state={{periodId:p.id}} to="/app/check-pay">Return to Pay</Link>
    </section>:
-   fromPay&&prior.length&&!createDuplicate?<section className="home-card space-y-3">
+   (fromPay||creating)&&prior.length&&!createDuplicate?<section className="home-card space-y-3">
      <h2>Invoice already prepared for this period</h2>
      <p className="home-muted">Avoid invoicing the same work twice. You can email this saved invoice here or find it under Records.</p>
      <p className="font-semibold">Invoice {prior.map(i=>'INV-'+String(i.invoiceNumber).padStart(4,'0')).join(', ')}</p>

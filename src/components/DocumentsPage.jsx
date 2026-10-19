@@ -1,6 +1,6 @@
 import React,{useEffect} from 'react';
 import {Link} from 'react-router-dom';
-import {FileCheck2,FileText,ChevronRight,Plus} from 'lucide-react';
+import {FileCheck2,FileText,ChevronRight,Plus,ArrowRight} from 'lucide-react';
 import {useData} from '../contexts/DataContext';
 import {useInvoice} from '../contexts/InvoiceContext';
 import InvoiceHistory from './InvoiceHistory';
@@ -23,12 +23,24 @@ function statementStatus(record){
  if(record.payoutComparison)return 'Checked · View comparison';
  return 'Review statement details';
 }
+// A saved check is only a candidate for invoicing. InvoicePage verifies its
+// current work fingerprint again before allowing the checked amount to prefill.
+function invoiceCandidate(record){
+ const c=record?.payoutComparison;
+ if(!c||record.needsReview||c.scope!=='contractor_payout'||c.currency!=='GBP'||c.taxBasis!=='same_as_records'||!c.basisConfirmed||
+    !Number.isSafeInteger(c.statementPence)||c.statementPence<=0||!Number.isSafeInteger(c.expectedPence)||!c.start||!c.end)return false;
+ return (record.status==='checked'&&c.statementPence===c.expectedPence)||
+  (record.status==='reconciled'&&!!record.resolvedAt);
+}
 export default function DocumentsPage({embedded=false}){
  const {periodRecords={},loading,loadError}=useData();
  const invoice=useInvoice();
  const statements=Object.entries(periodRecords)
    .filter(([,record])=>record?.payoutComparison||record?.statementAmount!=null)
    .sort((a,b)=>b[0].localeCompare(a[0]));
+ const pendingInvoice=statements.find(([id,record])=>invoiceCandidate(record)&&
+   !(invoice.invoices||[]).some(saved=>saved.periodId===id));
+ const reviewPeriodId=statements[0]?.[0];
  useEffect(()=>{track('documents_opened');},[]);
  return <div className="home-screen st-page document-page">
   {!embedded&&<header className="home-row"><div><h1>Documents</h1><p className="home-muted">Your checked statements and created invoices.</p></div><FileText size={24} aria-hidden="true"/></header>}
@@ -50,7 +62,12 @@ export default function DocumentsPage({embedded=false}){
     invoice.loadError?<p role="alert" className="home-banner">{invoice.loadError} <button type="button" className="home-text-button" onClick={invoice.retry}>Retry</button></p>:
     <InvoiceHistory compact/>}
    <p className="home-muted text-xs document-invoice-info">Create an invoice only if your contractor needs one. A generated invoice isn't proof of payment.</p>
-   {!invoice.loading&&!invoice.loadError&&<Link className="home-secondary document-create" data-tour="invoice-generate" to="/app/invoice"><Plus size={18}/> Create invoice</Link>}
+   {!loading&&!loadError&&!invoice.loading&&!invoice.loadError&&<div className="document-invoice-actions">
+    {pendingInvoice?
+     <Link className="home-primary document-create" data-tour="invoice-generate" to="/app/invoice" state={{fromPay:true,periodId:pendingInvoice[0]}}><FileCheck2 size={18}/> Prepare from checked pay <ArrowRight size={17}/></Link>:
+     <Link className="home-secondary document-create" data-tour="invoice-generate" to="/app/check-pay" state={reviewPeriodId?{periodId:reviewPeriodId}:undefined}><FileCheck2 size={18}/> Check pay before invoicing <ArrowRight size={17}/></Link>}
+    <Link className="home-text-button document-invoice-manual" to="/app/invoice"><Plus size={16}/> Create invoice manually</Link>
+   </div>}
   </section>
  </div>;
 }
