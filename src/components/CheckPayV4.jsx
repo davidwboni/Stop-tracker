@@ -107,7 +107,7 @@ export default function CheckPayV4() {
           <ChevronDown size={17} aria-hidden="true" className="check-period-desktop-chevron"/>
          </span>
      </label>
-     <span className="money-badge check-status">{label}</span>
+     <span className="money-badge check-status">{needsPayRepair?'Needs pay details':label}</span>
    </div>
    {!fullPeriod&&<p className="home-banner">Choose a full pay period. <Link to="/app/periods" className="home-text-button">Set pay-period dates</Link></p>}
    {busy?<div className="home-skeleton check-skeleton" role="status" aria-label="Loading expected payout"/>:!summary.rows.length&&!unavailable?
@@ -118,7 +118,7 @@ export default function CheckPayV4() {
      </div>:
      <div className="check-expected">
        <p className="home-muted">Expected contractor payout</p>
-       <strong>{unavailable?'Unavailable':summary.payout==null?'Needs complete records':cash(summary.payout)}</strong>
+       <strong className={unavailable||summary.payout==null?'check-value-incomplete':''}>{unavailable?'Unavailable':summary.payout==null?'Pay details needed':cash(summary.payout)}</strong>
        <p className="home-muted text-xs">After contractor fees and charges · Before personal expenses and tax</p>
        {summary.rows.length>0&&<p className="home-muted text-xs check-period-days">{summary.rows.length} {summary.rows.length===1?'day':'days'} recorded</p>}
      </div>
