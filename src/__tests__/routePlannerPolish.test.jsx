@@ -14,6 +14,12 @@ vi.mock('../services/googleRoutes',()=>({optimizeRouteGoogle:vi.fn()}));
 vi.mock('../services/premium',()=>({getPremiumStatus:vi.fn(async()=>({isPro:false,routeOptimizationUses:0}))}));
 vi.mock('../services/productAnalytics',()=>({trackProductEvent:vi.fn()}));
 
+// Headless UI uses ResizeObserver in browsers; jsdom has no native implementation.
+vi.stubGlobal('ResizeObserver',class {
+ observe(){}
+ unobserve(){}
+ disconnect(){}
+});
 const depot={address:'Depot A',postcode:'RH10 1AA',latitude:51.11,longitude:-.18};
 const stop={address:'Delivery B',postcode:'RH10 2BB',latitude:51.12,longitude:-.2};
 const mount=()=>render(<MemoryRouter><RoutePlanner/></MemoryRouter>);
