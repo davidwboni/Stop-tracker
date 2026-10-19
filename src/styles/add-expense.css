@@ -45,3 +45,9 @@
 .ae-panel .qe-footer{position:relative;flex-shrink:0}
 @media(max-height:540px){.ae-choice{padding-top:2px}.ae-choice-card{min-height:74px;padding:10px}.ae-simple-fields{gap:10px}}
 @media(prefers-reduced-motion:reduce){.ae-choice-card,.ae-choice-card *{transition:none!important;animation:none!important}}
+
+/* The initial choice is a compact sheet, not a full-height empty form. */
+.ae-panel:has(.ae-choice){height:auto;max-height:min(540px,calc(100dvh - 80px));min-height:0}
+.ae-panel:has(.ae-choice) .qe-form{flex:0 1 auto}
+.ae-panel:has(.ae-choice) .ae-simple-scroll{flex:0 1 auto;padding-bottom:18px}
+@media(max-width:639px){.ae-panel:has(.ae-choice){border-radius:22px 22px 0 0}}
