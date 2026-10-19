@@ -44,7 +44,7 @@ describe('approved saved-day flow',()=>{
   fireEvent.click(screen.getByRole('button',{name:'Keep day'}));
   expect(state.save).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button',{name:'Delete record'}));
-  fireEvent.click(screen.getByRole('button',{name:'Confirm delete'}));
+  fireEvent.click(screen.getByRole('button',{name:'Delete day'}));
   await waitFor(()=>expect(state.save).toHaveBeenCalledTimes(1));
   expect(state.save.mock.calls[0][0]).toEqual([]);
  });
