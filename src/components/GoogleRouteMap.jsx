@@ -9,11 +9,12 @@ const DEFAULT_CENTER = { lat: 51.5074, lng: -0.1278 }; // London
 
 // Numbered teal pin, drawn inline so it matches the app's brand.
 function numberedIcon(index) {
+  const pinColor = index === 1 ? '#765DE8' : '#175fa2';
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 34 34">
-      <circle cx="17" cy="17" r="14" fill="#175fa2" stroke="#ffffff" stroke-width="3"/>
+      <circle cx="17" cy="17" r="14" fill="${pinColor}" stroke="#ffffff" stroke-width="3"/>
       <text x="17" y="22" text-anchor="middle" font-family="Arial, sans-serif"
-            font-size="13" font-weight="bold" fill="#ffffff">${index}</text>
+            font-size="13" font-weight="bold" fill="#ffffff">${index === 1 ? "S" : index - 1}</text>
     </svg>`;
   return {
     url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
@@ -38,7 +39,7 @@ const GoogleRouteMap = ({ addresses = [], fallback = null }) => {
   useEffect(() => {
     if (!isLoaded || !mapRef.current || addresses.length === 0) return;
     const bounds = new window.google.maps.LatLngBounds();
-    addresses.forEach((a) => bounds.extend({ lat: a.latitude, lng: a.longitude }));
+    addresses.forEach((a) => bounds.extend({ lat: Number(a.latitude), lng: Number(a.longitude) }));
     if (addresses.length === 1) {
       mapRef.current.setCenter(bounds.getCenter());
       mapRef.current.setZoom(15);
@@ -65,7 +66,7 @@ const GoogleRouteMap = ({ addresses = [], fallback = null }) => {
     );
   }
 
-  const path = addresses.map((a) => ({ lat: a.latitude, lng: a.longitude }));
+  const path = addresses.map((a) => ({ lat: Number(a.latitude), lng: Number(a.longitude) }));
 
   return (
     <div className="w-full h-full rounded-lg overflow-hidden border-2 border-border isolate">
@@ -85,7 +86,7 @@ const GoogleRouteMap = ({ addresses = [], fallback = null }) => {
         {addresses.map((a, i) => (
           <MarkerF
             key={a.id ?? `${a.latitude},${a.longitude}`}
-            position={{ lat: a.latitude, lng: a.longitude }}
+            position={{ lat: Number(a.latitude), lng: Number(a.longitude) }}
             icon={numberedIcon(i + 1)}
             title={a.address}
           />
