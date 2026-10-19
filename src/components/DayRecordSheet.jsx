@@ -23,9 +23,22 @@ export default function DayRecordSheet({log,onClose,onEdit,onDelete,hidden=false
    catch(_){setError('This day could not be deleted. Please try again.')}
    finally{setBusy(false)}
  }
- return <Dialog open onClose={()=>{if(!busy)onClose()}} className="drs-root">
+ return <Dialog open onClose={()=>{if(busy)return;if(confirmDelete){setConfirmDelete(false);setError('');}else onClose();}} className="drs-root">
   <div className="drs-backdrop" aria-hidden="true"/>
-  <div className="drs-position">
+  <div className={confirmDelete?'drs-position drs-confirm-position':'drs-position'}>
+   {confirmDelete?
+    <Dialog.Panel as={motion.div} initial={reducedMotion?false:{opacity:0,y:10,scale:.98}} animate={{opacity:1,y:0,scale:1}} transition={{duration:reducedMotion?0:0.18}} className="home-screen drs-confirm-panel">
+      <span className="drs-confirm-icon" aria-hidden="true"><Trash2 size={24}/></span>
+      <Dialog.Title className="drs-confirm-title">Delete saved day?</Dialog.Title>
+      <p className="drs-confirm-date">{formattedDate(log.date)}</p>
+      <p className="home-muted drs-confirm-description">This removes the work record. Any checked pay period containing this day will need reviewing. This cannot be undone.</p>
+      {error&&<p role="alert" className="home-error drs-confirm-error">{error}</p>}
+      <div className="drs-confirm-actions">
+        <button type="button" className="home-secondary" disabled={busy} onClick={()=>{setConfirmDelete(false);setError('');}}>Keep day</button>
+        <button type="button" className="drs-confirm-delete" disabled={busy} onClick={remove}>{busy?'Deleting…':'Delete day'}</button>
+      </div>
+    </Dialog.Panel>
+   :
    <Dialog.Panel as={motion.div} initial={reducedMotion?false:{opacity:0,y:22}} animate={{opacity:1,y:0}} transition={{duration:reducedMotion?0:0.2}} className="home-screen drs-panel">
     <header className="drs-header">
      <div><p className="home-muted text-sm">Saved workday</p><Dialog.Title className="drs-title">{formattedDate(log.date)}</Dialog.Title></div>
@@ -53,10 +66,9 @@ export default function DayRecordSheet({log,onClose,onEdit,onDelete,hidden=false
     </div>
     <footer className="drs-footer">
       <button className="home-primary w-full" disabled={busy||duplicate} onClick={onEdit}><Pencil size={18}/>Edit this day</button>
-      <button className="home-text-button drs-delete" onClick={()=>setConfirmDelete(v=>!v)} disabled={busy}><Trash2 size={16}/>Delete record</button>
-      {confirmDelete&&<div className="drs-confirm" role="group" aria-label="Confirm deletion"><p>Delete this saved day? Any checked pay period will need reviewing.</p><div><button className="home-secondary" disabled={busy} onClick={()=>setConfirmDelete(false)}>Keep day</button><button className="home-secondary home-error" disabled={busy} onClick={remove}>{busy?'Deleting…':'Confirm delete'}</button></div></div>}
+      <button className="home-text-button drs-delete" onClick={()=>{setError('');setConfirmDelete(true);}} disabled={busy}><Trash2 size={16}/>Delete record</button>
     </footer>
-   </Dialog.Panel>
+   </Dialog.Panel>}
   </div>
  </Dialog>;
 }
