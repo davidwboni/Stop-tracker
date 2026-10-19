@@ -58,17 +58,17 @@ export default function ExpensesOverview({privacyHidden}){
     </label>
     {!payPeriodAnchor&&<Link className="home-text-button text-sm" to="/app/periods">Set your pay-period dates</Link>}
     {costs.cached&&<p className="home-banner" role="status">Showing cached expense records{costs.pending?' · changes waiting to sync':''}.</p>}
-    {record?.needsReview&&<p className="home-banner" role="status">Expenses changed after this pay period was checked. <Link to="/app/check-pay" state={{periodId:period.id}} className="underline">Recheck pay</Link></p>}
+    {record?.needsReview&&<p className="home-banner" role="status">This period has a saved pay comparison that needs reviewing. <Link to="/app/check-pay" state={{periodId:period.id}} className="underline">Review pay</Link></p>}
     <section className="home-card simple-expenses-total" aria-busy={costs.loading}>
       <p className="home-muted text-sm">Your recorded expenses</p>
       <strong className="expense-total">{costs.loading?'…':costs.error?'Unavailable':cash(summary.own)}</strong>
       {!costs.loading&&!costs.error&&<p className="home-muted text-xs">{rows.length} {rows.length===1?'expense':'expenses'} recorded in this period</p>}
     </section>
     {costs.error&&<p role="alert" className="home-banner">{costs.error} <button className="home-text-button underline" onClick={costs.retry}>Retry</button></p>}
-    <section className="simple-expenses-history" aria-label="Your expenses">
+    {(costs.loading||rows.length>0)&&<section className="simple-expenses-history" aria-label="Your expenses">
       <div className="home-row"><h3>Your expenses</h3><span className="home-muted text-xs">Tap to view</span></div>
-      {costs.loading?<div className="home-skeleton" role="status" aria-label="Loading expenses"/>:rows.length?<div className="expense-list">{rows.map(rowButton)}</div>:!costs.error&&<div className="home-card home-empty"><h3>No expenses recorded this period</h3><p className="home-muted text-sm">Tap Add expense to keep track of what you've spent.</p></div>}
-    </section>
+      {costs.loading?<div className="home-skeleton" role="status" aria-label="Loading expenses"/>:<div className="expense-list">{rows.map(rowButton)}</div>}
+    </section>}
     {!!legacyCharges.length&&!costs.error&&<details className="simple-legacy">
       <summary>Previously saved contractor charges <span>{cash(summary.contractor)}</span></summary>
       <p className="home-muted text-xs">Older contractor charges are preserved separately from the expenses you paid yourself. Check these against your contractor's statement in Pay.</p>

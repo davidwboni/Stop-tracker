@@ -58,6 +58,14 @@ describe('Expenses overview',()=>{
   expect(screen.queryByText('My expenses')).not.toBeInTheDocument();
   expect(screen.getByRole('button',{name:'Add expense'})).toBeEnabled();
  });
+ it('does not repeat a large empty-history card when the expense total already says zero',()=>{
+  fixture.costs={...fixture.costs,expenses:[expenses[0]],rules:[]};
+  mount();
+  expect(screen.getByText('0 expenses recorded in this period')).toBeInTheDocument();
+  expect(screen.queryByRole('region',{name:'Your expenses'})).not.toBeInTheDocument();
+  expect(screen.queryByText('No expenses recorded this period')).not.toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'Add expense'})).toBeEnabled();
+ });
  it('masks amounts in records and expected costs',()=>{
   mount();fireEvent.click(screen.getByRole('button',{name:'Hide monetary amounts'}));
   expect(document.body.textContent).not.toMatch(/£\d/);

@@ -13,6 +13,16 @@ beforeEach(()=>{vi.clearAllMocks();fixture.save.mockResolvedValue();fixture.reta
 const mount=(props={})=>render(<HomeExpenseDialog open onClose={fixture.close} save={fixture.save} {...props}/>);
 async function file(){fireEvent.change(screen.getByLabelText('Receipt file'),{target:{files:[new File(['receipt'],'receipt.png',{type:'image/png'})]}});await screen.findByText('Photo selected');}
 describe('Add Expense',()=>{
+ it('opens a compact method choice without rendering an empty receipt container',()=>{
+  mount();
+  expect(screen.getByRole('group',{name:'How to add an expense'})).toBeInTheDocument();
+  expect(document.querySelector('.ae-panel:has(.ae-choice)')).toBeInTheDocument();
+  expect(document.querySelector('.ae-receipt')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:/Attach receipt/})).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:/Enter manually/}));
+  expect(document.querySelector('.ae-choice')).not.toBeInTheDocument();
+  expect(screen.getByRole('button',{name:/Attach receipt/})).toBeInTheDocument();
+ });
  it('new manual expenses always default to personal costs and do not require category',async()=>{
   mount({initialSource:'contractor_charge'});
   expect(screen.getByRole('group',{name:'How to add an expense'})).toBeInTheDocument();

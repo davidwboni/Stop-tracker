@@ -24,3 +24,11 @@
 .work-entry-list .day-record-copy small{font-size:12px;line-height:1.4}
 .work-entry-list .day-record-total{font-size:15px}
 @media(max-width:360px){.work-history-header .home-primary{padding:8px 10px}.work-entry-list .day-record-card>button{padding:11px 9px;gap:8px}.work-entry-list .day-record-total{font-size:13px}}
+
+/* The lookup is a small on-demand control, not an empty full-width card. */
+.work-search:not([open]){justify-self:start;width:fit-content;padding:0 12px!important;border-radius:11px}
+.work-search:not([open])>summary{min-height:44px;gap:9px}
+.work-search[open]{width:100%}
+.work-search[open]>summary{gap:9px}
+.work-pay-review{display:grid;gap:7px}
+.work-pay-review .home-text-button{justify-self:start;min-height:44px;display:inline-flex;align-items:center;gap:6px}

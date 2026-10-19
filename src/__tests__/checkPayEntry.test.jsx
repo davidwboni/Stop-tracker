@@ -48,6 +48,16 @@ describe('Check Pay entry',()=>{
  });
  it('does not invent trial counts when status fails and leaves manual free',async()=>{f.status.mockRejectedValue(new Error('offline'));open();await screen.findByRole('button',{name:'Retry AI availability'});expect(screen.queryByText(/3 free AI checks left/)).not.toBeInTheDocument();expect(screen.getByRole('button',{name:'Enter manually'})).toBeEnabled();});
  it('switches displayed period without changing pay setup',()=>{open();const select=screen.getByLabelText('Check Pay period');fireEvent.change(select,{target:{value:select.options[0].value}});expect(f.anchor).not.toHaveBeenCalled();});
+ it('does not strand the driver when saved work lacks historical contractor-fee details',()=>{
+  f.data.logs=[{id:'old-day',date:period.start,stops:120,totalParcels:158,total:281.1}];
+  open();
+  expect(screen.getByText('Pay details needed')).toBeInTheDocument();
+  expect(screen.getByText(/1 work entry needs historical pay details/)).toBeInTheDocument();
+  expect(screen.getByRole('link',{name:/Review 1 workday/})).toHaveAttribute('href','/app/records?payReview=1');
+  expect(screen.getByRole('link',{name:/Create invoice from statement/})).toHaveAttribute('href','/app/invoice');
+  expect(screen.queryByRole('button',{name:'Enter manually'})).not.toBeInTheDocument();
+  expect(document.querySelector('.check-value-incomplete')).toBeInTheDocument();
+ });
  it('shows an empty state instead of a zero expected payout',()=>{f.data.logs=[];open();expect(screen.getByText('No work logged yet')).toBeInTheDocument();expect(screen.queryByText('£0.00')).not.toBeInTheDocument();expect(screen.getByRole('button',{name:'Enter manually'})).toBeDisabled();});
  it('shows loading and errors without interim amounts',()=>{f.costs.loading=true;open();expect(screen.getByLabelText('Loading expected payout')).toBeInTheDocument();expect(screen.queryByText('£94.00')).not.toBeInTheDocument();});
  it('does not save on extraction or use gross earnings as payout',async()=>{f.extract.mockResolvedValue({statementAmount:100,contractorPayout:null,currency:'GBP'});open();await screen.findByText('2 free AI checks left');fireEvent.change(screen.getByLabelText('Choose statement file'),{target:{files:[new File(['image'],'statement.png',{type:'image/png'})]}});fireEvent.click(screen.getByRole('button',{name:'Read statement with AI'}));await screen.findByText('Review statement');expect(screen.getByLabelText('Final contractor payout (£)')).toHaveValue('');expect(f.save).not.toHaveBeenCalled();});
