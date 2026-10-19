@@ -24,6 +24,10 @@
 .document-invoice-options .home-text-button{font-size:12px}
 .document-invoice-info{line-height:1.45}
 .document-create{width:100%;min-height:49px;text-decoration:none}
+.document-invoice-actions{display:grid;gap:6px}
+.document-invoice-actions .document-create{display:flex;align-items:center;justify-content:center;gap:9px;padding-inline:12px}
+.document-invoice-actions .document-create svg:last-child{margin-left:auto;flex-shrink:0}
+.document-invoice-manual{min-height:44px;width:100%;display:flex;justify-content:center;align-items:center;gap:7px;font-size:13px}
 @media(max-width:390px){.document-invoice-bottom{padding-left:0}.document-invoice-amount{font-size:13px}.document-download{font-size:12px}.document-main strong{font-size:13px}}
 @media(min-width:800px){.document-page{padding-bottom:36px}}
 @media(prefers-reduced-motion:reduce){.document-page *{animation:none!important;transition:none!important}}
