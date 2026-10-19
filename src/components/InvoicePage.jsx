@@ -13,7 +13,8 @@ export default function InvoicePage(){
  const {logs=[],payPeriodAnchor,periodRecords={},loading,loadError}=useData();
  const invoice=useInvoice(),expenses=useExpenses(),loc=useLocation();
  const fromPay=loc.state?.fromPay===true;
- const [selected,setSelected]=useState(null),[creating,setCreating]=useState(false),[createDuplicate,setCreateDuplicate]=useState(false);
+ const fromPayHub=fromPay||loc.state?.startInvoice===true;
+ const [selected,setSelected]=useState(null),[creating,setCreating]=useState(loc.state?.startInvoice===true),[createDuplicate,setCreateDuplicate]=useState(false);
  const [revision,setRevision]=useState(null),[sending,setSending]=useState(false),[sendError,setSendError]=useState('');
  const periods=useMemo(()=>listPeriods(logs,payPeriodAnchor||isoDate(new Date()),13),[logs,payPeriodAnchor]);
  const requestedId=loc.state?.periodId;
@@ -44,12 +45,13 @@ export default function InvoicePage(){
  };
  const prepare=fromPay||creating;
  return <div className="home-screen st-page invoice-workflow" style={{maxWidth:760}}>
-  <Link className="home-text-button" to={fromPay?'/app/check-pay':'/app/records?tab=documents'} state={fromPay?{periodId:p.id}:undefined}>
-   ← {fromPay?'Back to Pay':'Documents'}
+  <Link className="home-text-button" to={fromPayHub?'/app/check-pay':'/app/records?tab=documents'} state={fromPayHub?{periodId:p.id}:undefined}>
+   ← {fromPayHub?'Back to Pay':'Documents'}
   </Link>
-  <header><h1>{fromPay?'Prepare your invoice':'Create invoice'}</h1>
-   <p className="home-muted">{fromPay?'From your checked four-week statement.':'For drivers who invoice their contractor.'}</p>
+  <header><h1>{fromPay?'Prepare your invoice':loc.state?.startInvoice?'Invoice from statement':'Create invoice'}</h1>
+   <p className="home-muted">{fromPay?'From your checked four-week statement.':loc.state?.startInvoice?'For an agreed contractor payment that you have not checked against your work.':'For drivers who invoice their contractor.'}</p>
   </header>
+  {loc.state?.startInvoice&&<div className="home-banner" role="status"><strong>Manual invoice · Pay not checked</strong><p>Use the amount on your contractor's statement and confirm the recipient and VAT details. This does not verify your earnings or mark you as paid.</p></div>}
   {blocked?<div className="home-skeleton" role="status" aria-label="Loading invoice records"/>:
    loadError||invoice.loadError||expenses.error?<p role="alert" className="home-banner">Invoice or pay records could not be verified. Retry when connected. <button className="home-text-button" onClick={()=>{invoice.retry?.();expenses.retry?.()}}>Retry</button></p>:
    fromPay&&!allowed?<section className="home-card space-y-3"><h2>Check your statement first</h2>
