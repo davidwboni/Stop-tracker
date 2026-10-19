@@ -17,13 +17,14 @@ import '../styles/expenses.css';
 const fmt=date=>new Date(date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});
 const maskPreference=()=>{try{return localStorage.getItem('home-hide-money')==='1';}catch(_){return false;}};
 
-export default function ExpensesOverview(){
+export default function ExpensesOverview({privacyHidden}){
   const {user}=useAuth();
   const {logs=[],payPeriodAnchor,periodRecords={}}=useData();
   const costs=useExpenses();
   const nav=useNavigate();
   const location=useLocation();
-  const [hidden,setHidden]=useState(maskPreference);
+  const [localHidden,setHidden]=useState(maskPreference);
+ const hidden=privacyHidden??localHidden;
   const [selectedPeriod,setSelectedPeriod]=useState(null);
   const [selected,setSelected]=useState(null);
   const [editor,setEditor]=useState(null);
