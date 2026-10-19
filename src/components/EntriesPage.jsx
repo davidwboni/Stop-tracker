@@ -48,7 +48,7 @@ export default function EntriesPage({privacyHidden}){
  }
  const updateFilter=(setter,value)=>{setter(value);setPage(0)};
  return <div className="home-screen st-page work-records">
-  <header className="home-row work-history-header"><div><h2>Your days</h2><p className="home-muted text-xs">{loading?'Loading days…':loadError?'Records unavailable':`${logs.length} ${logs.length===1?'day':'days'} recorded`}</p></div>
+  <header className="home-row work-history-header"><div><h2>Your days</h2><p className="home-muted text-xs">{loading?'Loading days…':loadError?'Records unavailable':needsPayReview?`${rows.length} ${rows.length===1?'day needs':'days need'} pay details`:`${logs.length} ${logs.length===1?'day':'days'} recorded`}</p></div>
    <button className="home-primary" onClick={()=>setEditing(isoDate(new Date()))} disabled={loading||!!loadError}><Plus size={18}/>Add day</button>
   </header>
   {loc.state?.walkthrough?<div className="home-card" data-tour="entry-example"><h2>Example work day</h2><p>150 stops · 185 parcels</p><p className="home-muted">Temporary example; nothing is saved.</p></div>:<>
