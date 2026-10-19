@@ -18,6 +18,8 @@ export default function EntriesPage({privacyHidden}){
  const {logs=[],loading,loadError,updateLogs}=useData();
  const loc=useLocation();
  const needsPayReview=new URLSearchParams(loc.search).get('payReview')==='1';
+ const periodId=loc.state?.periodId;
+ const reviewRange=needsPayReview&&/^\d{4}-\d{2}-\d{2}_\d{4}-\d{2}-\d{2}$/.test(periodId||'')?periodId.split('_'):null;
  const [query,setQuery]=useState('');
  const [from,setFrom]=useState('');
  const [to,setTo]=useState('');
@@ -29,7 +31,7 @@ export default function EntriesPage({privacyHidden}){
  const [localHidden]=useState(moneyPreference);
  const hidden=privacyHidden??localHidden;
  const missingPay=r=>{const day=summarizeDay(r);return !day||day.unavailable||day.fee==null;};
- const rows=logs.filter(r=>(!needsPayReview||missingPay(r))&&(!from||r.date>=from)&&(!to||r.date<=to)&&(!query||`${r.date} ${r.stops??''} ${r.notes||''}`.toLowerCase().includes(query.toLowerCase()))).sort((a,b)=>b.date.localeCompare(a.date));
+ const rows=logs.filter(r=>(!needsPayReview||(!!reviewRange&&r.date>=reviewRange[0]&&r.date<=reviewRange[1]&&missingPay(r)))&&(!from||r.date>=from)&&(!to||r.date<=to)&&(!query||`${r.date} ${r.stops??''} ${r.notes||''}`.toLowerCase().includes(query.toLowerCase()))).sort((a,b)=>b.date.localeCompare(a.date));
  const perPage=10,maxPage=Math.max(0,Math.ceil(rows.length/perPage)-1),currentPage=Math.min(page,maxPage),pagedRows=rows.slice(currentPage*perPage,(currentPage+1)*perPage);
  const selected=logs.find(r=>r.id===selectedId)||null;
  const duplicate=selected?logs.filter(r=>r.date===selected.date).length>1:false;
