@@ -15,6 +15,7 @@ const day=n=>({
  total:200+n,payStructureSnapshot:{model:'flat_stops',ratePerStop:2.08,contractorFeePercent:6}
 });
 beforeEach(()=>{
+ vi.stubGlobal('ResizeObserver',class{observe(){}unobserve(){}disconnect(){}});
  localStorage.clear();
  f.data={logs:Array.from({length:12},(_,n)=>day(n+1)),loading:false,loadError:'',updateLogs:vi.fn().mockResolvedValue({success:true})};
 });
