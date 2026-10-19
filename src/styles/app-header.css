@@ -10,3 +10,6 @@
 .st-visibility-toggle{width:44px;height:44px}
 .st-header-controls .home-icon svg{width:21px;height:21px}
 @media(prefers-reduced-motion:reduce){.st-profile-shortcut{transition:none;transform:none!important}}
+
+.st-profile-avatar{cursor:default;}
+.st-profile-avatar:active{transform:none;}
