@@ -14,7 +14,7 @@ function numberedIcon(index) {
     <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 34 34">
       <circle cx="17" cy="17" r="14" fill="${pinColor}" stroke="#ffffff" stroke-width="3"/>
       <text x="17" y="22" text-anchor="middle" font-family="Arial, sans-serif"
-            font-size="13" font-weight="bold" fill="#ffffff">${index}</text>
+            font-size="13" font-weight="bold" fill="#ffffff">${index === 1 ? "S" : index - 1}</text>
     </svg>`;
   return {
     url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
