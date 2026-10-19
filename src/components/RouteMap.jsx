@@ -13,10 +13,11 @@ L.Icon.Default.mergeOptions({
 
 // Create custom numbered icons
 const createNumberedIcon = (number) => {
+  const fill = number === 1 ? '#765DE8' : '#175fa2';
   return L.divIcon({
     className: 'custom-div-icon',
     html: `<div style="
-      background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
+      background: ${fill};
       color: white;
       border-radius: 50%;
       width: 32px;
@@ -28,7 +29,7 @@ const createNumberedIcon = (number) => {
       font-size: 14px;
       border: 3px solid white;
       box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    ">${number}</div>`,
+    ">${number === 1 ? 'S' : number - 1}</div>`,
     iconSize: [32, 32],
     iconAnchor: [16, 16],
   });
@@ -40,10 +41,14 @@ const FitBounds = ({ addresses }) => {
 
   useEffect(() => {
     if (addresses.length > 0) {
+      if (addresses.length === 1) {
+        map.setView([Number(addresses[0].latitude), Number(addresses[0].longitude)], 15);
+        return;
+      }
       const bounds = L.latLngBounds(
-        addresses.map(addr => [addr.latitude, addr.longitude])
+        addresses.map(addr => [Number(addr.latitude), Number(addr.longitude)])
       );
-      map.fitBounds(bounds, { padding: [50, 50] });
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
     }
   }, [addresses, map]);
 
@@ -54,11 +59,11 @@ const RouteMap = ({ addresses }) => {
   // Default center (UK)
   const defaultCenter = [51.5074, -0.1278];
   const center = addresses.length > 0
-    ? [addresses[0].latitude, addresses[0].longitude]
+    ? [Number(addresses[0].latitude), Number(addresses[0].longitude)]
     : defaultCenter;
 
   // Create polyline coordinates
-  const polylinePositions = addresses.map(addr => [addr.latitude, addr.longitude]);
+  const polylinePositions = addresses.map(addr => [Number(addr.latitude), Number(addr.longitude)]);
 
   return (
     <div className="w-full h-full rounded-lg overflow-hidden border-2 border-border isolate">
@@ -77,7 +82,7 @@ const RouteMap = ({ addresses }) => {
         {addresses.map((address, index) => (
           <Marker
             key={address.id}
-            position={[address.latitude, address.longitude]}
+            position={[Number(address.latitude), Number(address.longitude)]}
             icon={createNumberedIcon(index + 1)}
           >
             <Popup>
