@@ -6,6 +6,7 @@ import useExpenses from '../hooks/useExpenses';
 import {isoDate,listPeriods} from '../features/payperiod/periods';
 import {moneyRevision,moneySummary,payoutComparison} from '../features/money/moneyModel';
 import InvoiceCreate from './InvoiceCreate';
+import {shareSavedInvoice} from '../services/invoicePdf';
 import {money} from '../features/home/homeModel';
 
 export default function InvoicePage(){
@@ -13,7 +14,7 @@ export default function InvoicePage(){
  const invoice=useInvoice(),expenses=useExpenses(),loc=useLocation();
  const fromPay=loc.state?.fromPay===true;
  const [selected,setSelected]=useState(null),[creating,setCreating]=useState(false),[createDuplicate,setCreateDuplicate]=useState(false);
- const [revision,setRevision]=useState(null);
+ const [revision,setRevision]=useState(null),[sending,setSending]=useState(false),[sendError,setSendError]=useState('');
  const periods=useMemo(()=>listPeriods(logs,payPeriodAnchor||isoDate(new Date()),13),[logs,payPeriodAnchor]);
  const p=periods.find(row=>row.id===(selected||loc.state?.periodId))||periods[0];
  const summary=useMemo(()=>moneySummary(logs,expenses.expenses,p),[logs,expenses.expenses,p.start,p.end]);
@@ -50,8 +51,25 @@ export default function InvoicePage(){
    </section>:
    fromPay&&prior.length&&!createDuplicate?<section className="home-card space-y-3">
      <h2>Invoice already prepared for this period</h2>
-     <p className="home-muted">Avoid invoicing the same work twice. You can download or share the saved invoice from Records.</p>
+     <p className="home-muted">Avoid invoicing the same work twice. You can email this saved invoice here or find it under Records.</p>
      <p className="font-semibold">Invoice {prior.map(i=>'INV-'+String(i.invoiceNumber).padStart(4,'0')).join(', ')}</p>
+     {prior[0].status==='sent_self_reported'
+      ? <p role="status" className="home-banner">You marked this invoice sent. Delivery and payment have not been verified.</p>
+      : <div className="space-y-2">
+          <p className="home-muted text-sm">This invoice is prepared, but you haven't confirmed sending it.</p>
+          <button type="button" className="home-secondary w-full" disabled={sending||!prior[0].senderSnapshot||!prior[0].clientEmail} onClick={async()=>{
+            setSending(true);setSendError('');
+            try{await shareSavedInvoice(prior[0]);}catch(e){if(e?.name!=='AbortError')setSendError(e.message||'Could not open the email app. Download the invoice from Records.');}
+            finally{setSending(false);}
+          }}>{sending?'Opening email app…':'Email saved invoice'}</button>
+          <button type="button" className="home-primary w-full" disabled={sending} onClick={async()=>{
+            if(!window.confirm('Only mark sent if you actually emailed or shared this invoice with your contractor. Stop Tracker cannot verify delivery.'))return;
+            setSending(true);setSendError('');
+            try{await invoice.confirmInvoiceSent(prior[0].id);}catch(_){setSendError('Could not save the sent status. Retry when connected.');}
+            finally{setSending(false);}
+          }}>Yes, I've sent it</button>
+        </div>}
+     {sendError&&<p role="alert" className="home-banner home-error">{sendError}</p>}
      <Link className="home-primary w-full" to="/app/records?tab=documents">View saved invoice</Link>
      <button className="home-text-button" onClick={()=>{if(window.confirm('Prepare another invoice for the same four-week period? Check you are not billing twice.'))setCreateDuplicate(true);}}>Create another invoice anyway</button>
    </section>:

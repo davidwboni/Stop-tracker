@@ -5,7 +5,7 @@ import {MemoryRouter} from 'react-router-dom';
 import {webcrypto} from 'node:crypto';
 import InvoicePage from '../components/InvoicePage';
 import {moneyRevision,moneySummary} from '../features/money/moneyModel';
-const f=vi.hoisted(()=>({data:{},expenses:{},invoice:{}}));
+const f=vi.hoisted(()=>({data:{},expenses:{},invoice:{},confirmSent:vi.fn()}));
 vi.mock('../contexts/DataContext',()=>({useData:()=>f.data}));
 vi.mock('../contexts/InvoiceContext',()=>({useInvoice:()=>f.invoice}));
 vi.mock('../hooks/useExpenses',()=>({default:()=>f.expenses}));
@@ -22,7 +22,7 @@ async function checked(overrides={}){
     expectedPence:moneySummary(logs,expenses,period).payout,revision:await moneyRevision(logs,expenses,period),...overrides
   }};
 }
-beforeEach(()=>{f.data={logs,payPeriodAnchor:period.start,periodRecords:{},loading:false,loadError:''};f.expenses={expenses,loading:false,error:''};f.invoice={loading:false,loadError:'',invoices:[],retry:vi.fn()};});
+beforeEach(()=>{f.data={logs,payPeriodAnchor:period.start,periodRecords:{},loading:false,loadError:''};f.expenses={expenses,loading:false,error:''};f.invoice={loading:false,loadError:'',invoices:[],retry:vi.fn(),confirmInvoiceSent:f.confirmSent};});
 describe('Pay → Invoice handoff',()=>{
  it('prepares invoice from checked contractor payout, not gross earnings',async()=>{
   f.data.periodRecords[period.id]=await checked();mount();
@@ -57,4 +57,16 @@ describe('Pay → Invoice handoff',()=>{
   mount();await screen.findByText('Check your statement first');
   expect(screen.queryByText('InvoiceCreate')).not.toBeInTheDocument();
  });
+});
+
+it('lets the driver confirm sending a previously prepared invoice without creating another',async()=>{
+ f.data.periodRecords[period.id]=await checked();
+ f.invoice.invoices=[{id:'saved-invoice',invoiceNumber:8,periodId:period.id,status:'generated',senderSnapshot:{name:'Driver'},clientEmail:'billing@example.com'}];
+ f.confirmSent.mockResolvedValue();
+ vi.spyOn(window,'confirm').mockReturnValue(true);
+ mount();
+ await screen.findByText('Invoice already prepared for this period');
+ fireEvent.click(screen.getByRole('button',{name:"Yes, I've sent it"}));
+ await waitFor(()=>expect(f.confirmSent).toHaveBeenCalledWith('saved-invoice'));
+ expect(screen.queryByText('InvoiceCreate')).not.toBeInTheDocument();
 });

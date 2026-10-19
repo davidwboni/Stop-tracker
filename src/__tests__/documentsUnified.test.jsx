@@ -6,7 +6,7 @@ import DocumentsPage from '../components/DocumentsPage';
 import RecordsHub from '../components/RecordsHub';
 vi.mock('../contexts/AuthContext',()=>({useAuth:()=>({user:{uid:'test',displayName:'Driver Example'}})}));
 
-const f=vi.hoisted(()=>({data:{},invoice:{},download:vi.fn(),deleteInvoice:vi.fn()}));
+const f=vi.hoisted(()=>({data:{},invoice:{},download:vi.fn(),deleteInvoice:vi.fn(),confirmSent:vi.fn()}));
 vi.mock('../contexts/DataContext',()=>({useData:()=>f.data}));
 vi.mock('../contexts/InvoiceContext',()=>({useInvoice:()=>f.invoice}));
 vi.mock('../services/invoicePdf',()=>({downloadSavedInvoice:(...a)=>f.download(...a),shareSavedInvoice:vi.fn()}));
@@ -17,7 +17,7 @@ vi.mock('../components/ExpensesOverview',()=>({default:()=>null}));
 const id='2026-08-17_2026-09-13';
 const invoice={id:'one',invoiceNumber:6,clientName:'Sample contractor',invoiceAmount:'1000.00',dateFrom:'2026-08-17',dateTo:'2026-09-13',senderSnapshot:{name:'Driver'},clientSnapshot:{name:'Sample contractor'},status:'generated'};
 const mount=(embedded=false)=>render(<MemoryRouter initialEntries={['/app/documents']}><DocumentsPage embedded={embedded}/></MemoryRouter>);
-beforeEach(()=>{vi.clearAllMocks();f.download.mockResolvedValue();f.data={periodRecords:{[id]:{status:'reconciled',payoutComparison:{start:'2026-08-17',end:'2026-09-13'}}},loading:false,loadError:''};f.invoice={invoices:[invoice],loading:false,loadError:'',deleteInvoice:f.deleteInvoice,retry:vi.fn()};});
+beforeEach(()=>{vi.clearAllMocks();f.download.mockResolvedValue();f.data={periodRecords:{[id]:{status:'reconciled',payoutComparison:{start:'2026-08-17',end:'2026-09-13'}}},loading:false,loadError:''};f.invoice={invoices:[invoice],loading:false,loadError:'',deleteInvoice:f.deleteInvoice,confirmInvoiceSent:f.confirmSent,retry:vi.fn()};});
 describe('Documents on one page',()=>{
  it('shows saved statements and invoices without forcing a second tab',()=>{
   mount();
@@ -62,4 +62,13 @@ describe('Documents on one page',()=>{
   expect(screen.queryByRole('heading',{name:'Documents'})).not.toBeInTheDocument();
   expect(screen.getByRole('heading',{name:'Statements'})).toBeInTheDocument();
  });
+});
+
+it('lets a driver explicitly mark a saved invoice sent from Records without claiming delivery',async()=>{
+ vi.spyOn(window,'confirm').mockReturnValue(true);f.confirmSent.mockResolvedValue();
+ mount();
+ const opts=screen.getByText('More options').closest('details');
+ fireEvent.click(opts.querySelector('summary'));
+ fireEvent.click(screen.getByRole('button',{name:'Mark as sent'}));
+ await waitFor(()=>expect(f.confirmSent).toHaveBeenCalledWith('one'));
 });
