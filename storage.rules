@@ -1,20 +1,49 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    function owner(uid) { return request.auth != null && request.auth.uid == uid; }
+    function owner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+    function permanentOwner(uid) {
+      return owner(uid) && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+    function validProfileImage() {
+      return request.resource.size > 0
+        && request.resource.size <= 2 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+    }
+
     match /users/{uid}/receipts/{expenseId}/{fileId} {
       allow read, delete: if owner(uid);
-      allow create, update: if owner(uid)
-        && request.auth.token.firebase.sign_in_provider != 'anonymous'
-        && request.resource.size > 0 && request.resource.size <= 8 * 1024 * 1024
+      allow create, update: if permanentOwner(uid)
+        && request.resource.size > 0
+        && request.resource.size <= 8 * 1024 * 1024
         && request.resource.contentType.matches('image/(jpeg|png|webp)|application/pdf');
     }
-    // Preserve existing profile files and other owner-scoped folders, without
-    // allowing a broad wildcard to bypass receipt size/type restrictions.
-    match /users/{uid}/{file} { allow read, write: if owner(uid); }
-    match /users/{uid}/{folder}/{rest=**} {
-      allow read, write: if owner(uid) && folder != 'receipts';
+
+    // Current profile path, plus a legacy one-file location.
+    // Restrict writes so owners cannot upload arbitrary content or huge files.
+    match /users/{uid}/profile/photo {
+      allow read, delete: if owner(uid);
+      allow create, update: if permanentOwner(uid) && validProfileImage();
     }
-    match /{allPaths=**} { allow read, write: if false; }
+    match /users/{uid}/profile {
+      allow read, delete: if owner(uid);
+      allow create, update: if permanentOwner(uid) && validProfileImage();
+    }
+
+    // Retain owner read access to any older stored files without allowing
+    // the old broad wildcard to bypass receipt/profile upload limits.
+    match /users/{uid}/{file} {
+      allow read: if owner(uid);
+      allow write: if false;
+    }
+    match /users/{uid}/{folder}/{rest=**} {
+      allow read: if owner(uid);
+      allow write: if false;
+    }
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
   }
 }
