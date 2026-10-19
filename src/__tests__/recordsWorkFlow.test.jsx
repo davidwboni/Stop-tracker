@@ -44,6 +44,14 @@ describe('Driver-first Work records',()=>{
   fireEvent.click(screen.getByRole('button',{name:'Clear filters'}));
   expect(screen.getByText('Page 1 of 2')).toBeInTheDocument();
  });
+ it('filters missing historical pay details only inside the selected period',()=>{
+  f.data.logs=[day(2),{...day(4),payStructureSnapshot:undefined},day(10),{...day(14),payStructureSnapshot:undefined}];
+  render(<MemoryRouter initialEntries={[{pathname:'/app/records',search:'?payReview=1',state:{periodId:'2026-09-01_2026-09-07'}}]}><RecordsHub/></MemoryRouter>);
+  expect(screen.getByText('1 day needs pay details')).toBeInTheDocument();
+  expect(screen.getByRole('button',{name:/View work for Fri, 4 Sept 2026/})).toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:/View work for Mon, 14 Sept 2026/})).not.toBeInTheDocument();
+  expect(screen.getByRole('link',{name:/Back to Pay/})).toHaveAttribute('href','/app/check-pay');
+ });
  it('hides monetary amounts in Work and keeps the preference across Records tabs',()=>{
   mount();
   expect(screen.getAllByText('£212.00').length).toBeGreaterThan(0);
