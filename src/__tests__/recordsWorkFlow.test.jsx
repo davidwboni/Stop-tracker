@@ -33,7 +33,7 @@ describe('Driver-first Work records',()=>{
  it('paginates ordered workdays and reset filters without modifying records',()=>{
   mount();
   expect(screen.getByRole('navigation',{name:'Work record pages'})).toHaveTextContent('Page 1 of 2');
-  expect(screen.getByRole('button',{name:/View work for Wed, 30 Sept 2026/})).toBeInTheDocument();
+  expect(screen.getByRole('button',{name:/View work for Sat, 12 Sept 2026/})).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button',{name:'Next'}));
   expect(screen.getByText('Page 2 of 2')).toBeInTheDocument();
   const search=screen.getByText('Find a day').closest('details').querySelector('summary');
@@ -58,8 +58,8 @@ describe('Driver-first Work records',()=>{
  });
  it('still opens a saved day for inspection without immediately changing it',()=>{
   mount();
-  fireEvent.click(screen.getByRole('button',{name:/View work for Wed, 30 Sept 2026/}));
-  expect(screen.getByRole('heading',{name:/30 September 2026/})).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:/View work for Sat, 12 Sept 2026/}));
+  expect(screen.getByRole('heading',{name:/12 September 2026/})).toBeInTheDocument();
   expect(screen.getByRole('button',{name:'Edit this day'})).toBeInTheDocument();
   expect(f.data.updateLogs).not.toHaveBeenCalled();
  });
