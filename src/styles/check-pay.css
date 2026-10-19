@@ -107,3 +107,25 @@
 .check-repair-path h2{font-size:19px}
 .check-repair-path .home-primary,.check-repair-path .home-secondary{display:flex;align-items:center;justify-content:center;gap:9px;min-height:49px;text-align:center}
 .check-repair-path .home-muted{line-height:1.5}
+
+/* Driver-first Pay: tasks on the first screen, methods only after opting in. */
+.check-pay-page,.invoice-workflow{width:100%;min-width:0;box-sizing:border-box}
+.check-pay-page>*{min-width:0;max-width:100%}
+.check-simple-actions{display:grid;gap:10px}
+.check-simple-actions>.home-primary,.check-simple-actions>.home-secondary{
+  width:100%;min-height:52px;display:flex;align-items:center;justify-content:center;gap:10px;
+  padding:12px 14px;text-decoration:none;text-align:center;font-weight:700
+}
+.check-simple-actions>.home-muted{font-size:12px;line-height:1.5;margin:0 3px}
+.check-period-note{line-height:1.5;margin-top:6px}
+.check-help-details{border:1px solid var(--border);background:var(--card);border-radius:14px;padding:0 14px 11px;display:grid;gap:8px}
+.check-help-details>summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:49px;font-weight:650;font-size:13px}
+.check-help-details>summary::marker{content:''}
+.check-help-details>summary svg{color:var(--home-muted);flex-shrink:0}
+.check-help-details[open]>summary svg{transform:rotate(180deg)}
+.check-help-details>.home-muted{font-size:12px;line-height:1.55}
+.check-help-details>.home-text-button{display:inline-flex;align-items:center;gap:6px;min-height:44px;font-size:13px}
+.check-start>.home-text-button{justify-self:start}
+.check-start>.home-muted{font-size:13px}
+.check-draft>.check-help-details{padding:0 12px 12px}
+@media(prefers-reduced-motion:reduce){.check-help-details>summary svg{transition:none!important}}
