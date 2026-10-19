@@ -64,6 +64,16 @@ describe('Pay → Invoice handoff',()=>{
   expect(screen.getByTestId('prefill-period')).toHaveTextContent(old.id);
   expect(screen.getByTestId('prefill-total')).toHaveTextContent('94.00');
  });
+ it('opens a manual invoice for an incomplete period without pretending its amount was verified',async()=>{
+  f.data.logs=[{id:'old-day',date:period.start,total:100,stops:50}];
+  mount({startInvoice:true,periodId:period.id});
+  expect(screen.getByRole('heading',{name:'Invoice from statement'})).toBeInTheDocument();
+  expect(screen.getByText(/Manual invoice · Pay not checked/)).toBeInTheDocument();
+  await screen.findByText('InvoiceCreate');
+  expect(screen.getByTestId('prefill-total')).toHaveTextContent('unverified');
+  expect(screen.getByTestId('prefill-period')).toHaveTextContent(period.id);
+  expect(screen.getByRole('link',{name:/Back to Pay/})).toHaveAttribute('href','/app/check-pay');
+ });
  it('guards manual invoices against accidentally billing the same period twice',async()=>{
   f.invoice.invoices=[{id:'previous',invoiceNumber:12,periodId:period.id}];
   mount({});
