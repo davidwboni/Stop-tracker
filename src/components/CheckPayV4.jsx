@@ -42,6 +42,8 @@ export default function CheckPayV4() {
  const busy=loading||costs.loading, unavailable=busy||!!loadError||!!costs.error;
  const fullPeriod=!!payPeriodAnchor&&getPeriodForDate(payPeriodAnchor,period.start).id===period.id;
  const ready=fullPeriod&&!unavailable&&summary.rows.length>0&&summary.payout!=null;
+ const missingPayDays=summary.days.filter(d=>!d||d.unavailable||d.fee==null).length;
+ const needsPayRepair=fullPeriod&&!unavailable&&summary.rows.length>0&&summary.payout==null;
  const recordsKey=JSON.stringify([logs,costs.expenses.filter(e=>e.source==='contractor_charge'),period.start,period.end]);
  const previewStale=!!previewSnapshot&&previewSnapshot.key!==recordsKey;
  const previewExpected=previewSnapshot?.payout??summary.payout;
@@ -121,7 +123,7 @@ export default function CheckPayV4() {
        {summary.rows.length>0&&<p className="home-muted text-xs check-period-days">{summary.rows.length} {summary.rows.length===1?'day':'days'} recorded</p>}
      </div>
    }
-   {summary.payout==null&&!unavailable&&summary.rows.length>0&&<p className="home-banner">Some work records need their saved pay details checked before a payout can be calculated.</p>}
+   {needsPayRepair&&<p className="home-banner">Your expected payout is unavailable because {missingPayDays} work {missingPayDays===1?'entry needs':'entries need'} historical pay details. Your saved stops are still here.</p>}
  </section>
  {offerPrevious&&<button type="button" className="home-card check-completed-period" onClick={()=>{setSelected(previousComplete);setShowAnotherCheck(false);setError('');track('check_pay_period_changed');}}>
    <span><strong>Last completed period</strong><small>{fmt(previousComplete.start)} – {fmt(previousComplete.end)} · {previousComplete.daysLogged} days logged</small></span>
@@ -145,7 +147,14 @@ export default function CheckPayV4() {
  </Dialog>
  {(offline||costs.cached)&&<p className="home-banner" role="status">Showing cached records. {offline?'AI requires a connection. Unsaved drafts stay here while this screen is open.':'Refresh before relying on the comparison.'}</p>}
  {(loadError||costs.error)&&<div className="home-banner" role="alert">Records could not be loaded. <button className="home-text-button" onClick={()=>{costs.retry?.();forceSync?.();}}>Retry records</button></div>}
- {mode==='idle'&&<>
+  {mode==='idle'&&<>
+   {needsPayRepair&&<section className="home-card check-repair-path" aria-label="Continue with incomplete pay records">
+     <h2>Finish your pay period</h2>
+     <p className="home-muted text-sm">You can fix recorded pay details or prepare an invoice directly from your contractor's statement. An unchecked invoice is not a verified comparison.</p>
+     <Link className="home-primary w-full" to="/app/records?payReview=1" state={{periodId:period.id}}>Review {missingPayDays} {missingPayDays===1?'workday':'workdays'} <ArrowRight size={18} aria-hidden="true"/></Link>
+     <Link className="home-secondary w-full" to="/app/invoice" state={{periodId:period.id,startInvoice:true}}>Create invoice from statement <ArrowRight size={18} aria-hidden="true"/></Link>
+     <p className="home-muted text-xs">Enter and confirm the invoice amount yourself. Stop Tracker will not mark this period as checked or paid.</p>
+   </section>}
    {canInvoice&&<section className="home-card check-next-step" aria-label="Next step after checking">
      <div className="home-row"><h2><CheckCircle2 size={20} aria-hidden="true"/> Statement checked</h2><span className="money-badge">Ready</span></div>
      <p className="home-muted text-sm">Your checked statement is saved. Review the invoice amount and recipient before sending.</p>
@@ -158,7 +167,7 @@ export default function CheckPayV4() {
      <button type="button" className="home-primary w-full" onClick={viewSaved}>Review saved comparison <ArrowRight size={18}/></button>
    </section>}
    {checkedAlready&&<button type="button" className="home-text-button check-again-toggle" aria-expanded={showAnotherCheck} onClick={()=>setShowAnotherCheck(v=>!v)}>{showAnotherCheck?'Hide new comparison options':'Check a different statement'} <ChevronDown size={16} aria-hidden="true"/></button>}
-   {(!checkedAlready||showAnotherCheck)&&<section className="check-start" aria-label="Check your statement">
+   {(!checkedAlready||showAnotherCheck)&&(ready||!summary.rows.length)&&<section className="check-start" aria-label="Check your statement">
      <h2 className="check-question">{canInvoice?"Check again":"Check your statement"}</h2>
      <p className="home-muted text-sm">Choose how you'd like to compare your contractor's statement with your work.</p>
      <div className="check-actions">
