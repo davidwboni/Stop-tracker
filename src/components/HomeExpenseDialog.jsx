@@ -178,7 +178,7 @@ export default function HomeExpenseDialog({ open, onClose, save, isGuest, initia
               </div>
               {initial.source==='contractor_charge'&&<p className="home-banner text-xs">This older record was saved as a contractor charge. The charge type is preserved when you edit it; new contractor deductions belong in Pay.</p>}
             </fieldset>}
-            <div className={'ae-receipt '+(mode==='manual'?'ae-manual-receipt':'')}>
+            {mode!=='choice'&&<div className={'ae-receipt '+(mode==='manual'?'ae-manual-receipt':'')}>
               <input ref={input} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={attach} className="sr-only" tabIndex={-1} aria-label="Receipt file" disabled={busy}/>
               {mode==='ai'&&!review&&<button type="button" disabled={busy} className="home-secondary w-full" onClick={()=>input.current?.click()}><Paperclip size={18}/> {file?'Change receipt':'Choose receipt'}</button>}
               {mode==='manual'&&!file&&!existing&&<button type="button" disabled={busy} className="home-text-button ae-attach" onClick={()=>input.current?.click()}><Paperclip size={17}/> Attach receipt (optional)</button>}
@@ -190,7 +190,7 @@ export default function HomeExpenseDialog({ open, onClose, save, isGuest, initia
                 <p className="home-muted text-xs">{retain?(isGuest?'Saved only on this device.':'Saved privately with this expense.'):'The receipt will not be stored.'}</p>
               </div>}
               {mode==='ai'&&<p className="home-muted text-xs">JPEG, PNG, WebP or PDF · Up to 8 MB · 4 PDF pages maximum</p>}
-            </div>
+            </div>}
             {review&&<label className="ae-checkbox"><input type="checkbox" disabled={busy} checked={reviewed} onChange={e=>setReviewed(e.target.checked)}/>I've checked these details against my receipt</label>}
             {error&&<p role="alert" className="home-error">{error}</p>}
             {isGuest&&mode!=='choice'&&<p className="home-muted text-xs">Guest records are stored on this device only.</p>}
