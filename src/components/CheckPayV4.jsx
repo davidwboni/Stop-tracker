@@ -55,7 +55,7 @@ export default function CheckPayV4() {
  const invoicePath={pathname:'/app/invoice',state:{fromPay:true,periodId:period.id}};
  const label={none:'Not checked yet',incomplete:'Statement saved · Not compared',unavailable:'Not compared',stale:'Check again after changes',matched:'Checked · Matches',difference:'Payout differs',reconciled:'Difference resolved'}[comparison.state];
  const cash=p=>hidden?'••••':money(p/100);
- const dirty=mode!=='idle'&&mode!=='saved'&&(!!amount||!!file||!!aiDraft||JSON.stringify(details)!==JSON.stringify(emptyStatementDetails()));
+ const dirty=mode!=='idle'&&mode!=='saved'&&mode!=='savedPending'&&(!!amount||!!file||!!aiDraft||JSON.stringify(details)!==JSON.stringify(emptyStatementDetails()));
  draftRef.current=dirty;
  useEffect(()=>{mounted.current=true;track('check_pay_opened');return()=>{mounted.current=false;if(draftRef.current)track('statement_draft_abandoned');};},[]);
  useEffect(()=>{const changed=()=>setOffline(!navigator.onLine);window.addEventListener('online',changed);window.addEventListener('offline',changed);return()=>{window.removeEventListener('online',changed);window.removeEventListener('offline',changed);};},[]);
@@ -169,6 +169,7 @@ export default function CheckPayV4() {
     <p className="home-muted text-sm">You can still check a statement or invoice your contractor without fixing these first.</p>
     <Link className="home-text-button" to="/app/records?payReview=1" state={{periodId:period.id}}>Review those days <ArrowRight size={16}/></Link>
   </details>}
+  {hasSaved&&!checkedAlready&&<button className="home-text-button check-again-toggle" onClick={viewSaved}>Review previous statement <ArrowRight size={16}/></button>}
   {checkedAlready&&<button className="home-text-button check-again-toggle" onClick={viewSaved}>View saved statement <ArrowRight size={16}/></button>}
   <Link className="home-text-button check-history-link" to="/app/periods">Previous pay periods <ArrowRight size={16}/></Link>
  </>}
