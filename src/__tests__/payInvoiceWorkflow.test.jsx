@@ -14,7 +14,7 @@ vi.stubGlobal('crypto',webcrypto);
 const period={id:'2026-08-17_2026-09-13',start:'2026-08-17',end:'2026-09-13'};
 const logs=[{id:'day',date:period.start,total:100,stops:50,payStructureSnapshot:{contractorFeePercent:6}}];
 const expenses=[];
-const mount=()=>render(<MemoryRouter initialEntries={[{pathname:'/app/invoice',state:{fromPay:true,periodId:period.id}}]}><InvoicePage/></MemoryRouter>);
+const mount=(state={fromPay:true,periodId:period.id})=>render(<MemoryRouter initialEntries={[{pathname:'/app/invoice',state}]}><InvoicePage/></MemoryRouter>);
 async function checked(overrides={}){
   return {status:'checked',needsReview:false,payoutComparison:{
     scope:'contractor_payout',currency:'GBP',taxBasis:'same_as_records',basisConfirmed:true,
@@ -52,6 +52,27 @@ describe('Pay → Invoice handoff',()=>{
   await screen.findByText('Invoice already prepared for this period');
   expect(screen.getByText('Invoice INV-0007')).toBeInTheDocument();
   expect(screen.queryByText('InvoiceCreate')).not.toBeInTheDocument();
+ });
+ it('keeps a checked period older than the visible 13-period picker',async()=>{
+  const old={id:'2025-08-18_2025-09-14',start:'2025-08-18',end:'2025-09-14'};
+  const earlier=[{...logs[0],date:old.start}];
+  f.data.logs=earlier;
+  f.data.periodRecords[old.id]={status:'checked',payoutComparison:{scope:'contractor_payout',currency:'GBP',taxBasis:'same_as_records',basisConfirmed:true,
+   start:old.start,end:old.end,statementPence:9400,expectedPence:moneySummary(earlier,expenses,old).payout,revision:await moneyRevision(earlier,expenses,old)}};
+  mount({fromPay:true,periodId:old.id});
+  await screen.findByText('InvoiceCreate');
+  expect(screen.getByTestId('prefill-period')).toHaveTextContent(old.id);
+  expect(screen.getByTestId('prefill-total')).toHaveTextContent('94.00');
+ });
+ it('guards manual invoices against accidentally billing the same period twice',async()=>{
+  f.invoice.invoices=[{id:'previous',invoiceNumber:12,periodId:period.id}];
+  mount({});
+  fireEvent.click(screen.getByRole('button',{name:'Prepare invoice'}));
+  expect(await screen.findByText('Invoice already prepared for this period')).toBeInTheDocument();
+  expect(screen.queryByText('InvoiceCreate')).not.toBeInTheDocument();
+  vi.spyOn(window,'confirm').mockReturnValue(true);
+  fireEvent.click(screen.getByRole('button',{name:'Create another invoice anyway'}));
+  await screen.findByText('InvoiceCreate');
  });
  it('requires checked records even if link state asks to prepare',async()=>{
   mount();await screen.findByText('Check your statement first');
