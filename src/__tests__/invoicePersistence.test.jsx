@@ -6,7 +6,7 @@ const f=vi.hoisted(()=>({user:{uid:'a',isGuest:true},get:vi.fn(),transaction:vi.
 vi.mock('../contexts/AuthContext',()=>({useAuth:()=>({user:f.user})}));
 vi.mock('../services/firebase',()=>({db:{}}));
 vi.mock('firebase/firestore',()=>({doc:(_,collection,id)=>({collection,id}),getDoc:(...a)=>f.get(...a),runTransaction:(...a)=>f.transaction(...a)}));
-function Harness(){const c=useInvoice(),[error,setError]=React.useState('');return <><span>{c.loading?'Loading':'Ready'}</span><div data-testid="names">{c.invoices.map(i=>i.clientName).join(',')}</div><button disabled={c.loading} onClick={()=>c.addInvoice({invoiceNumber:1,clientName:'Synthetic Client'}).catch(e=>setError(e.message))}>Save invoice</button><p>{error}</p></>;}
+function Harness(){const c=useInvoice(),[error,setError]=React.useState('');return <><div data-testid="invoice-status">{c.invoices[0]?.status||'none'}</div><button onClick={()=>c.confirmInvoiceSent(c.invoices[0]?.id).catch(e=>setError(e.message))}>Confirm sent</button><span>{c.loading?'Loading':'Ready'}</span><div data-testid="names">{c.invoices.map(i=>i.clientName).join(',')}</div><button disabled={c.loading} onClick={()=>c.addInvoice({invoiceNumber:1,clientName:'Synthetic Client',status:'generated'}).catch(e=>setError(e.message))}>Save invoice</button><p>{error}</p></>;}
 beforeEach(()=>{localStorage.clear();f.user={uid:'a',isGuest:true};f.get.mockReset();f.get.mockResolvedValue({data:()=>({})});f.transaction.mockReset();});
 afterEach(()=>vi.restoreAllMocks());
 it('retains the invoice only after device persistence succeeds',async()=>{
@@ -49,4 +49,16 @@ it('remembers the contractor in the same write as the invoice',async()=>{
  expect(stored.defaultClientId).toBe('c-one');
  expect(stored.lastInvoiceNumber).toBe(7);
  expect(stored.revision).toBe(1);
+});
+
+it('marks an invoice as sent only after an explicit action and persists the self-reported status',async()=>{
+ render(<InvoiceProvider><Harness/></InvoiceProvider>);await screen.findByText('Ready');
+ fireEvent.click(screen.getByText('Save invoice'));
+ await waitFor(()=>expect(screen.getByTestId('invoice-status')).toHaveTextContent('generated'));
+ expect(JSON.parse(localStorage.getItem('invoiceData_a')).invoices[0].sentAt).toBeUndefined();
+ fireEvent.click(screen.getByText('Confirm sent'));
+ await waitFor(()=>expect(screen.getByTestId('invoice-status')).toHaveTextContent('sent_self_reported'));
+ const record=JSON.parse(localStorage.getItem('invoiceData_a')).invoices[0];
+ expect(record.sentAt).toBeTruthy();
+ expect(record.status).toBe('sent_self_reported');
 });

@@ -26,6 +26,7 @@ export default function InvoiceCreate({ prefill }) {
     defaultClientId,
     saveClient,
     addInvoice,
+    confirmInvoiceSent,
     getNextInvoiceNumber,
     senderProfile,
     saveSenderProfile,
@@ -61,6 +62,8 @@ export default function InvoiceCreate({ prefill }) {
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
   const [persisted, setPersisted] = useState(false);
+  const [sentConfirmed, setSentConfirmed] = useState(false);
+  const savedInvoiceId = useRef(null);
   const [shared, setShared] = useState(false);
   const [shareCanceled, setShareCanceled] = useState(false);
   const [emailCopied, setEmailCopied] = useState(false);
@@ -141,7 +144,13 @@ export default function InvoiceCreate({ prefill }) {
 
   // ---------- Generate PDF ----------
   const invoiceRecord = () => ({invoiceNumber,senderSnapshot:{...sender},clientSnapshot:{...client},notes,issuedDate:new Date().toISOString().slice(0,10),clientName:client.name,clientEmail:client.email||'',invoiceAmount:total.toFixed(2),dateFrom,dateTo,lines:[{desc:'Delivery services',qty:'1',rate:String(total)}],periodId:prefill?.periodId||null,status:'generated'});
-  const persist = async () => { if(persisted)return; await addInvoice(invoiceRecord(),{defaultClientId:client?.id});setPersisted(true); };
+  const persist = async () => {
+    if (persisted) return savedInvoiceId.current;
+    const item = await addInvoice(invoiceRecord(), {defaultClientId:client?.id});
+    savedInvoiceId.current = item.id;
+    setPersisted(true);
+    return item.id;
+  };
 
   const canGenerate = client && total > 0 && /^\d+(\.\d{1,2})?$/.test(invoiceAmount) && Number.isSafeInteger(Math.round(total*100)) && dateFrom && dateTo && dateFrom<=dateTo;
 
@@ -188,6 +197,17 @@ export default function InvoiceCreate({ prefill }) {
       if(e?.name==="AbortError")setShareCanceled(true);
       else setError(e?.message||"Could not prepare or share your invoice. Try again, or download the PDF.");
     }finally{setBusy(false);}
+  };
+  const confirmSent = async () => {
+    if (!persisted || !savedInvoiceId.current || sentConfirmed || busy) return;
+    if (!window.confirm("Only confirm if you actually sent this invoice to your contractor. Stop Tracker cannot verify email delivery.")) return;
+    setBusy(true); setError(null);
+    try {
+      await confirmInvoiceSent(savedInvoiceId.current);
+      setSentConfirmed(true);
+    } catch (_) {
+      setError("The invoice is saved, but we couldn't update its sent status. Retry from Records.");
+    } finally { setBusy(false); }
   };
   const saveRecipient = async () => {
     const email=recipientDraft.trim();
@@ -316,6 +336,14 @@ export default function InvoiceCreate({ prefill }) {
         </Alert>
       )}
 
+      {persisted && !sentConfirmed && (
+        <section className="rounded-[14px] border border-border bg-card p-4 space-y-2" aria-label="Invoice sending status">
+          <h3 className="font-semibold">Did you send your invoice?</h3>
+          <p className="text-xs text-muted-foreground">Opening an email app or downloading a PDF doesn't send it. Once you've sent it yourself, mark it here to finish this period's invoice task.</p>
+          <Button type="button" variant="outline" disabled={busy} onClick={confirmSent} className="w-full min-h-[44px]">Yes, I've sent it</Button>
+        </section>
+      )}
+      {sentConfirmed && <p role="status" className="home-banner">Marked as sent by you. Email delivery and contractor payment aren't verified. <a className="home-text-button" href="/app/check-pay">Back to Pay</a></p>}
       <div className="space-y-2">
         {!client?.email&&client&&<p className="text-xs text-amber-700 dark:text-amber-300">Add a billing email for this client to send the invoice. You can still download a PDF.</p>}
         <Button onClick={handleShare} disabled={busy||!canGenerate||!client?.email} className="w-full min-h-[52px] bg-primary text-primary-foreground">
