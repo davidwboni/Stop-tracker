@@ -59,6 +59,30 @@ jobs:
             rm -f "$response"
           done
           unset access_token
+      - name: Diagnose Firestore and Storage resource access
+        shell: bash
+        run: |
+          set -euo pipefail
+          access_token="$(gcloud auth print-access-token)"
+          endpoints=(
+            "https://firestore.googleapis.com/v1/projects/stop-tracker-v1/databases/%28default%29"
+            "https://storage.googleapis.com/storage/v1/b/stop-tracker-v1.appspot.com?fields=name,location"
+          )
+          names=("Firestore database metadata" "Storage bucket region metadata")
+          for i in "${!endpoints[@]}"; do
+            output="$(mktemp)"
+            status="$(curl --silent --show-error --output "$output" --write-out '%{http_code}' --header "Authorization: Bearer $access_token" "${endpoints[$i]}")"
+            echo "${names[$i]} HTTP $status"
+            if [ "$status" != "200" ]; then
+              jq -r '.error.message // .error.status // "Resource lookup failed"' "$output" | head -c 700
+              echo
+            else
+              jq -c '{name,location}' "$output" | head -c 300
+              echo
+            fi
+            rm -f "$output"
+          done
+          unset access_token
       - name: Deploy six AI and route callables to verified project
         run: |
           npx --yes firebase-tools@latest deploy \
