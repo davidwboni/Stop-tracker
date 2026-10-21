@@ -149,6 +149,54 @@ jobs:
             echo
           fi
           rm -f "$output"
+      - name: Run one synthetic statement through DeepSeek (no user files)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv /tmp/st-synthetic-venv
+          /tmp/st-synthetic-venv/bin/pip -q install pillow
+          /tmp/st-synthetic-venv/bin/python - <<'PY'
+          from PIL import Image,ImageDraw,ImageFont
+          import io,base64,json
+          img=Image.new("RGB",(1200,490),"white")
+          d=ImageDraw.Draw(img)
+          try: font=ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",31)
+          except OSError: font=ImageFont.load_default()
+          lines=["TEST ONLY: Fictional contractor pay statement","Period: 14 Sep 2026 to 11 Oct 2026","Currency: GBP","Total gross work earnings: GBP 100.00","Contractor admin fee: GBP 6.00","Final contractor payout: GBP 94.00","VAT treatment: excluded"]
+          for i,line in enumerate(lines): d.text((35,30+62*i),line,font=font,fill="black")
+          buf=io.BytesIO();img.save(buf,format="PNG")
+          payload={"data":{"images":[{"mimeType":"image/png","fileBase64":base64.b64encode(buf.getvalue()).decode("ascii")}]}}
+          with open("/tmp/st-synthetic-payload.json","w") as out:json.dump(payload,out)
+          PY
+          api_key="$(node -e 'const s=require("fs").readFileSync("src/services/firebase.js","utf8");const line=s.split(String.fromCharCode(10)).find(x=>x.includes("apiKey:"));if(!line)process.exit(1);process.stdout.write(line.split(String.fromCharCode(34))[1]);')"
+          email="st-ai-probe-$(openssl rand -hex 12)@example.invalid"
+          password="$(openssl rand -hex 20)"
+          register="$(mktemp)"
+          body="$(jq -nc --arg e "$email" --arg p "$password" '{email:$e,password:$p,returnSecureToken:true}')"
+          sign_code="$(curl --max-time 20 --silent --show-error -o "$register" -w '%{http_code}' -H 'content-type: application/json' -d "$body" "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=$api_key")"
+          if [ "$sign_code" != "200" ]; then
+            echo "Synthetic test could not create temporary Firebase identity (HTTP $sign_code)."
+            rm -f "$register" /tmp/st-synthetic-payload.json
+            exit 1
+          fi
+          token="$(jq -r .idToken "$register")"
+          rm -f "$register"
+          cleanup() {
+            curl --silent --show-error -H 'content-type: application/json' -d "$(jq -nc --arg t "$token" '{idToken:$t}')" "https://identitytoolkit.googleapis.com/v1/accounts:delete?key=$api_key" >/dev/null || true
+            rm -f /tmp/st-synthetic-payload.json
+          }
+          trap cleanup EXIT
+          url="$(gcloud functions describe extractStatement --gen2 --region=us-central1 --project=stop-tracker-v1 --format='value(serviceConfig.uri)')"
+          result="$(mktemp)"
+          response_code="$(curl --max-time 116 --silent --show-error -o "$result" -w '%{http_code}' -H 'content-type: application/json' -H "Authorization: Bearer $token" --data-binary @/tmp/st-synthetic-payload.json "$url")"
+          echo "Synthetic DeepSeek extraction HTTP $response_code"
+          if [ "$response_code" = "200" ]; then
+            jq -c '{hasResult:(.result!=null),hasStops:(.result.statementStops!=null),hasGross:(.result.statementAmount!=null),hasPayout:(.result.contractorPayout!=null)}' "$result"
+          else
+            jq -c '{code:.error.status,message:.error.message}' "$result" | head -c 350 || true
+            echo
+          fi
+          rm -f "$result"
       - name: Check error log access without printing customer data
         shell: bash
         run: |
