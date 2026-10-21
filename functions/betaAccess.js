@@ -22,4 +22,11 @@ async function reserveBetaRequest(tx, db, now, HttpsError){
     throw new HttpsError('resource-exhausted','Beta testing usage limit reached today. Please try tomorrow.');
   tx.set(ref,{requests:count+1,updatedAt:now},{merge:true});
 }
-module.exports={betaAccess,reserveBetaRequest,END_UTC,DAILY_SHARED_LIMIT,DAILY_ACCOUNT_LIMIT};
+// Legacy usage records can contain malformed counts. Treat invalid values as
+// exhausted rather than granting extra free trials or returning NaN/null.
+function safeUsageCount(value){
+  if(value===undefined||value===null||value==='')return 0;
+  const n=Number(value);
+  return Number.isSafeInteger(n)&&n>=0?n:3;
+}
+module.exports={betaAccess,reserveBetaRequest,safeUsageCount,END_UTC,DAILY_SHARED_LIMIT,DAILY_ACCOUNT_LIMIT};
