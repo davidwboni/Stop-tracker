@@ -16,8 +16,11 @@ export function summarizeDay(log, expenses = []) {
   const config = log.payStructureSnapshot;
   const gross = Number(log.total);
   if (log.total == null || !Number.isFinite(gross)) return { unavailable: true };
-  const feeRate = config?.contractorFeePercent;
-  const knownFee = feeRate != null && feeRate !== '' && typeof feeRate !== 'boolean' && Number.isFinite(Number(feeRate)) && Number(feeRate) >= 0 && Number(feeRate) <= 100;
+  const validRate = value => value != null && value !== '' && typeof value !== 'boolean' && Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 100;
+  // Historic fee confirmation is separate: never replace an old rate snapshot
+  // with a partial object that would break editing or silently reprice gross.
+  const feeRate = validRate(config?.contractorFeePercent) ? config.contractorFeePercent : log.historicalFeeConfirmation?.percent;
+  const knownFee = validRate(feeRate);
   const grossPence = pennies(gross);
   const feePence = knownFee ? Math.round(grossPence * Number(feeRate) / 100) : null;
   const dailyExpenses = expenses.filter(e => e.date === log.date && !e.periodOnly);
