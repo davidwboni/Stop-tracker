@@ -16,9 +16,10 @@ describe('confirmed historical contractor fee recovery',()=>{
  });
  it('keeps original work fields, earnings, existing rates and out-of-period entries unchanged',()=>{
   const logs=applyConfirmedHistoricalFee(saved,p,'6','2026-10-21T22:00:00Z');
-  expect(logs[0]).toMatchObject({id:'a',stops:120,totalParcels:158,total:281.1,notes:'keep intact',payStructureSnapshot:{contractorFeePercent:6},historicalFeeConfirmation:{percent:6,method:'driver_confirmed_period'}});
+  expect(logs[0]).toMatchObject({id:'a',stops:120,totalParcels:158,total:281.1,notes:'keep intact',historicalFeeConfirmation:{percent:6,method:'driver_confirmed_period'}});
   expect(logs[1]).toBe(saved[1]);expect(logs[3]).toBe(saved[3]);
-  expect(logs[2].payStructureSnapshot.contractorFeePercent).toBe(6);
+  expect(logs[2].payStructureSnapshot.contractorFeePercent).toBe('');
+  expect(logs[2].historicalFeeConfirmation.percent).toBe(6);
   expect(logs[0].historicalFeeConfirmation.confirmedAt).toBe('2026-10-21T22:00:00Z');
   expect(saved[0].payStructureSnapshot).toBeUndefined();
  });
@@ -42,8 +43,8 @@ describe('confirmed historical contractor fee recovery',()=>{
  });
  it('rejects invalid fee percentages including negative, over 100 and malformed strings',()=>{
   for(const x of ['',null,-1,101,'6.123','abc','6e2',true])expect(()=>applyConfirmedHistoricalFee(saved,p,x)).toThrow();
-  expect(applyConfirmedHistoricalFee(saved,p,'0')[0].payStructureSnapshot.contractorFeePercent).toBe(0);
-  expect(applyConfirmedHistoricalFee(saved,p,'100')[0].payStructureSnapshot.contractorFeePercent).toBe(100);
+  expect(applyConfirmedHistoricalFee(saved,p,'0')[0].historicalFeeConfirmation.percent).toBe(0);
+  expect(applyConfirmedHistoricalFee(saved,p,'100')[0].historicalFeeConfirmation.percent).toBe(100);
  });
  it('does not permit reapplying to all-complete records',()=>{
   const patched=applyConfirmedHistoricalFee(saved,p,6);
