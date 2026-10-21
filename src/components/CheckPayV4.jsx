@@ -31,7 +31,7 @@ export default function CheckPayV4() {
  const [amount,setAmount]=useState(''),[basis,setBasis]=useState(false),[error,setError]=useState('');
  const [feeRepairOpen,setFeeRepairOpen]=useState(false),[feeRateInput,setFeeRateInput]=useState(''),[feeConfirmed,setFeeConfirmed]=useState(false),[feeRepairBusy,setFeeRepairBusy]=useState(false),[feeRepairError,setFeeRepairError]=useState('');
  const [file,setFile]=useState(null),[aiDraft,setAiDraft]=useState(null),[stage,setStage]=useState(''),[saving,setSaving]=useState(false);
- const [entitlement,setEntitlement]=useState(null),[entitlementError,setEntitlementError]=useState(false),[statusRequest,setStatusRequest]=useState(0);
+ const [entitlement,setEntitlement]=useState(null),[entitlementError,setEntitlementError]=useState(false),[entitlementCode,setEntitlementCode]=useState(''),[statusRequest,setStatusRequest]=useState(0);
  const [revision,setRevision]=useState(null),[offline,setOffline]=useState(!navigator.onLine);
  const [hidden,setHidden]=useState(()=>{try{return localStorage.getItem('home-hide-money')==='1';}catch(_){return false;}});
  const lock=useRef(false), mounted=useRef(true), draftRef=useRef(false);
@@ -65,18 +65,20 @@ export default function CheckPayV4() {
  useEffect(()=>{if(!dirty)return;const guard=e=>{e.preventDefault();e.returnValue='';};window.addEventListener('beforeunload',guard);return()=>window.removeEventListener('beforeunload',guard);},[dirty]);
  useEffect(()=>{
   let active=true;
-  setEntitlement(null);setEntitlementError(false);
+  setEntitlement(null);setEntitlementError(false);setEntitlementCode('');
   if(offline)return;
   getPremiumStatus().then(status=>{
     if(!active)return;
     if(typeof status?.isPro!=='boolean'||!Number.isSafeInteger(status.statementAiUses)||status.statementAiUses<0){
       const error=new Error('Unexpected AI entitlement response');error.code='invalid-response';throw error;
     }
-    setEntitlement(status);
+    setEntitlementCode('');setEntitlement(status);
   }).catch(err=>{
     if(!active)return;
     const code=String(err?.code||'');
     setEntitlementError(code.includes('unauthenticated')?'auth':code.includes('permission-denied')?'permission':'connection');
+    const safeCode=/^(?:functions\/[a-z-]{1,35}|invalid-response)$/.test(code)?code:'unknown';
+    setEntitlementCode(safeCode);
     // No client-side fallback can reliably determine Free uses or Pro access.
     track('statement_ai_access_check_failed',{reason:code.includes('unauthenticated')?'auth':code.includes('permission-denied')?'permission':'other'});
   });
@@ -195,7 +197,7 @@ export default function CheckPayV4() {
      </section>
      <section className="home-card check-action"><div className="check-action-top"><Sparkles size={23}/><span className="money-badge">{entitlement?.isPro?'Pro':entitlement?.betaAccess?'Beta':entitlement?'AI':entitlementError?'Unavailable':'Checking'}</span></div>
        <h3>Upload with AI</h3><p className="home-muted" role="status">{offline?'Connect to use AI':entitlement?entitlement.isPro?'Included with Pro':entitlement.betaAccess?'Free during testing · up to 8 a day':entitlement.statementAiUses<3?`${3-entitlement.statementAiUses} free AI checks left`:'Free checks used · Pro required':entitlementError==='auth'?'Sign in again to check AI access':entitlementError==='permission'?'AI access was rejected':entitlementError?'AI service check failed':'Checking AI access…'}</p>
-       {entitlementError&&<p className="home-muted text-xs" role="alert">The AI service did not confirm access. Retry, or enter the totals manually. No statement was uploaded.</p>}
+       {entitlementError&&<p className="home-muted text-xs" role="alert">The AI service did not confirm access. Retry, or enter the totals manually. No statement was uploaded. {entitlementCode&&<span className="block text-xs">Support code: {entitlementCode}</span>}</p>}
        {entitlementError?<button className="home-secondary" onClick={()=>setStatusRequest(n=>n+1)}>Retry AI availability</button>:entitlement&&!entitlement.isPro&&!entitlement.betaAccess&&entitlement.statementAiUses>=3?<button className="home-secondary" onClick={()=>navigate('/app/upgrade')}>View Pro</button>:<label className={'home-secondary check-file '+(offline||!entitlement?'check-disabled':'')}>Choose a file<input aria-label="Choose statement file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp,.pdf" disabled={offline||!entitlement} onChange={e=>{chooseFile(e.target.files?.[0]);e.target.value='';}}/></label>}
      </section>
    </div>
