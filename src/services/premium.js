@@ -1,9 +1,18 @@
 import { httpsCallable } from "firebase/functions";
-import { functions } from "./firebase";
+import { functions, auth } from "./firebase";
 
 export const getPremiumStatus = async () => {
-  const { data } = await httpsCallable(functions, "getPremiumStatus", {timeout:15000})();
-  return data;
+  const callable = httpsCallable(functions, "getPremiumStatus", {timeout:25000});
+  try {
+    return (await callable()).data;
+  } catch (error) {
+    // Restore an expired Firebase login once; never fake premium/trial access.
+    if (error?.code === "functions/unauthenticated" && auth.currentUser) {
+      await auth.currentUser.getIdToken(true);
+      return (await callable()).data;
+    }
+    throw error;
+  }
 };
 
 const fileToBase64 = (fileOrBlob) => new Promise((resolve, reject) => {
