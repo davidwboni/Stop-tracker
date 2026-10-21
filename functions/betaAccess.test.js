@@ -26,3 +26,15 @@ test('shared budget reserves at most 100 requests per day without storing person
  await assert.rejects(reserveBetaRequest(tx,db,Date.UTC(2026,9,21),HttpError),{code:'resource-exhausted'});
  assert.ok(writes.every(x=>Object.keys(x).sort().join(',')==='requests,updatedAt'));
 });
+
+test('legacy usage counters are valid integers and cannot grant extra free attempts',()=>{
+ const {safeUsageCount}=require('./betaAccess');
+ assert.equal(safeUsageCount(undefined),0);
+ assert.equal(safeUsageCount(null),0);
+ assert.equal(safeUsageCount(''),0);
+ assert.equal(safeUsageCount('2'),2);
+ assert.equal(safeUsageCount(3),3);
+ for(const input of [NaN,Infinity,-1,1.5,'oops','Infinity',{},true,Number.MAX_SAFE_INTEGER+10]){
+   assert.equal(safeUsageCount(input),3,'invalid usage values must be treated as exhausted');
+ }
+});
