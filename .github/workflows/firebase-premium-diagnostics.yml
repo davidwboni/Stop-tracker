@@ -55,6 +55,33 @@ jobs:
               echo "IAM policy not readable by deployment identity"
             fi
           done
+      - name: Repair callable HTTP invocation for receipt AI (Firebase auth remains mandatory)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for service in getreceiptstatus extractexpensereceipt; do
+            echo "Granting unauthenticated Cloud Run transport access to $service; callable handler enforces Firebase Auth."
+            gcloud run services add-iam-policy-binding "$service" --region=us-central1 --project=stop-tracker-v1 --member=allUsers --role=roles/run.invoker --quiet
+            policy="$(gcloud run services get-iam-policy "$service" --region=us-central1 --project=stop-tracker-v1 --format=json)"
+            printf '%s' "$policy" | jq -e '[.bindings[]? | select(.role=="roles/run.invoker") | .members[]? | select(.=="allUsers")] | length>0' >/dev/null
+            echo "Confirmed public HTTP transport permission on $service"
+          done
+      - name: Confirm both receipt endpoints still require Firebase login
+        shell: bash
+        run: |
+          set -euo pipefail
+          for fn in getReceiptStatus extractExpenseReceipt; do
+            url="$(gcloud functions describe "$fn" --gen2 --region=us-central1 --project=stop-tracker-v1 --format='value(serviceConfig.uri)')"
+            output="$(mktemp)"
+            status="$(curl --max-time 25 --silent --show-error --output "$output" --write-out '%{http_code}' -X POST -H 'content-type: application/json' --data '{"data":{}}' "$url")"
+            echo "$fn HTTP $status (unsigned must be 401)"
+            if [ "$status" != "401" ]; then
+              jq -c '{error: .error.status}' "$output" 2>/dev/null || true
+              rm -f "$output"
+              exit 1
+            fi
+            rm -f "$output"
+          done
       - name: Check error log access without printing customer data
         shell: bash
         run: |
