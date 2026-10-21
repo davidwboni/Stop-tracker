@@ -136,6 +136,18 @@ describe('Check Pay entry',()=>{
  });
  it('shows an empty state instead of a zero expected payout',()=>{f.data.logs=[];open();expect(screen.getByText('No work logged yet')).toBeInTheDocument();expect(screen.queryByText('£0.00')).not.toBeInTheDocument();expect(screen.getByRole('button',{name:'Check statement'})).toBeEnabled();});
  it('shows loading and errors without interim amounts',()=>{f.costs.loading=true;open();expect(screen.getByLabelText('Loading expected payout')).toBeInTheDocument();expect(screen.queryByText('£94.00')).not.toBeInTheDocument();});
+ it('shows the safe DeepSeek provider error and retains the selected statement for retry',async()=>{
+   f.status.mockResolvedValue({isPro:false,betaAccess:true,statementAiUses:3,routeOptimizationUses:3});
+   f.extract.mockRejectedValue(Object.assign(new Error('Statement AI billing or credit is unavailable (DS-402). Please report this code.'),{code:'functions/failed-precondition'}));
+   choose();
+   await screen.findByText(/AI scanning is included|Free during testing/);
+   fireEvent.change(screen.getByLabelText('Choose statement file'),{target:{files:[new File(['fake image'],'statement.png',{type:'image/png'})]}});
+   fireEvent.click(screen.getByRole('button',{name:'Read statement with AI'}));
+   expect(await screen.findByText(/DS-402/)).toBeInTheDocument();
+   expect(screen.getByText(/Support code: functions\/failed-precondition/)).toBeInTheDocument();
+   expect(screen.getByRole('button',{name:'Read statement with AI'})).toBeEnabled();
+   expect(f.save).not.toHaveBeenCalled();
+ });
  it('does not save on extraction or use gross earnings as payout',async()=>{f.extract.mockResolvedValue({statementAmount:100,contractorPayout:null,currency:'GBP'});choose();await screen.findByText('2 free AI checks left');fireEvent.change(screen.getByLabelText('Choose statement file'),{target:{files:[new File(['image'],'statement.png',{type:'image/png'})]}});fireEvent.click(screen.getByRole('button',{name:'Read statement with AI'}));await screen.findByText('Review statement');expect(screen.getByLabelText('Final contractor payout (£)')).toHaveValue('');expect(f.save).not.toHaveBeenCalled();});
 
  it('offers one clear action when the checked statement payout differs',async()=>{
