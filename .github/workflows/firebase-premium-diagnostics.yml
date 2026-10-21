@@ -27,6 +27,34 @@ jobs:
             gcloud functions describe "$fn" --gen2 --region=us-central1 --project=stop-tracker-v1 --format=json |
               jq '{state: .state, runtimeServiceAccount: .serviceConfig.serviceAccountEmail, availableMemory: .serviceConfig.availableMemory, ingress: .serviceConfig.ingressSettings, uriConfigured: (.serviceConfig.uri != null)}'
           done
+      - name: Probe callable endpoint invocation and CORS without customer credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          for fn in getPremiumStatus getReceiptStatus; do
+            url="$(gcloud functions describe "$fn" --gen2 --region=us-central1 --project=stop-tracker-v1 --format='value(serviceConfig.uri)')"
+            echo "--- $fn unauthenticated callable probe ---"
+            result="$(mktemp)"
+            status="$(curl --max-time 20 --silent --show-error --output "$result" --write-out '%{http_code}' -X POST -H 'content-type: application/json' --data '{"data":{}}' "$url" || true)"
+            echo "HTTP $status"
+            jq -c '{status: .error.status, message: .error.message}' "$result" 2>/dev/null | head -c 240 || true
+            echo
+            rm -f "$result"
+            result="$(mktemp)"
+            headers="$(mktemp)"
+            status="$(curl --max-time 20 --silent --show-error --output "$result" --dump-header "$headers" --write-out '%{http_code}' -X OPTIONS -H 'Origin: https://stop-tracker.vercel.app' -H 'Access-Control-Request-Method: POST' -H 'Access-Control-Request-Headers: content-type,authorization' "$url" || true)"
+            echo "CORS preflight HTTP $status"
+            grep -i '^access-control-allow-origin:' "$headers" | tr -d '\r' | head -c 150 || true
+            echo
+            rm -f "$result" "$headers"
+            echo "Cloud Run IAM public invoker (if permitted):"
+            iam="$(gcloud run services get-iam-policy "$(echo "$fn" | tr '[:upper:]' '[:lower:]')" --region=us-central1 --project=stop-tracker-v1 --format=json 2>/dev/null)"
+            if [ $? -eq 0 ] && [ -n "$iam" ]; then
+              printf '%s' "$iam" | jq -c '[.bindings[]? | select(.role == "roles/run.invoker") | .members[]? | select(.=="allUsers")] | length > 0'
+            else
+              echo "IAM policy not readable by deployment identity"
+            fi
+          done
       - name: Check error log access without printing customer data
         shell: bash
         run: |
