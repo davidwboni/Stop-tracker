@@ -17,7 +17,7 @@ export function summarizeDay(log, expenses = []) {
   const gross = Number(log.total);
   if (log.total == null || !Number.isFinite(gross)) return { unavailable: true };
   const feeRate = config?.contractorFeePercent;
-  const knownFee = feeRate != null && Number.isFinite(Number(feeRate)) && feeRate >= 0 && feeRate <= 100;
+  const knownFee = feeRate != null && feeRate !== '' && typeof feeRate !== 'boolean' && Number.isFinite(Number(feeRate)) && Number(feeRate) >= 0 && Number(feeRate) <= 100;
   const grossPence = pennies(gross);
   const feePence = knownFee ? Math.round(grossPence * Number(feeRate) / 100) : null;
   const dailyExpenses = expenses.filter(e => e.date === log.date && !e.periodOnly);
