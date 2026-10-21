@@ -82,6 +82,39 @@ jobs:
             fi
             rm -f "$output"
           done
+      - name: Read-only callable check with a disposable anonymous Firebase identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          api_key="$(node -e 'const s=require("fs").readFileSync("src/services/firebase.js","utf8");const m=s.match(/apiKey:\\s*["\x27]([^"\x27]+)["\x27]/);if(!m)process.exit(1);process.stdout.write(m[1]);')"
+          signup="$(mktemp)"
+          signup_status="$(curl --silent --show-error --output "$signup" --write-out '%{http_code}' -X POST -H 'content-type: application/json' --data '{"returnSecureToken":true}' "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=$api_key")"
+          if [ "$signup_status" != "200" ]; then
+            echo "Temporary anonymous Firebase test sign-in unavailable (HTTP $signup_status)"
+            jq -r '.error.message // "Unknown sign-in error"' "$signup" | head -c 120
+            echo
+            rm -f "$signup"
+            exit 0
+          fi
+          token="$(jq -r .idToken "$signup")"
+          rm -f "$signup"
+          cleanup() {
+            curl --silent --show-error -X POST -H 'content-type: application/json' --data "$(jq -nc --arg t "$token" '{idToken:$t}')" "https://identitytoolkit.googleapis.com/v1/accounts:delete?key=$api_key" >/dev/null || true
+          }
+          trap cleanup EXIT
+          for fn in getPremiumStatus getReceiptStatus; do
+            url="$(gcloud functions describe "$fn" --gen2 --region=us-central1 --project=stop-tracker-v1 --format='value(serviceConfig.uri)')"
+            output="$(mktemp)"
+            status="$(curl --silent --show-error --max-time 25 --output "$output" --write-out '%{http_code}' -X POST -H 'content-type: application/json' -H "Authorization: Bearer $token" --data '{"data":{}}' "$url")"
+            echo "Signed-in anonymous check $fn HTTP $status"
+            if [ "$status" = "200" ]; then
+              jq -c '{isPro:.result.isPro,betaAccess:.result.betaAccess,enabled:.result.enabled,validResponse:(.result!=null)}' "$output"
+            else
+              jq -c '{code:.error.status,message:.error.message}' "$output" 2>/dev/null | head -c 260 || true
+              echo
+            fi
+            rm -f "$output"
+          done
       - name: Check error log access without printing customer data
         shell: bash
         run: |
