@@ -3,10 +3,15 @@ import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 
 const storage=readFileSync(resolve(process.cwd(),'storage.rules'),'utf8');
+const firebaseClient=readFileSync(resolve(process.cwd(),'src/services/firebase.js'),'utf8');
 const android=readFileSync(resolve(process.cwd(),'android/app/src/main/AndroidManifest.xml'),'utf8');
 const transfer=readFileSync(resolve(process.cwd(),'android/app/src/main/res/xml/data_extraction_rules.xml'),'utf8');
 
 describe('Mobile and storage policy source gates',()=>{
+ it('targets the actual default Firebase Storage bucket for signed-in uploads',()=>{
+  expect(firebaseClient).toContain('storageBucket: "stop-tracker-v1.firebasestorage.app"');
+  expect(firebaseClient).not.toContain('storageBucket: "stop-tracker-v1.appspot.com"');
+ });
  it('has no broad owner-write wildcard bypassing receipt/profile limits',()=>{
   expect(storage).not.toMatch(/allow read, write: if owner\(uid\)/);
   expect(storage).toMatch(/match \/users\/\{uid\}\/\{folder\}\/\{rest=\*\*\}/);
