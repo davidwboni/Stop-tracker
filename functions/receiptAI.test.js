@@ -43,3 +43,28 @@ test('bounded server extraction persists only usage and always releases its lock
   assert.equal(writes.at(-1).receiptBusyUntil,0);
  }finally{global.fetch=previousFetch;if(old===undefined)delete process.env.RECEIPT_AI_ENABLED;else process.env.RECEIPT_AI_ENABLED=old;}
 });
+
+test('preview grants receipt scanning without falsifying Pro subscription or using lifetime trials',async()=>{
+ const old=process.env.RECEIPT_AI_ENABLED,fetchBefore=global.fetch;
+ const writes=[];let budgetClaims=0;
+ const ref={set:async()=>{}};
+ const db={collection:()=>({doc:()=>ref}),runTransaction:async fn=>fn({get:async()=>({data:()=>({})}),set:(_,v)=>writes.push(v)})};
+ class HttpError extends Error{constructor(code,message){super(message);this.code=code;}}
+ const functions=registerReceiptAI({
+   onCall:(_,fn)=>fn,HttpsError:HttpError,admin:{firestore:()=>db},
+   secret:{value:()=> 'provider-key-not-real'},getEntitlement:async()=>({isPro:false}),
+   betaAccess:auth=>auth?.uid==='driver',
+   reserveBetaRequest:async()=>{budgetClaims++;}
+ });
+ try {
+   delete process.env.RECEIPT_AI_ENABLED;
+   const auth={uid:'driver',token:{firebase:{sign_in_provider:'password'}}};
+   assert.deepEqual(await functions.status({auth}),{enabled:true,isPro:false,betaAccess:true});
+   global.fetch=async()=>({ok:true,json:async()=>({choices:[{message:{content:JSON.stringify({amount:12.34,currency:'GBP',date:'2026-10-20'})}}]})});
+   const result=await functions.extract({auth,data:{images:[{mimeType:'image/png',fileBase64:'YWJj'}]}});
+   assert.equal(result.amount,12.34);
+   assert.equal(budgetClaims,1);
+   assert.equal(writes[0].receiptRequests,1);
+   assert.equal(writes[0].receiptBusyUntil>0,true);
+ }finally{global.fetch=fetchBefore;if(old===undefined)delete process.env.RECEIPT_AI_ENABLED;else process.env.RECEIPT_AI_ENABLED=old;}
+});
