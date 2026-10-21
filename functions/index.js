@@ -3,6 +3,7 @@ const admin = require("firebase-admin");
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
 const crypto = require("crypto");
+const {betaAccess,reserveBetaRequest,DAILY_ACCOUNT_LIMIT} = require("./betaAccess");
 
 admin.initializeApp();
 
@@ -140,13 +141,26 @@ exports.optimizeDriverRoute = onCall(
     });
 
     const ent = await getEntitlement(request.auth.uid);
-    if (!ent.isPro) {
+    const beta = !ent.isPro && betaAccess(request.auth);
+    if (!ent.isPro && !beta) {
       const usage = (await admin.firestore().collection("usage").doc(request.auth.uid).get()).data() || {};
       if (Number(usage.routeOptimizationUses || 0) >= 3) {
         throw new HttpsError("permission-denied", "Your 3 free route optimisations are used. Upgrade to Pro.");
       }
     }
 
+    if (beta) {
+      // Reserve quota before a billable Google API request. Do not use the
+      // lifetime trial counter while the temporary preview is running.
+      const now=Date.now(),day=new Date(now).toISOString().slice(0,10),db=admin.firestore(),ref=db.collection("usage").doc(request.auth.uid);
+      await db.runTransaction(async tx=>{
+        const u=(await tx.get(ref)).data()||{};
+        const count=u.betaRouteDay===day?Number(u.betaRouteRequests||0):0;
+        if(count>=DAILY_ACCOUNT_LIMIT)throw new HttpsError("resource-exhausted","Today's beta route optimisation limit has been reached.");
+        await reserveBetaRequest(tx,db,now,HttpsError);
+        tx.set(ref,{betaRouteDay:day,betaRouteRequests:count+1},{merge:true});
+      });
+    }
     const start = addresses[0];
     const shipments = addresses.slice(1).map((a, index) => ({
       label: String(index + 1),
@@ -228,7 +242,7 @@ exports.optimizeDriverRoute = onCall(
     }
 
     let usageResult = { isPro: ent.isPro };
-    if (!ent.isPro) {
+    if (!ent.isPro && !beta) {
       const consumed = await consumeFreeUse(request.auth.uid, "routeOptimizationUses");
       if (!consumed.allowed) {
         throw new HttpsError("permission-denied", "Your 3 free route optimisations are used. Upgrade to Pro.");
@@ -238,6 +252,7 @@ exports.optimizeDriverRoute = onCall(
 
     return {
       route: ordered,
+      betaAccess: beta,
       totalDistanceKm: Number(route?.metrics?.travelDistanceMeters || 0) / 1000,
       totalDurationMin: Math.ceil(parseGoogleDurationSeconds(route?.metrics?.travelDuration) / 60),
       source: "google-route-optimization",
@@ -253,11 +268,11 @@ exports.getPremiumStatus = onCall({ cors: true, invoker: "public" }, async reque
     admin.firestore().collection("usage").doc(request.auth.uid).get(),
   ]);
   const u = usage.data() || {};
-  return { isPro: ent.isPro, statementAiUses: Number(u.statementAiUses || 0), routeOptimizationUses: Number(u.routeOptimizationUses || 0) };
+  return { isPro: ent.isPro, betaAccess:betaAccess(request.auth), statementAiUses: Number(u.statementAiUses || 0), routeOptimizationUses: Number(u.routeOptimizationUses || 0) };
 });
 
 exports.extractStatement = onCall(
-  { secrets: [DEEPSEEK_API_KEY], cors: true, invoker: "public", memory: "512MiB", timeoutSeconds: 120 },
+  { secrets: [DEEPSEEK_API_KEY], cors: true, invoker: "public", memory: "512MiB", timeoutSeconds: 120, maxInstances: 5 },
   async request => {
     if (!request.auth) throw new HttpsError("unauthenticated", "You must be signed in.");
 
@@ -286,13 +301,16 @@ exports.extractStatement = onCall(
     }
 
     const ent = await getEntitlement(request.auth.uid);
+    const beta = !ent.isPro && betaAccess(request.auth);
     const usageRef = admin.firestore().collection("usage").doc(request.auth.uid);
     const now = Date.now(), day = new Date(now).toISOString().slice(0,10);
     await admin.firestore().runTransaction(async tx => {
       const usage = (await tx.get(usageRef)).data() || {};
-      if (!ent.isPro && Number(usage.statementAiUses || 0) >= 3) throw new HttpsError('permission-denied','Your 3 free AI checks are used. Upgrade to Pro.');
+      if (!ent.isPro && !beta && Number(usage.statementAiUses || 0) >= 3) throw new HttpsError('permission-denied','Your 3 free AI checks are used. Upgrade to Pro.');
       const requests = usage.statementDay === day ? Number(usage.statementRequests || 0) : 0;
-      if (usage.statementBusyUntil > now || requests >= 20) throw new HttpsError('resource-exhausted','Please wait before checking another statement. Daily limit: 20 requests.');
+      const cap=beta?DAILY_ACCOUNT_LIMIT:20;
+      if (usage.statementBusyUntil > now || requests >= cap) throw new HttpsError('resource-exhausted','Please wait before checking another statement. Daily request limit reached.');
+      if(beta)await reserveBetaRequest(tx,admin.firestore(),now,HttpsError);
       tx.set(usageRef,{statementBusyUntil:now+125000,statementDay:day,statementRequests:requests+1},{merge:true});
     });
     try {
@@ -355,7 +373,7 @@ exports.extractStatement = onCall(
       throw new HttpsError("failed-precondition", "No usable statement totals were found.");
     }
 
-    if (!ent.isPro) {
+    if (!ent.isPro && !beta) {
       const consumed = await consumeFreeUse(request.auth.uid, "statementAiUses");
       if (!consumed.allowed) {
         throw new HttpsError("permission-denied", "Your 3 free AI checks are used. Upgrade to Pro.");
@@ -371,6 +389,7 @@ exports.consumeRouteOptimization = onCall({ cors: true, invoker: "public" }, asy
   if (!request.auth) throw new HttpsError("unauthenticated", "You must be signed in.");
   const ent = await getEntitlement(request.auth.uid);
   if (ent.isPro) return { allowed: true, isPro: true };
+  if (betaAccess(request.auth)) return { allowed: true, isPro: false, betaAccess: true };
   const result = await consumeFreeUse(request.auth.uid, "routeOptimizationUses");
   if (!result.allowed) throw new HttpsError("permission-denied", "Your 3 free route optimisations are used. Upgrade to Pro.");
   return { allowed: true, isPro: false, used: result.used, remaining: Math.max(0, 3 - result.used) };
@@ -533,7 +552,7 @@ exports.assignRoleOnSignup = functions.auth.user().onCreate(async (user) => {
 });
 
 // Enable receipt AI only after the documented staging provider check.
-const receiptAI = require('./receiptAI').registerReceiptAI({ onCall, HttpsError, admin, secret:DEEPSEEK_API_KEY, getEntitlement });
+const receiptAI = require('./receiptAI').registerReceiptAI({ onCall, HttpsError, admin, secret:DEEPSEEK_API_KEY, getEntitlement, betaAccess, reserveBetaRequest });
 exports.getReceiptStatus = receiptAI.status;
 exports.extractExpenseReceipt = receiptAI.extract;
 

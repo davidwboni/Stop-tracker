@@ -126,7 +126,7 @@ export default function HomeExpenseDialog({ open, onClose, save, isGuest, initia
       track('expense_save_failed',{source:eventSource});setError('Couldn’t save. Your details are still here. Please retry.');
     }finally{lock.current=false;setPhase('idle');}
   }
-  const canScan=status?.enabled&&status?.isPro&&!isGuest;
+  const canScan=status?.enabled&&(status?.isPro||status?.betaAccess)&&!isGuest;
   const displayDate=value=>validDate(value)?new Date(value+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'Choose date';
   const dayLabel=draft.date===isoDate(new Date())?'Today · '+displayDate(draft.date):displayDate(draft.date);
   return <Dialog open={open} onClose={()=>closeRef.current?.()} className="qe-root">
@@ -158,11 +158,12 @@ export default function HomeExpenseDialog({ open, onClose, save, isGuest, initia
               <div className="ae-scan-icon"><ScanLine size={32} aria-hidden="true"/></div>
               <h3>Scan your receipt</h3>
               <p className="home-muted text-sm">Choose a photo or PDF. AI will try to read the amount, date and what you bought. Review the result before saving.</p>
-              {isGuest?<p className="home-banner">Sign in to a permanent Pro account to scan. Manual entry is free.</p>:
+              {isGuest?<p className="home-banner">Sign in with a permanent account to scan receipts during testing. Manual entry is free.</p>:
                 status===null?<p role="status" className="home-muted text-sm">Checking scanning access…</p>:
                 status.error?<p role="alert" className="home-banner">Scanning access could not be checked. You can retry or enter manually.</p>:
                 !status.enabled?<p className="home-banner">Receipt scanning isn't available right now. You can enter it manually.</p>:
-                !status.isPro?<p className="home-banner">Scanning requires Pro. <a className="underline" href="/app/upgrade">View Pro</a> or enter it manually.</p>:null}
+                !status.isPro&&!status.betaAccess?<p className="home-banner">Scanning requires Pro. <a className="underline" href="/app/upgrade">View Pro</a> or enter it manually.</p>:null}
+              {status?.betaAccess&&!status?.error&&<p className="home-muted text-xs" role="status">Receipt AI is free during testing · up to 8 scans per day.</p>}
               {status?.error&&<button type="button" className="home-secondary" onClick={()=>setStatusRetry(n=>n+1)}>Retry availability</button>}
               <p className="home-muted text-xs">Scanning uses an external AI service. Nothing is saved until you confirm.</p>
             </section>}

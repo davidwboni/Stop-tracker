@@ -35,6 +35,13 @@ describe('Check Pay entry',()=>{
    expect(screen.getByRole('button',{name:'Enter manually'})).toBeEnabled();
    await screen.findByText('2 free AI checks left');
  });
+ it('unlocks statement AI for a free beta account even when three previous trials are used',async()=>{
+   f.status.mockResolvedValue({isPro:false,betaAccess:true,statementAiUses:3,routeOptimizationUses:3});
+   choose();
+   await screen.findByText(/Free during testing · up to 8 a day/);
+   expect(screen.getByLabelText('Choose statement file')).toBeEnabled();
+   expect(screen.queryByRole('button',{name:'View Pro'})).not.toBeInTheDocument();
+ });
  it('keeps the comparison action available on an AI-status failure and explains the retry',async()=>{
    f.status.mockRejectedValue(Object.assign(new Error('permission denied'),{code:'functions/permission-denied'}));
    choose();

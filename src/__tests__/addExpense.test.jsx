@@ -81,6 +81,16 @@ describe('Add Expense',()=>{
   await waitFor(()=>expect(fixture.save).toHaveBeenCalled());
   expect(fixture.save.mock.calls[0][0]).toMatchObject({amount:46.2,category:'Fuel',receipt:null});
  });
+ it('allows receipt scanning during temporary beta without claiming the user has Pro',async()=>{
+   fixture.status.mockResolvedValue({enabled:true,isPro:false,betaAccess:true});
+   mount();fireEvent.click(screen.getByRole('button',{name:/Scan receipt with AI/}));
+   await screen.findByText(/Receipt AI is free during testing/);
+   await file();
+   expect(screen.getByRole('button',{name:'Extract for review'})).toBeEnabled();
+   fireEvent.click(screen.getByRole('button',{name:'Extract for review'}));
+   expect(await screen.findByText('Review AI-extracted details')).toBeInTheDocument();
+   expect(fixture.save).not.toHaveBeenCalled();
+ });
  it('does not offer the statement trial for receipt scans',async()=>{
   fixture.status.mockResolvedValue({enabled:true,isPro:false});mount();
   fireEvent.click(screen.getByRole('button',{name:/Scan receipt with AI/}));
