@@ -1,0 +1,42 @@
+name: Deploy Firebase statement extraction fix
+on:
+  push:
+    branches: [main]
+    paths:
+      - functions/index.js
+      - functions/statementProviderErrors.js
+      - .github/workflows/firebase-statement-extraction-deploy.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  extract-statement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Confirm Firebase deploy credential
+        env:
+          FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STOP_TRACKER_V1 }}
+        run: |
+          test -n "$FIREBASE_SA_JSON" || { echo "::error::Firebase deployment credential missing."; exit 1; }
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STOP_TRACKER_V1 }}
+          project_id: stop-tracker-v1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+      - name: Check and test Firebase functions
+        working-directory: functions
+        run: |
+          npm ci --ignore-scripts
+          node --check index.js
+          node --test
+      - name: Deploy only extractStatement
+        run: |
+          npx --yes firebase-tools@latest deploy --project stop-tracker-v1 --only functions:extractStatement --non-interactive
