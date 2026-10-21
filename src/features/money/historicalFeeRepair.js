@@ -12,7 +12,7 @@ export const validHistoricalGross = log =>
 export function historicalFeeIssue(logs, period) {
   const rows=(logs||[]).filter(r=>r.date>=period.start&&r.date<=period.end);
   const missingGross=rows.filter(r=>!validHistoricalGross(r));
-  const missingFee=rows.filter(r=>validHistoricalGross(r)&&!validHistoricalFee(r.payStructureSnapshot?.contractorFeePercent));
+  const missingFee=rows.filter(r=>validHistoricalGross(r)&&!validHistoricalFee(r.payStructureSnapshot?.contractorFeePercent)&&!validHistoricalFee(r.historicalFeeConfirmation?.percent));
   return {rows,missingGross,missingFee};
 }
 
@@ -25,7 +25,8 @@ export function applyConfirmedHistoricalFee(logs,period,feePercent,confirmedAt) 
   const eligible=new Set(missingFee);
   return logs.map(log=>eligible.has(log)?{
     ...log,
-    payStructureSnapshot:{...(log.payStructureSnapshot||{}),contractorFeePercent:rate},
+    // Keep the original snapshot untouched. A fee-only snapshot would break
+    // historical editing because it has no pay model or earning rates.
     historicalFeeConfirmation:{percent:rate,confirmedAt:confirmedAt||new Date().toISOString(),method:'driver_confirmed_period'}
   }:log);
 }
