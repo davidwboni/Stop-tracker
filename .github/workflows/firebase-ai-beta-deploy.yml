@@ -39,6 +39,26 @@ jobs:
           npm ci --ignore-scripts
           node --check index.js
           node --test
+      - name: Inspect Cloud Functions list permissions (no secrets printed)
+        uses: google-github-actions/setup-gcloud@v2
+      - name: Verify list access against v1 and v2 APIs
+        shell: bash
+        run: |
+          set -euo pipefail
+          access_token="$(gcloud auth print-access-token)"
+          for version in v1 v2; do
+            response="$(mktemp)"
+            status="$(curl --silent --show-error --output "$response" --write-out '%{http_code}' \
+              --header "Authorization: Bearer $access_token" \
+              "https://cloudfunctions.googleapis.com/$version/projects/stop-tracker-v1/locations/-/functions")"
+            echo "Cloud Functions $version list HTTP $status"
+            if [ "$status" != "200" ]; then
+              jq -r '.error.message // .error.status // "Function listing was rejected"' "$response" | head -c 500
+              echo
+            fi
+            rm -f "$response"
+          done
+          unset access_token
       - name: Deploy six AI and route callables to verified project
         run: |
           npx --yes firebase-tools@latest deploy \
