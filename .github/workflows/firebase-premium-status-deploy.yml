@@ -1,0 +1,45 @@
+name: Deploy Firebase status repair
+on:
+  push:
+    branches: [main]
+    paths:
+      - functions/index.js
+      - functions/betaAccess.js
+      - .github/workflows/firebase-premium-status-deploy.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  status-function:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify scoped deployment credential
+        env:
+          FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STOP_TRACKER_V1 }}
+        run: |
+          if [ -z "$FIREBASE_SA_JSON" ]; then
+            echo "::error::Firebase deployment service-account credential missing."
+            exit 1
+          fi
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STOP_TRACKER_V1 }}
+          project_id: stop-tracker-v1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+      - name: Test Firebase Functions
+        working-directory: functions
+        run: |
+          npm ci --ignore-scripts
+          node --check index.js
+          node --test
+      - name: Deploy only entitlement-status callable
+        run: |
+          npx --yes firebase-tools@latest deploy --project stop-tracker-v1 --only functions:getPremiumStatus --non-interactive
