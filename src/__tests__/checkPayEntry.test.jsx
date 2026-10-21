@@ -54,6 +54,13 @@ describe('Check Pay entry',()=>{
    await screen.findByText('Included with Pro');
    expect(screen.getByLabelText('Choose statement file')).toBeEnabled();
  });
+ it('shows a safe support code when signed-in AI entitlement lookup fails',async()=>{
+  f.status.mockRejectedValue(Object.assign(new Error('Firebase internal'),{code:'functions/internal'}));
+  choose();
+  expect(await screen.findByText(/Support code: functions\/internal/)).toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'Enter manually'})).toBeEnabled();
+  expect(screen.getByRole('button',{name:'Retry AI availability'})).toBeEnabled();
+ });
  it('does not invent trial counts when status fails and leaves manual free',async()=>{f.status.mockRejectedValue(new Error('offline'));choose();await screen.findByRole('button',{name:'Retry AI availability'});expect(screen.queryByText(/3 free AI checks left/)).not.toBeInTheDocument();expect(screen.getByRole('button',{name:'Enter manually'})).toBeEnabled();});
  it('switches displayed period without changing pay setup',()=>{open();const select=screen.getByLabelText('Check Pay period');fireEvent.change(select,{target:{value:select.options[0].value}});expect(f.anchor).not.toHaveBeenCalled();});
  it('allows saving a contractor statement without missing historical pay rates or a false comparison',async()=>{
