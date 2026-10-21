@@ -138,9 +138,14 @@ export default function CheckPayV4() {
        {summary.rows.length>0&&<p className="home-muted text-xs check-period-days">{summary.rows.length} {summary.rows.length===1?'day':'days'} recorded</p>}
      </div>
    }
-   {needsPayRepair&&<p className="home-muted text-xs check-period-note">Your workdays are saved. {issues.missingFee.length>0?'Confirm missing contractor deductions below to restore your estimate.':'Some workdays are missing a saved gross amount.'}</p>}
+   {needsPayRepair&&<p className="home-muted text-xs check-period-note">Your workdays are saved. {issues.missingFee.length>0?'Confirm the missing contractor deduction to calculate your estimate.':'Some workdays are missing a saved gross amount.'}</p>}
  </section>
- {offerPrevious&&<button type="button" className="home-card check-completed-period" onClick={()=>{setSelected(previousComplete);setShowAnotherCheck(false);setError('');track('check_pay_period_changed');}}>
+ {['idle','choose'].includes(mode)&&needsPayRepair&&issues.missingFee.length>0&&<section className="home-card check-fee-repair" aria-label="Finish your pay estimate">
+     <h2>One thing left to check</h2>
+     <p className="home-muted text-sm">{issues.missingFee.length} of your {summary.rows.length} saved {summary.rows.length===1?'workday needs':'workdays need'} the contractor deduction confirmed. Your original stops, parcels and gross earnings will not change.</p>
+     <button type="button" className="home-primary w-full" onClick={openFeeRepair} disabled={unavailable||offline}>Confirm historical fee <ArrowRight size={17}/></button>
+   </section>}
+   {offerPrevious&&<button type="button" className="home-card check-completed-period" onClick={()=>{setSelected(previousComplete);setShowAnotherCheck(false);setError('');track('check_pay_period_changed');}}>
    <span><strong>Last completed period</strong><small>{fmt(previousComplete.start)} – {fmt(previousComplete.end)} · {previousComplete.daysLogged} days logged</small></span>
    <span className="check-completed-action">Open <ArrowRight size={17} aria-hidden="true"/></span>
  </button>}
@@ -169,7 +174,7 @@ export default function CheckPayV4() {
    <p className="home-muted text-xs">Only create an invoice if your contractor needs one. This doesn't confirm payment.</p>
   </section>
   {comparison.state==='stale'&&<p className="home-banner" role="status">Your work or charges changed after your last check. Check the statement again before relying on the previous comparison.</p>}
-  {needsPayRepair&&issues.missingFee.length>0&&<section className="home-card check-fee-repair" aria-label="Restore historical pay estimate"><h2>Finish your pay estimate</h2><p className="home-muted text-sm">{issues.missingFee.length} saved {issues.missingFee.length===1?'workday needs':'workdays need'} the contractor deduction confirmed. Your logged earnings will stay exactly as they are.</p><button type="button" className="home-primary w-full" onClick={openFeeRepair} disabled={unavailable||offline}>Confirm missing fee <ArrowRight size={17}/></button></section>}
+  
     {needsPayRepair&&<details className="check-help-details"><summary>Why is the estimate unavailable? <ChevronDown size={17}/></summary>
     <p className="home-muted text-sm">{summary.rows.length} workdays are saved. {issues.missingFee.length} {issues.missingFee.length===1?'day lacks':'days lack'} a confirmed contractor deduction; {issues.missingGross.length} {issues.missingGross.length===1?'day lacks':'days lack'} a saved gross amount. Days you didn't work don't need an entry.</p>
     <p className="home-muted text-sm">You can still check a statement or invoice your contractor without fixing these first.</p>
@@ -188,13 +193,13 @@ export default function CheckPayV4() {
        <h3>Enter manually</h3><p className="home-muted">Type the statement payout.</p>
        <button className="home-primary" data-tour="check-manual" onClick={()=>manual()}>Enter manually <ArrowRight size={16}/></button>
      </section>
-     <section className="home-card check-action"><div className="check-action-top"><Sparkles size={23}/><span className="money-badge">{entitlement?.isPro?'Pro':entitlement?.betaAccess?'Beta':entitlement?'AI':'Checking'}</span></div>
-       <h3>Upload with AI</h3><p className="home-muted" role="status">{offline?'Connect to use AI':entitlement?entitlement.isPro?'Included with Pro':entitlement.betaAccess?'Free during testing · up to 8 a day':entitlement.statementAiUses<3?`${3-entitlement.statementAiUses} free AI checks left`:'Free checks used · Pro required':entitlementError?'AI access could not be verified':'Checking AI access…'}</p>
-       {entitlementError&&<p className="home-muted text-xs" role="alert">AI access failed. Retry here after signing in, or enter totals manually. No statement was uploaded.</p>}
+     <section className="home-card check-action"><div className="check-action-top"><Sparkles size={23}/><span className="money-badge">{entitlement?.isPro?'Pro':entitlement?.betaAccess?'Beta':entitlement?'AI':entitlementError?'Unavailable':'Checking'}</span></div>
+       <h3>Upload with AI</h3><p className="home-muted" role="status">{offline?'Connect to use AI':entitlement?entitlement.isPro?'Included with Pro':entitlement.betaAccess?'Free during testing · up to 8 a day':entitlement.statementAiUses<3?`${3-entitlement.statementAiUses} free AI checks left`:'Free checks used · Pro required':entitlementError==='auth'?'Sign in again to check AI access':entitlementError==='permission'?'AI access was rejected':entitlementError?'AI service check failed':'Checking AI access…'}</p>
+       {entitlementError&&<p className="home-muted text-xs" role="alert">The AI service did not confirm access. Retry, or enter the totals manually. No statement was uploaded.</p>}
        {entitlementError?<button className="home-secondary" onClick={()=>setStatusRequest(n=>n+1)}>Retry AI availability</button>:entitlement&&!entitlement.isPro&&!entitlement.betaAccess&&entitlement.statementAiUses>=3?<button className="home-secondary" onClick={()=>navigate('/app/upgrade')}>View Pro</button>:<label className={'home-secondary check-file '+(offline||!entitlement?'check-disabled':'')}>Choose a file<input aria-label="Choose statement file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp,.pdf" disabled={offline||!entitlement} onChange={e=>{chooseFile(e.target.files?.[0]);e.target.value='';}}/></label>}
      </section>
    </div>
-   {!ready&&<p className="home-muted text-xs">We can save your statement. A payout difference can't be calculated until missing historical pay rates are reviewed.</p>}
+   {!ready&&<p className="home-muted text-xs">You can save your statement now. Confirm the missing contractor deduction above to compare it with your saved workdays.</p>}
    <p className="home-muted check-privacy">PDF or photo, up to 12 MB. Check AI figures before saving.</p>
  </section>}
  {mode==='savedPending'&&<section className="home-card check-next-step" role="status"><h2>Statement saved</h2>
