@@ -6,7 +6,7 @@ import {webcrypto} from 'node:crypto';
 import {getPeriodForDate} from '../features/payperiod/periods';
 import {moneySummary,moneyRevision} from '../features/money/moneyModel';
 import CheckPayV4 from '../components/CheckPayV4';
-const f=vi.hoisted(()=>({data:{},costs:{},status:vi.fn(),extract:vi.fn(),save:vi.fn(),anchor:vi.fn()}));
+const f=vi.hoisted(()=>({data:{},costs:{},status:vi.fn(),extract:vi.fn(),save:vi.fn(),anchor:vi.fn(),update:vi.fn()}));
 vi.mock('../contexts/AuthContext',()=>({useAuth:()=>({user:{uid:'test',displayName:'Driver Example'}})}));
 vi.mock('../contexts/DataContext',()=>({useData:()=>f.data}));
 vi.mock('../hooks/useExpenses',()=>({default:()=>f.costs}));
@@ -15,7 +15,7 @@ vi.stubGlobal('crypto',webcrypto);
 const period={start:'2026-08-17',end:'2026-09-13'};
 const open=()=>render(<MemoryRouter initialEntries={[{pathname:'/app/check-pay',state:period}]}><CheckPayV4/></MemoryRouter>);
 const choose=()=>{const view=open();fireEvent.click(screen.getByRole('button',{name:'Check statement'}));return view;};
-beforeEach(()=>{URL.createObjectURL=vi.fn(()=> 'blob:test');URL.revokeObjectURL=vi.fn();vi.clearAllMocks();localStorage.clear();f.data={logs:[{date:period.start,total:100,payStructureSnapshot:{contractorFeePercent:6}}],payPeriodAnchor:period.start,periodRecords:{},updatePeriodRecord:f.save,updatePayPeriodAnchor:f.anchor};f.costs={expenses:[{date:period.start,amount:10,source:'my_expense'}],loading:false};f.status.mockResolvedValue({isPro:false,statementAiUses:1});});
+beforeEach(()=>{vi.stubGlobal('ResizeObserver',class{observe(){}unobserve(){}disconnect(){}});URL.createObjectURL=vi.fn(()=> 'blob:test');URL.revokeObjectURL=vi.fn();vi.clearAllMocks();localStorage.clear();f.data={logs:[{date:period.start,total:100,payStructureSnapshot:{contractorFeePercent:6}}],payPeriodAnchor:period.start,periodRecords:{},updatePeriodRecord:f.save,updatePayPeriodAnchor:f.anchor,updateLogs:f.update,paymentConfig:{model:'flat_stops',ratePerStop:2.08,contractorFeePercent:6}};f.costs={expenses:[{date:period.start,amount:10,source:'my_expense'}],loading:false};f.status.mockResolvedValue({isPro:false,statementAiUses:1});});
 describe('Check Pay entry',()=>{
  it('shows payout before own expenses, free manual first, and server trial count',async()=>{choose();expect(screen.getByText('£94.00')).toBeInTheDocument();expect(screen.queryByText('£84.00')).not.toBeInTheDocument();await screen.findByText('2 free AI checks left');expect(screen.getByRole('button',{name:'Enter manually'})).toBeEnabled();});
  it('keeps Pay focused on two tasks rather than exposing both comparison methods immediately',async()=>{
@@ -46,7 +46,7 @@ describe('Check Pay entry',()=>{
    f.status.mockRejectedValue(Object.assign(new Error('permission denied'),{code:'functions/permission-denied'}));
    choose();
    await screen.findByText('AI access could not be verified');
-   expect(screen.getByText(/AI couldn't be verified/)).toBeInTheDocument();
+   expect(screen.getByText(/AI access failed/)).toBeInTheDocument();
    expect(screen.getByRole('button',{name:'Enter manually'})).toBeEnabled();
    expect(screen.queryByLabelText('Choose statement file')).not.toBeInTheDocument();
    f.status.mockResolvedValue({isPro:true,statementAiUses:3});
@@ -71,6 +71,43 @@ describe('Check Pay entry',()=>{
    expect(f.save.mock.calls[0][1]).not.toHaveProperty('payoutComparison');
    expect(screen.getByText('Statement saved')).toBeInTheDocument();
    expect(screen.getByRole('link',{name:'Create invoice'})).toHaveAttribute('href','/app/invoice');
+ });
+
+ it('restores a logged period with one confirmed historical fee action without rewriting its gross totals',async()=>{
+   const entries=[
+     {id:'first',date:period.start,stops:120,totalParcels:158,total:281.10},
+     {id:'second',date:'2026-08-18',stops:105,total:209.80},
+     {id:'third',date:'2026-08-19',stops:115,total:237.10,payStructureSnapshot:{contractorFeePercent:6}},
+   ];
+   f.data.logs=entries;
+   f.update.mockResolvedValue({success:true});
+   open();
+   expect(screen.getByText('Not available yet')).toBeInTheDocument();
+   expect(screen.getByRole('button',{name:'Confirm missing fee'})).toBeEnabled();
+   fireEvent.click(screen.getByRole('button',{name:'Confirm missing fee'}));
+   expect(screen.getByRole('heading',{name:'Confirm contractor fee'})).toBeInTheDocument();
+   expect(screen.getByLabelText('Historical contractor fee percentage')).toHaveValue('6');
+   expect(screen.getByRole('button',{name:'Apply to 2 saved days'})).toBeDisabled();
+   fireEvent.click(screen.getByRole('checkbox'));
+   fireEvent.click(screen.getByRole('button',{name:'Apply to 2 saved days'}));
+   await waitFor(()=>expect(f.update).toHaveBeenCalledTimes(1));
+   const changed=f.update.mock.calls[0][0];
+   expect(changed).toHaveLength(3);
+   expect(changed[0]).toMatchObject({stops:120,totalParcels:158,total:281.10,historicalFeeConfirmation:{percent:6}});
+   expect(changed[1].total).toBe(209.80);
+   expect(changed[2]).toBe(entries[2]);
+   expect(f.save).not.toHaveBeenCalled();
+ });
+ it('does not silently apply today\'s fee or confirm blank historical values',()=>{
+   f.data.logs=[{id:'legacy',date:period.start,stops:120,total:281.10}];
+   f.data.paymentConfig={model:'flat_stops',ratePerStop:2.08};
+   open();
+   fireEvent.click(screen.getByRole('button',{name:'Confirm missing fee'}));
+   expect(screen.getByLabelText('Historical contractor fee percentage')).toHaveValue('');
+   fireEvent.click(screen.getByRole('checkbox'));
+   expect(screen.getByRole('button',{name:'Apply to 1 saved day'})).toBeDisabled();
+   fireEvent.click(screen.getByRole('button',{name:'Cancel — keep records unchanged'}));
+   expect(f.update).not.toHaveBeenCalled();
  });
  it('hides the missing-rate explanation until requested, without blocking invoicing',()=>{
    f.data.logs=[{id:'old-day',date:period.start,total:281.1,stops:120}];

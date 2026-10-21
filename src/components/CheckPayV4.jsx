@@ -7,6 +7,7 @@ import {useData} from '../contexts/DataContext';
 import useExpenses from '../hooks/useExpenses';
 import {isoDate, listPeriods, getPeriodForDate} from '../features/payperiod/periods';
 import {moneySummary, moneyRevision, payoutComparison, validRange} from '../features/money/moneyModel';
+import {historicalFeeIssue,applyConfirmedHistoricalFee,validHistoricalFee} from '../features/money/historicalFeeRepair';
 import {money, pennies} from '../features/home/homeModel';
 import {extractStatement, getPremiumStatus} from '../services/premium';
 import {trackProductEvent as track} from '../services/productAnalytics';
@@ -21,13 +22,14 @@ import '../styles/check-pay.css';
 const fmt = d => new Date(d+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
 const amountValid = s => /^-?\d+(\.\d{1,2})?$/.test(s) && Number.isSafeInteger(pennies(Number(s)));
 export default function CheckPayV4() {
- const {logs=[],payPeriodAnchor,periodRecords={},updatePeriodRecord,loading,loadError,forceSync}=useData();
+ const {logs=[],payPeriodAnchor,periodRecords={},updatePeriodRecord,updateLogs,paymentConfig,loading,loadError,forceSync}=useData();
  const costs=useExpenses(), location=useLocation(), navigate=useNavigate();
  const [previewSnapshot,setPreviewSnapshot]=useState(null),[resolved,setResolved]=useState(false);
  const [review,setReview]=useState(null),[reviewedStatement,setReviewedStatement]=useState(null);
  const [details,setDetails]=useState(emptyStatementDetails);
  const [selected,setSelected]=useState(null),[mode,setMode]=useState('idle'),[periodPickerOpen,setPeriodPickerOpen]=useState(false),[showAnotherCheck,setShowAnotherCheck]=useState(false);
  const [amount,setAmount]=useState(''),[basis,setBasis]=useState(false),[error,setError]=useState('');
+ const [feeRepairOpen,setFeeRepairOpen]=useState(false),[feeRateInput,setFeeRateInput]=useState(''),[feeConfirmed,setFeeConfirmed]=useState(false),[feeRepairBusy,setFeeRepairBusy]=useState(false),[feeRepairError,setFeeRepairError]=useState('');
  const [file,setFile]=useState(null),[aiDraft,setAiDraft]=useState(null),[stage,setStage]=useState(''),[saving,setSaving]=useState(false);
  const [entitlement,setEntitlement]=useState(null),[entitlementError,setEntitlementError]=useState(false),[statusRequest,setStatusRequest]=useState(0);
  const [revision,setRevision]=useState(null),[offline,setOffline]=useState(!navigator.onLine);
@@ -42,6 +44,7 @@ export default function CheckPayV4() {
  const busy=loading||costs.loading, unavailable=busy||!!loadError||!!costs.error;
  const fullPeriod=!!payPeriodAnchor&&getPeriodForDate(payPeriodAnchor,period.start).id===period.id;
  const ready=fullPeriod&&!unavailable&&summary.rows.length>0&&summary.payout!=null;
+ const issues=historicalFeeIssue(logs,period);
  const missingPayDays=summary.days.filter(d=>!d||d.unavailable||d.fee==null).length;
  const needsPayRepair=fullPeriod&&!unavailable&&summary.rows.length>0&&summary.payout==null;
  const recordsKey=JSON.stringify([logs,costs.expenses.filter(e=>e.source==='contractor_charge'),period.start,period.end]);
@@ -80,6 +83,8 @@ export default function CheckPayV4() {
   return()=>{active=false;};
  },[statusRequest,offline]);
  useEffect(()=>{let active=true;setRevision(null);moneyRevision(logs,costs.expenses,period).then(r=>{if(active)setRevision(r);}).catch(()=>{});return()=>{active=false;};},[logs,costs.expenses,period.start,period.end]);
+ function openFeeRepair(){setFeeRateInput(validHistoricalFee(paymentConfig?.contractorFeePercent)?String(paymentConfig.contractorFeePercent):'');setFeeConfirmed(false);setFeeRepairError('');setFeeRepairOpen(true);}
+ async function saveHistoricalFee(){if(feeRepairBusy||!feeConfirmed||unavailable||offline||!fullPeriod)return;setFeeRepairBusy(true);setFeeRepairError('');try{const revised=applyConfirmedHistoricalFee(logs,period,feeRateInput);await updateLogs(revised);setFeeRepairOpen(false);setFeeConfirmed(false);track('historical_fee_confirmed',{days:issues.missingFee.length});}catch(err){setFeeRepairError(err?.message?.startsWith('Enter a contractor fee')?err.message:'Could not save the historical fee. Your records were not changed. Please try again.');}finally{setFeeRepairBusy(false);}}
  function reset(){if(dirty&&!window.confirm('Discard this unsaved statement draft?'))return;setMode('idle');setResolved(false);setReview(null);setReviewedStatement(null);setDetails(emptyStatementDetails());setAmount('');setBasis(false);setFile(null);setAiDraft(null);setError('');setShowAnotherCheck(false);}
  function manual(saved=false){setResolved(false);const previous=periodRecords[period.id];if(saved&&previous?.reviewedStatement){const r=previous.reviewedStatement;const daily=previous.statementWorkDetails?.daily||{};setDetails(previous.statementWorkDetails||emptyStatementDetails());setReview({...createStatementReview({periodStart:r.start,periodEnd:r.end,currency:r.currency,taxBasis:r.taxBasis,contractorPayout:r.payoutPence/100,statementAmount:r.grossPence==null?null:r.grossPence/100,contractorFee:r.feePence==null?null:r.feePence/100,contractorCharges:r.chargesPence==null?null:r.chargesPence/100,charges:r.charges.map(i=>({label:i.label,amount:i.amountPence/100}))}),items:r.charges.map((i,index)=>({id:String(index),label:i.label,amount:String(i.amountPence/100),reviewed:true}))});setReviewedStatement(null);setAiDraft({currency:r.currency,daily:Object.entries(daily).map(([date,d])=>({date,stops:d.stops===''?null:Number(d.stops),amount:d.amount===''?null:Number(d.amount)}))});setFile(null);setBasis(false);setError('');setMode('review');return;}setReview(null);setReviewedStatement(null);setAiDraft(null);setDetails(saved?(periodRecords[period.id]?.statementWorkDetails||{...emptyStatementDetails(),stops:periodRecords[period.id]?.statementStops==null?'':String(periodRecords[period.id].statementStops),gross:periodRecords[period.id]?.statementAmount==null?'':String(periodRecords[period.id].statementAmount),extras:periodRecords[period.id]?.extraPayments==null?'':String(periodRecords[period.id].extraPayments),charges:periodRecords[period.id]?.charges==null?'':String(periodRecords[period.id].charges),vat:periodRecords[period.id]?.vat==null?'':String(periodRecords[period.id].vat)}):emptyStatementDetails());setAmount(saved&&comparison.statement!=null?String(comparison.statement/100):previous?.statementAmount!=null?String(previous.statementAmount):'');setBasis(false);setError('');setMode('manual');track('statement_manual_started');}
  function viewSaved(){const record=periodRecords[period.id];if(!record?.payoutComparison||!['matched','difference','reconciled'].includes(comparison.state)){manual(true);return;}setReview(null);setReviewedStatement(record.reviewedStatement||null);setDetails(record.statementWorkDetails||emptyStatementDetails());setAmount(String(record.payoutComparison.statementPence/100));setBasis(true);setPreviewSnapshot({key:recordsKey,payout:record.payoutComparison.expectedPence});setResolved(comparison.state==='reconciled');setError('');setMode('saved');}
@@ -133,7 +138,7 @@ export default function CheckPayV4() {
        {summary.rows.length>0&&<p className="home-muted text-xs check-period-days">{summary.rows.length} {summary.rows.length===1?'day':'days'} recorded</p>}
      </div>
    }
-   {needsPayRepair&&<p className="home-muted text-xs check-period-note">Your workdays are saved, but an accurate payout estimate needs older pay settings.</p>}
+   {needsPayRepair&&<p className="home-muted text-xs check-period-note">Your workdays are saved. {issues.missingFee.length>0?'Confirm missing contractor deductions below to restore your estimate.':'Some workdays are missing a saved gross amount.'}</p>}
  </section>
  {offerPrevious&&<button type="button" className="home-card check-completed-period" onClick={()=>{setSelected(previousComplete);setShowAnotherCheck(false);setError('');track('check_pay_period_changed');}}>
    <span><strong>Last completed period</strong><small>{fmt(previousComplete.start)} – {fmt(previousComplete.end)} · {previousComplete.daysLogged} days logged</small></span>
@@ -160,12 +165,13 @@ export default function CheckPayV4() {
   {mode==='idle'&&<>
   <section className="check-simple-actions" aria-label="Your pay actions">
    {canInvoice?<Link className="home-primary w-full" to="/app/invoice" state={invoicePath.state}>Prepare invoice <ArrowRight size={18}/></Link>:<Link className="home-primary w-full" to="/app/invoice" state={{periodId:period.id,startInvoice:true}}>Create invoice <ArrowRight size={18}/></Link>}
-   {comparison.state==='difference'?<button className="home-secondary w-full" type="button" onClick={viewSaved}>Review payout difference <ArrowRight size={18}/></button>:<button className="home-secondary w-full" type="button" disabled={unavailable||!fullPeriod} onClick={()=>setMode('choose')}>Check statement <ArrowRight size={18}/></button>}
+   {comparison.state==='difference'?<button className="home-secondary w-full" type="button" onClick={viewSaved}>Review payout difference <ArrowRight size={18}/></button>:<button className="home-secondary w-full" type="button" disabled={unavailable||!fullPeriod} onClick={()=>{setMode('choose');setStatusRequest(n=>n+1);}}>Check statement <ArrowRight size={18}/></button>}
    <p className="home-muted text-xs">Only create an invoice if your contractor needs one. This doesn't confirm payment.</p>
   </section>
   {comparison.state==='stale'&&<p className="home-banner" role="status">Your work or charges changed after your last check. Check the statement again before relying on the previous comparison.</p>}
-  {needsPayRepair&&<details className="check-help-details"><summary>Why is the estimate unavailable? <ChevronDown size={17}/></summary>
-    <p className="home-muted text-sm">{summary.rows.length} worked days are recorded. {missingPayDays} of those {missingPayDays===1?'needs':'need'} older pay-rate details to calculate the estimate. Days you didn't work don't need an entry.</p>
+  {needsPayRepair&&issues.missingFee.length>0&&<section className="home-card check-fee-repair" aria-label="Restore historical pay estimate"><h2>Finish your pay estimate</h2><p className="home-muted text-sm">{issues.missingFee.length} saved {issues.missingFee.length===1?'workday needs':'workdays need'} the contractor deduction confirmed. Your logged earnings will stay exactly as they are.</p><button type="button" className="home-primary w-full" onClick={openFeeRepair} disabled={unavailable||offline}>Confirm missing fee <ArrowRight size={17}/></button></section>}
+    {needsPayRepair&&<details className="check-help-details"><summary>Why is the estimate unavailable? <ChevronDown size={17}/></summary>
+    <p className="home-muted text-sm">{summary.rows.length} workdays are saved. {issues.missingFee.length} {issues.missingFee.length===1?'day lacks':'days lack'} a confirmed contractor deduction; {issues.missingGross.length} {issues.missingGross.length===1?'day lacks':'days lack'} a saved gross amount. Days you didn't work don't need an entry.</p>
     <p className="home-muted text-sm">You can still check a statement or invoice your contractor without fixing these first.</p>
     <Link className="home-text-button" to="/app/records?payReview=1" state={{periodId:period.id}}>Review those days <ArrowRight size={16}/></Link>
   </details>}
@@ -173,7 +179,8 @@ export default function CheckPayV4() {
   {checkedAlready&&<button className="home-text-button check-again-toggle" onClick={viewSaved}>View saved statement <ArrowRight size={16}/></button>}
   <Link className="home-text-button check-history-link" to="/app/periods">Previous pay periods <ArrowRight size={16}/></Link>
  </>}
- {mode==='choose'&&<section className="check-start" aria-label="Check your statement">
+ <Dialog open={feeRepairOpen} onClose={()=>{if(!feeRepairBusy)setFeeRepairOpen(false);}} className="relative z-[100]"><div className="fixed inset-0 bg-black/70" aria-hidden="true"/><div className="check-fee-dialog-position"><Dialog.Panel className="home-card check-fee-dialog home-screen"><Dialog.Title as="h2">Confirm contractor fee</Dialog.Title><p className="home-muted text-sm">For {fmt(period.start)} – {fmt(period.end)}, {issues.missingFee.length} saved workdays are missing a contractor-fee percentage. We will not change their gross earnings, stops, parcels, extras or dates.</p><label className="home-field">Contractor deduction for those days (%)<input inputMode="decimal" autoComplete="off" value={feeRateInput} onChange={e=>{setFeeRateInput(e.target.value);setFeeRepairError('');}} placeholder="e.g. 6" aria-label="Historical contractor fee percentage"/></label>{issues.missingGross.length>0&&<p className="home-muted text-sm">{issues.missingGross.length} workdays also have missing gross earnings. Those will still need reviewing separately.</p>}<label className="check-basis"><input type="checkbox" checked={feeConfirmed} onChange={e=>setFeeConfirmed(e.target.checked)}/><span>I confirm this percentage applied to these historical workdays. This restores only the missing fee, not the original pay rate.</span></label>{feeRepairError&&<p role="alert" className="home-error">{feeRepairError}</p>}<button type="button" className="home-primary w-full" disabled={feeRepairBusy||!feeConfirmed||!validHistoricalFee(feeRateInput)||offline} onClick={saveHistoricalFee}>{feeRepairBusy?'Saving…':`Apply to ${issues.missingFee.length} saved ${issues.missingFee.length===1?'day':'days'}`}</button><button type="button" className="home-secondary w-full" disabled={feeRepairBusy} onClick={()=>setFeeRepairOpen(false)}>Cancel — keep records unchanged</button></Dialog.Panel></div></Dialog>
+  {mode==='choose'&&<section className="check-start" aria-label="Check your statement">
    <button className="home-text-button" onClick={reset}>← Back to Pay</button>
    <h2>Check your statement</h2><p className="home-muted text-sm">Choose how to read the contractor's statement.</p>
    <div className="check-actions">
@@ -183,7 +190,7 @@ export default function CheckPayV4() {
      </section>
      <section className="home-card check-action"><div className="check-action-top"><Sparkles size={23}/><span className="money-badge">{entitlement?.isPro?'Pro':entitlement?.betaAccess?'Beta':entitlement?'AI':'Checking'}</span></div>
        <h3>Upload with AI</h3><p className="home-muted" role="status">{offline?'Connect to use AI':entitlement?entitlement.isPro?'Included with Pro':entitlement.betaAccess?'Free during testing · up to 8 a day':entitlement.statementAiUses<3?`${3-entitlement.statementAiUses} free AI checks left`:'Free checks used · Pro required':entitlementError?'AI access could not be verified':'Checking AI access…'}</p>
-       {entitlementError&&<p className="home-muted text-xs" role="alert">AI couldn't be verified. You can still enter totals manually.</p>}
+       {entitlementError&&<p className="home-muted text-xs" role="alert">AI access failed. Retry here after signing in, or enter totals manually. No statement was uploaded.</p>}
        {entitlementError?<button className="home-secondary" onClick={()=>setStatusRequest(n=>n+1)}>Retry AI availability</button>:entitlement&&!entitlement.isPro&&!entitlement.betaAccess&&entitlement.statementAiUses>=3?<button className="home-secondary" onClick={()=>navigate('/app/upgrade')}>View Pro</button>:<label className={'home-secondary check-file '+(offline||!entitlement?'check-disabled':'')}>Choose a file<input aria-label="Choose statement file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp,.pdf" disabled={offline||!entitlement} onChange={e=>{chooseFile(e.target.files?.[0]);e.target.value='';}}/></label>}
      </section>
    </div>

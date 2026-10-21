@@ -129,3 +129,16 @@
 .check-start>.home-muted{font-size:13px}
 .check-draft>.check-help-details{padding:0 12px 12px}
 @media(prefers-reduced-motion:reduce){.check-help-details>summary svg{transition:none!important}}
+
+/* Recover only the missing historical contractor deduction; no silent repricing. */
+.check-fee-repair{display:grid;gap:11px;min-width:0}
+.check-fee-repair h2{font-size:17px}
+.check-fee-repair p{line-height:1.5}
+.check-fee-repair>.home-primary{display:flex;justify-content:center;align-items:center;gap:8px;min-height:50px}
+.check-fee-dialog-position{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto}
+.check-fee-dialog{width:min(100%,460px);max-height:min(90dvh,720px);overflow-y:auto;overscroll-behavior:contain;display:grid;gap:14px;box-shadow:0 24px 60px #0007}
+.check-fee-dialog h2{font-size:20px;font-weight:750}
+.check-fee-dialog .home-field input{width:100%}
+.check-fee-dialog .check-basis{margin:0}
+.check-fee-dialog .home-primary,.check-fee-dialog .home-secondary{min-height:48px}
+@media(max-width:500px){.check-fee-dialog-position{align-items:flex-end;padding:12px 12px calc(14px + env(safe-area-inset-bottom))}.check-fee-dialog{border-radius:20px}}
