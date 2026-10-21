@@ -45,7 +45,7 @@ describe('Check Pay entry',()=>{
  it('keeps the comparison action available on an AI-status failure and explains the retry',async()=>{
    f.status.mockRejectedValue(Object.assign(new Error('permission denied'),{code:'functions/permission-denied'}));
    choose();
-   await screen.findByText('AI access could not be verified');
+   await screen.findByText('AI access was rejected');
    expect(screen.getByText(/The AI service did not confirm access/)).toBeInTheDocument();
    expect(screen.getByRole('button',{name:'Enter manually'})).toBeEnabled();
    expect(screen.queryByLabelText('Choose statement file')).not.toBeInTheDocument();
