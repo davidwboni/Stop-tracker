@@ -93,7 +93,7 @@ describe('Check Pay entry',()=>{
    await waitFor(()=>expect(f.update).toHaveBeenCalledTimes(1));
    const changed=f.update.mock.calls[0][0];
    expect(changed).toHaveLength(3);
-   expect(changed[0]).toMatchObject({stops:120,totalParcels:158,total:281.10,payStructureSnapshot:{contractorFeePercent:6}});
+   expect(changed[0]).toMatchObject({stops:120,totalParcels:158,total:281.10,historicalFeeConfirmation:{percent:6}});
    expect(changed[1].total).toBe(209.80);
    expect(changed[2]).toBe(entries[2]);
    expect(f.save).not.toHaveBeenCalled();
