@@ -40,7 +40,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyAZ-6RobdXXlYX8YL0OQV67AVq7Da7Sp2A",
   authDomain: "stop-tracker-v1.firebaseapp.com",
   projectId: "stop-tracker-v1",
-  storageBucket: "stop-tracker-v1.appspot.com",
+  storageBucket: "stop-tracker-v1.firebasestorage.app",
   messagingSenderId: "183138392477",
   appId: "1:183138392477:web:408e779b7276ed51897774",
 };
