@@ -45,8 +45,8 @@ describe('Check Pay entry',()=>{
  it('keeps the comparison action available on an AI-status failure and explains the retry',async()=>{
    f.status.mockRejectedValue(Object.assign(new Error('permission denied'),{code:'functions/permission-denied'}));
    choose();
-   await screen.findByText('AI access could not be verified');
-   expect(screen.getByText(/AI access failed/)).toBeInTheDocument();
+   await screen.findByText('AI access was rejected');
+   expect(screen.getByText(/The AI service did not confirm access/)).toBeInTheDocument();
    expect(screen.getByRole('button',{name:'Enter manually'})).toBeEnabled();
    expect(screen.queryByLabelText('Choose statement file')).not.toBeInTheDocument();
    f.status.mockResolvedValue({isPro:true,statementAiUses:3});
@@ -73,6 +73,14 @@ describe('Check Pay entry',()=>{
    expect(screen.getByRole('link',{name:'Create invoice'})).toHaveAttribute('href','/app/invoice');
  });
 
+ it('keeps the fee repair available inside the statement chooser',()=>{
+   f.data.logs=[{id:'historic',date:period.start,stops:120,total:280.10}];
+   choose();
+   expect(screen.getByRole('heading',{name:'One thing left to check'})).toBeInTheDocument();
+   expect(screen.getByRole('button',{name:'Confirm historical fee'})).toBeEnabled();
+   fireEvent.click(screen.getByRole('button',{name:'Confirm historical fee'}));
+   expect(screen.getByRole('heading',{name:'Confirm contractor fee'})).toBeInTheDocument();
+ });
  it('restores a logged period with one confirmed historical fee action without rewriting its gross totals',async()=>{
    const entries=[
      {id:'first',date:period.start,stops:120,totalParcels:158,total:281.10},
@@ -83,8 +91,8 @@ describe('Check Pay entry',()=>{
    f.update.mockResolvedValue({success:true});
    open();
    expect(screen.getByText('Not available yet')).toBeInTheDocument();
-   expect(screen.getByRole('button',{name:'Confirm missing fee'})).toBeEnabled();
-   fireEvent.click(screen.getByRole('button',{name:'Confirm missing fee'}));
+   expect(screen.getByRole('button',{name:'Confirm historical fee'})).toBeEnabled();
+   fireEvent.click(screen.getByRole('button',{name:'Confirm historical fee'}));
    expect(screen.getByRole('heading',{name:'Confirm contractor fee'})).toBeInTheDocument();
    expect(screen.getByLabelText('Historical contractor fee percentage')).toHaveValue('6');
    expect(screen.getByRole('button',{name:'Apply to 2 saved days'})).toBeDisabled();
@@ -102,7 +110,7 @@ describe('Check Pay entry',()=>{
    f.data.logs=[{id:'legacy',date:period.start,stops:120,total:281.10}];
    f.data.paymentConfig={model:'flat_stops',ratePerStop:2.08};
    open();
-   fireEvent.click(screen.getByRole('button',{name:'Confirm missing fee'}));
+   fireEvent.click(screen.getByRole('button',{name:'Confirm historical fee'}));
    expect(screen.getByLabelText('Historical contractor fee percentage')).toHaveValue('');
    fireEvent.click(screen.getByRole('checkbox'));
    expect(screen.getByRole('button',{name:'Apply to 1 saved day'})).toBeDisabled();
