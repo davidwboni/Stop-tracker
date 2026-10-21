@@ -86,7 +86,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          api_key="$(node -e 'const s=require("fs").readFileSync("src/services/firebase.js","utf8");const m=s.match(/apiKey:\\s*["\x27]([^"\x27]+)["\x27]/);if(!m)process.exit(1);process.stdout.write(m[1]);')"
+          api_key="$(node -e 'const s=require("fs").readFileSync("src/services/firebase.js","utf8");const line=s.split(String.fromCharCode(10)).find(x=>x.includes("apiKey:"));if(!line)process.exit(1);process.stdout.write(line.split(String.fromCharCode(34))[1]);')"
           signup="$(mktemp)"
           signup_status="$(curl --silent --show-error --output "$signup" --write-out '%{http_code}' -X POST -H 'content-type: application/json' --data '{"returnSecureToken":true}' "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=$api_key")"
           if [ "$signup_status" != "200" ]; then
