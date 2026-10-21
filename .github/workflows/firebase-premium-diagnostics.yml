@@ -115,6 +115,40 @@ jobs:
             fi
             rm -f "$output"
           done
+      - name: Verify beta access for disposable non-guest account
+        shell: bash
+        run: |
+          set -euo pipefail
+          api_key="$(node -e 'const s=require("fs").readFileSync("src/services/firebase.js","utf8");const line=s.split(String.fromCharCode(10)).find(x=>x.includes("apiKey:"));if(!line)process.exit(1);process.stdout.write(line.split(String.fromCharCode(34))[1]);')"
+          email="st-health-$(openssl rand -hex 10)@example.invalid"
+          password="$(openssl rand -hex 20)"
+          response="$(mktemp)"
+          payload="$(jq -nc --arg e "$email" --arg p "$password" '{email:$e,password:$p,returnSecureToken:true}')"
+          code="$(curl --silent --show-error --output "$response" --write-out '%{http_code}' -X POST -H 'content-type: application/json' --data "$payload" "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=$api_key")"
+          if [ "$code" != "200" ]; then
+            echo "Disposable email test account unavailable (HTTP $code)"
+            jq -r '.error.message // "Unable to create test account"' "$response" | head -c 100 || true
+            echo
+            rm -f "$response"
+            exit 0
+          fi
+          token="$(jq -r .idToken "$response")"
+          rm -f "$response"
+          cleanup() {
+            curl --silent --show-error -X POST -H 'content-type: application/json' --data "$(jq -nc --arg t "$token" '{idToken:$t}')" "https://identitytoolkit.googleapis.com/v1/accounts:delete?key=$api_key" >/dev/null || true
+          }
+          trap cleanup EXIT
+          url="$(gcloud functions describe getPremiumStatus --gen2 --region=us-central1 --project=stop-tracker-v1 --format='value(serviceConfig.uri)')"
+          output="$(mktemp)"
+          status="$(curl --silent --show-error --max-time 25 --output "$output" --write-out '%{http_code}' -X POST -H 'content-type: application/json' -H "Authorization: Bearer $token" --data '{"data":{}}' "$url")"
+          echo "Non-guest beta status HTTP $status"
+          if [ "$status" = "200" ]; then
+            jq -c '{betaAccess: .result.betaAccess, isPro: .result.isPro, validUses:(.result.statementAiUses!=null)}' "$output"
+          else
+            jq -c '{status: .error.status, message: .error.message}' "$output" | head -c 240 || true
+            echo
+          fi
+          rm -f "$output"
       - name: Check error log access without printing customer data
         shell: bash
         run: |
