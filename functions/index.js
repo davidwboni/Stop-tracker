@@ -11,6 +11,7 @@ const DEEPSEEK_API_KEY = defineSecret("DEEPSEEK_API_KEY");
 const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
+const {classifyProviderStatus,classifyProviderException} = require("./statementProviderErrors");
 
 function stripeApiError(response, data) {
   const error = new Error(data?.error?.message || "Stripe request failed");
@@ -353,19 +354,24 @@ exports.extractStatement = onCall(
       });
 
       if (!response.ok) {
-        // Do not log provider responses or document contents.
-        throw new Error(`DeepSeek status ${response.status}`);
+        // Provider messages, documents, and API credentials are never exposed.
+        const info=classifyProviderStatus(response.status);
+        throw new HttpsError(info.code,info.message);
       }
 
-      const payload = await response.json();
-      data = JSON.parse(
-        String(payload?.choices?.[0]?.message?.content || "{}")
-          .replace(/^\`\`\`(?:json)?\\s*/i, "")
-          .replace(/\`\`\`\\s*$/, "")
-      );
+      let payload;
+      try { payload=await response.json(); }
+      catch (_) { throw new Error('provider-response'); }
+      const content=payload?.choices?.[0]?.message?.content;
+      if(typeof content!=='string'||!content.trim())throw new Error('provider-response');
+      try {
+        data=JSON.parse(content.replace(/^```(?:json)?\s*/i,"").replace(/```\s*$/,""));
+      } catch (_) { throw new Error('provider-json'); }
     } catch (err) {
-      // No document content or provider errors enter application logs.
-      throw new HttpsError("internal", "Could not read this statement. Try a clearer file or enter it manually.");
+      // Sanitised status codes are surfaced; never include raw provider errors.
+      if (err instanceof HttpsError) throw err;
+      const info=classifyProviderException(err);
+      throw new HttpsError(info.code,info.message);
     }
 
     data = require('./statementModel').normalizeStatement(data);
