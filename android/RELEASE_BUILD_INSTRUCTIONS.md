@@ -4,15 +4,17 @@
 
 ### Step 1: Create Keystore
 
+**Security:** Generate strong, unique signing passwords in a password manager and back up the keystore securely outside the repository. A previously documented example password was public; **if you ever used that sample to create a real keystore, do not use that key to publish a new app**. For an already published app, follow the official Google Play signing-key reset/upgrade procedure rather than replacing the key blindly.
+
 1. In Android Studio, go to **Build → Generate Signed Bundle / APK**
 2. Select **Android App Bundle** → Click **Next**
 3. Click **Create new...** under Key store path
 4. Fill in the form:
    - **Key store path**: Browse and save as `stop-tracker-release.keystore` in the `/android` folder
-   - **Password**: `StopTracker2026!SecureKey#`
-   - **Confirm**: `StopTracker2026!SecureKey#`
+   - **Password**: `<unique-password-from-password-manager>`
+   - **Confirm**: Repeat the unique password you created (never use a password copied from this guide)
    - **Alias**: `stop-tracker`
-   - **Key password**: `StopTracker2026!SecureKey#`
+   - **Key password**: Create a second strong unique password (or an independent securely stored one)
    - **Validity**: 25 years (or maximum allowed)
    - **Certificate**:
      - First and Last Name: David Boni
@@ -52,8 +54,8 @@ Before building the release, test your app:
 Create a file `android/key.properties` with:
 
 ```properties
-storePassword=StopTracker2026!SecureKey#
-keyPassword=StopTracker2026!SecureKey#
+storePassword=YOUR_PRIVATE_STORE_PASSWORD
+keyPassword=YOUR_PRIVATE_KEY_PASSWORD
 keyAlias=stop-tracker
 storeFile=stop-tracker-release.keystore
 ```
@@ -74,8 +76,8 @@ The AAB will be in: `android/app/build/outputs/bundle/release/app-release.aab`
 - Check the path in Android Studio or key.properties
 
 ### "Wrong password"
-- Password: `StopTracker2026!SecureKey#`
-- See KEYSTORE_CREDENTIALS.txt for all details
+- Password: `<unique-password-from-password-manager>`
+- Retrieve your actual keystore credentials from your password manager. Never store passwords in the repository.
 
 ### "Build failed"
 - Run `./gradlew clean` first
