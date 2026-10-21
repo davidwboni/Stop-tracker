@@ -362,10 +362,10 @@ exports.extractStatement = onCall(
       let payload;
       try { payload=await response.json(); }
       catch (_) { throw new Error('provider-response'); }
-      const content=payload?.choices?.[0]?.message?.content;
-      if(typeof content!=='string'||!content.trim())throw new Error('provider-response');
+      const rawAnswer=payload?.choices?.[0]?.message?.content;
+      if(typeof rawAnswer!=='string'||!rawAnswer.trim())throw new Error('provider-response');
       try {
-        data=JSON.parse(content.replace(/^```(?:json)?\s*/i,"").replace(/```\s*$/,""));
+        data=JSON.parse(rawAnswer.replace(/^```(?:json)?\s*/i,"").replace(/```\s*$/,""));
       } catch (_) { throw new Error('provider-json'); }
     } catch (err) {
       // Sanitised status codes are surfaced; never include raw provider errors.
