@@ -26,6 +26,7 @@ async function reserveBetaRequest(tx, db, now, HttpsError){
 // exhausted rather than granting extra free trials or returning NaN/null.
 function safeUsageCount(value){
   if(value===undefined||value===null||value==='')return 0;
+  if(typeof value!=='string'&&typeof value!=='number')return 3;
   const n=Number(value);
   return Number.isSafeInteger(n)&&n>=0?n:3;
 }
