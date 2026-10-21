@@ -3,7 +3,7 @@ const admin = require("firebase-admin");
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
 const crypto = require("crypto");
-const {betaAccess,reserveBetaRequest,DAILY_ACCOUNT_LIMIT} = require("./betaAccess");
+const {betaAccess,reserveBetaRequest,DAILY_ACCOUNT_LIMIT,safeUsageCount} = require("./betaAccess");
 
 admin.initializeApp();
 
@@ -84,7 +84,7 @@ async function consumeFreeUse(uid, field) {
   return admin.firestore().runTransaction(async tx => {
     const snap = await tx.get(ref);
     const data = snap.data() || {};
-    const used = Number(data[field] || 0);
+    const used = safeUsageCount(data[field]);
     if (used >= 3) return { allowed: false, used };
     tx.set(ref, { [field]: used + 1, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
     return { allowed: true, used: used + 1 };
@@ -268,7 +268,7 @@ exports.getPremiumStatus = onCall({ cors: true, invoker: "public" }, async reque
     admin.firestore().collection("usage").doc(request.auth.uid).get(),
   ]);
   const u = usage.data() || {};
-  return { isPro: ent.isPro, betaAccess:betaAccess(request.auth), statementAiUses: Number(u.statementAiUses || 0), routeOptimizationUses: Number(u.routeOptimizationUses || 0) };
+  return { isPro: ent.isPro, betaAccess:betaAccess(request.auth), statementAiUses: safeUsageCount(u.statementAiUses), routeOptimizationUses: safeUsageCount(u.routeOptimizationUses) };
 });
 
 exports.extractStatement = onCall(
