@@ -64,6 +64,7 @@ export default function CheckPayV4() {
  const previewExpected=previewSnapshot?.payout??summary.payout;
  const comparison=payoutComparison(periodRecords[period.id],period,summary,revision,unavailable);
  const canInvoice=comparison.state==='matched'||comparison.state==='reconciled';
+ const canScan=!!entitlement&&(entitlement.isPro||entitlement.betaAccess||entitlement.statementAiUses<3)&&!offline&&!unavailable&&fullPeriod;
  const checkedAlready=['matched','difference','reconciled'].includes(comparison.state);
  const previousComplete=periods[1]?.end<today?periods[1]:null;
  const offerPrevious=mode==='idle'&&period.id===periods[0]?.id&&previousComplete&&(previousComplete.daysLogged>0||!!periodRecords[previousComplete.id]);
@@ -243,13 +244,24 @@ export default function CheckPayV4() {
  {(loadError||costs.error)&&<div className="home-banner" role="alert">Records could not be loaded. <button className="home-text-button" onClick={()=>{costs.retry?.();forceSync?.();}}>Retry records</button></div>}
   {mode==='idle'&&<>
   <section className="check-simple-actions" aria-label="Your pay actions">
-   {ready&&periodRecords[period.id]?.reviewedStatement?.reviewed&&!periodRecords[period.id]?.payoutComparison?
-       <button type="button" className="home-primary w-full" onClick={compareSavedStatement}>Compare saved statement <ArrowRight size={18}/></button>:
-       canInvoice?<Link className="home-primary w-full" to="/app/invoice" state={invoicePath.state}>Prepare invoice <ArrowRight size={18}/></Link>:
-       <Link className="home-primary w-full" to="/app/invoice" state={{periodId:period.id,startInvoice:true}}>Create invoice <ArrowRight size={18}/></Link>}
-   {comparison.state==='difference'?<button className="home-secondary w-full" type="button" onClick={viewSaved}>Review payout difference <ArrowRight size={18}/></button>:<button className="home-secondary w-full" type="button" disabled={unavailable||!fullPeriod} onClick={()=>{setMode('choose');setStatusRequest(n=>n+1);}}>Check statement <ArrowRight size={18}/></button>}
-   <p className="home-muted text-xs">Only create an invoice if your contractor needs one. This doesn't confirm payment.</p>
-  </section>
+    {comparison.state==='difference'?
+      <button className="home-primary w-full" type="button" onClick={viewSaved}>Review payout difference <ArrowRight size={18}/></button>:
+     canInvoice?
+      <Link className="home-primary w-full" to="/app/invoice" state={invoicePath.state}>Prepare invoice <ArrowRight size={18}/></Link>:
+     hasSaved&&periodRecords[period.id]?.reviewedStatement&&!periodRecords[period.id]?.reviewedStatement?.reviewed?
+      <button className="home-primary w-full" type="button" onClick={()=>manual(true)}>Finish checking saved statement <ArrowRight size={18}/></button>:
+     ready&&periodRecords[period.id]?.reviewedStatement?.reviewed&&!periodRecords[period.id]?.payoutComparison?
+      <button className="home-primary w-full" type="button" onClick={compareSavedStatement}>Compare saved statement <ArrowRight size={18}/></button>:
+     canScan?
+      <label className="home-primary check-direct-upload">Upload contractor statement <ArrowRight size={18}/>
+       <input aria-label="Upload contractor statement" type="file" accept="application/pdf,image/jpeg,image/png,image/webp,.pdf"
+         onChange={e=>{chooseFile(e.target.files?.[0]);e.target.value='';}}/>
+      </label>:
+      <button type="button" className="home-primary w-full" disabled={unavailable||!fullPeriod} onClick={()=>{setMode('choose');setStatusRequest(n=>n+1);}}>Check statement <ArrowRight size={18}/></button>}
+    {canScan&&comparison.state!=='difference'&&!canInvoice&&<button className="home-secondary w-full" type="button" onClick={()=>{setMode('choose');setStatusRequest(n=>n+1);}}>Check statement <ArrowRight size={18}/></button>}
+    {(canInvoice||comparison.state==='difference')&&<button className="home-secondary w-full" type="button" disabled={unavailable||!fullPeriod} onClick={()=>{setMode('choose');setStatusRequest(n=>n+1);}}>Check another statement <ArrowRight size={18}/></button>}
+    <p className="home-muted text-xs">{canInvoice?'Your pay has been checked. Confirm the contractor statement amounts before sending an invoice.':'AI reads the statement and compares it with your saved work. You only review exceptions; no invoice is created until you approve.'}</p>
+   </section>
   {comparison.state==='stale'&&<p className="home-banner" role="status">Your work or charges changed after your last check. Check the statement again before relying on the previous comparison.</p>}
   
     {needsPayRepair&&<details className="check-help-details"><summary>Why is the estimate unavailable? <ChevronDown size={17}/></summary>

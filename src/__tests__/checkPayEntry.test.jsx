@@ -26,7 +26,7 @@ describe('Check Pay entry',()=>{
    expect(amount).toBeTruthy();
    expect(actions).toBeTruthy();
    expect(amount.compareDocumentPosition(actions)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-   expect(screen.getByRole('link',{name:'Create invoice'})).toHaveAttribute('href','/app/invoice');
+   expect(screen.queryByRole('link',{name:'Create invoice'})).not.toBeInTheDocument();
    expect(screen.getByRole('button',{name:'Check statement'})).toBeEnabled();
    expect(screen.queryByRole('button',{name:'Enter manually'})).not.toBeInTheDocument();
    fireEvent.click(screen.getByRole('button',{name:'Check statement'}));
@@ -34,6 +34,16 @@ describe('Check Pay entry',()=>{
    expect(page.querySelectorAll('.check-action')).toHaveLength(2);
    expect(screen.getByRole('button',{name:'Enter manually'})).toBeEnabled();
    await screen.findByText('2 free AI checks left');
+ });
+ it('opens upload directly from Pay when beta AI is available, before any invoice action',async()=>{
+   f.status.mockResolvedValue({isPro:false,betaAccess:true,statementAiUses:3,routeOptimizationUses:3});
+   open();
+   const fileInput=await screen.findByLabelText('Upload contractor statement');
+   expect(fileInput).toBeEnabled();
+   expect(screen.queryByRole('link',{name:'Create invoice'})).not.toBeInTheDocument();
+   fireEvent.change(fileInput,{target:{files:[new File(['fake'],'statement.png',{type:'image/png'})]}});
+   expect(screen.getByText('Ready to read your statement?')).toBeInTheDocument();
+   expect(screen.getByRole('button',{name:'Read statement with AI'})).toBeEnabled();
  });
  it('unlocks statement AI for a free beta account even when three previous trials are used',async()=>{
    f.status.mockResolvedValue({isPro:false,betaAccess:true,statementAiUses:3,routeOptimizationUses:3});
@@ -127,7 +137,7 @@ describe('Check Pay entry',()=>{
  it('hides the missing-rate explanation until requested, without blocking invoicing',()=>{
    f.data.logs=[{id:'old-day',date:period.start,total:281.1,stops:120}];
    open();
-   expect(screen.getByRole('link',{name:'Create invoice'})).toHaveAttribute('href','/app/invoice');
+   expect(screen.queryByRole('link',{name:'Create invoice'})).not.toBeInTheDocument();
    expect(screen.getByRole('button',{name:'Check statement'})).toBeEnabled();
    expect(screen.getByText('Why is the estimate unavailable?')).toBeInTheDocument();
    expect(screen.queryByRole('link',{name:/Review those days/})).not.toBeVisible();
