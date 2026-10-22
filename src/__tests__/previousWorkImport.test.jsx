@@ -23,7 +23,7 @@ describe('historical work CSV safety',()=>{
    Object.defineProperty(file,'text',{value:async()=> 'date,stops,gross\n2026-09-14,120,200'});
    fireEvent.change(screen.getByLabelText('Choose previous work CSV'),{target:{files:[file]}});
    expect(await screen.findByText(/dates already exist/)).toBeInTheDocument();
-   expect(screen.queryByRole('button',{name:/Import 1 workdays/})).toBeDisabled();
+   expect(screen.queryByRole('button',{name:/Import 1 workdays/})).not.toBeInTheDocument();
    expect(onImport).not.toHaveBeenCalled();
  });
  it('imports only after the driver confirms provenance and previews values',async()=>{
