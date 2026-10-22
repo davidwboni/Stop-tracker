@@ -53,12 +53,11 @@ export default function StatementAutoReview({check,period,hidden=false,saving=fa
    </section>
    <section className="home-card auto-check-finish">
      <h2>Next step</h2>
-     <p className="home-muted text-sm">{check.canCompare?'Check the payout and VAT figures above against your original statement. One confirmation will open the comparison; individual charge ticks aren't required.':
+     <p className="home-muted text-sm">{check.canCompare?'Check the payout and VAT figures above against your original statement. One confirmation will open the comparison; individual charge ticks are not required.':
        'You can save what AI found now. The app will not claim the figures match until any missing VAT, period or historical pay details are resolved.'}</p>
      {error&&<p className="home-error" role="alert">{error}</p>}
      {check.canCompare?<button type="button" className="home-primary w-full" disabled={saving} onClick={onCompare}>{saving?'Saving…':'I checked these figures — compare pay'}</button>:
        <button type="button" className="home-primary w-full" disabled={!canArchive||saving} onClick={onSaveDraft}>{saving?'Saving…':check.payoutBeforeVat!=null?'I checked payout — save for comparison later':'Save statement — finish later'}</button>}
-     {feeMissing>0&&check.expectedPence==null&&<button className="home-secondary w-full" type="button" onClick={onFeeRepair}>Confirm missing contractor fee</button>}
      <button type="button" className="home-secondary w-full" onClick={onEdit} disabled={saving}>Edit AI figures / VAT</button>
      <p className="home-muted text-xs">No work entries or contractor charges are changed by this preview. AI can make mistakes; the original statement is the source of truth.</p>
    </section>
