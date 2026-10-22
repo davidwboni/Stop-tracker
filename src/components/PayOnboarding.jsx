@@ -48,7 +48,7 @@ const WelcomeStep = ({ firstName, config, payPeriodAnchor, onStart }) => {
       </div>
 
       <motion.h1 variants={rise} custom={0} initial="hidden" animate="show" className="text-3xl font-bold">
-        You're all set, {firstName}
+        You're ready, {firstName}
       </motion.h1>
       <motion.p variants={rise} custom={1} initial="hidden" animate="show" className="text-muted-foreground leading-relaxed">
         Welcome to Stop Tracker. Just log your day, we'll do the maths.
@@ -70,21 +70,21 @@ const WelcomeStep = ({ firstName, config, payPeriodAnchor, onStart }) => {
         custom={3}
         initial="hidden"
         animate="show"
-        className="mx-auto w-full min-w-0 max-w-full box-border rounded-[16px] border border-[#302a5b] bg-[#111827] p-4 text-left"
+        className="mx-auto w-full min-w-0 max-w-full box-border rounded-[16px] border border-border bg-card p-4 text-left"
       >
-        <div className="text-xs font-bold uppercase tracking-wider text-[#8f83ff]">
-          Current 4-week period started
+        <div className="text-xs font-bold uppercase tracking-wider text-primary">
+          Tracking starts on
         </div>
 
         <div className="relative mt-2 block w-full">
-          <div className="flex h-12 w-full items-center justify-between rounded-xl border border-[#26314a] bg-[#090f1a] px-4 text-base font-semibold text-white">
+          <div className="flex h-12 w-full items-center justify-between rounded-xl border border-border bg-background px-4 text-base font-semibold text-foreground">
             <span>{formattedPayPeriodAnchor}</span>
-            <CalendarDays className="h-5 w-5 shrink-0 text-[#8f83ff]" />
+            <CalendarDays className="h-5 w-5 shrink-0 text-primary" />
           </div>
         </div>
 
         <p className="mt-3 text-xs leading-5 text-muted-foreground">
-          Use the first day of your current invoice/pay cycle. Stop Tracker will keep future 28-day periods aligned automatically.
+          Stop Tracker checks the exact dates on each contractor statement when you upload it. You do not need a fixed four-week pay cycle.
         </p>
       </motion.div>
 
@@ -115,7 +115,7 @@ const PayOnboarding = ({ onComplete, onStart }) => {
   const [payPeriodAnchor, setPayPeriodAnchor] = useState(() => isoDate(new Date()));
 
   return (
-    <div className="min-h-[100dvh] w-full overflow-x-hidden bg-[#080c14] text-[#f5f7fb] flex flex-col items-center justify-center px-4 py-10 pt-safe">
+    <div className="min-h-[100dvh] w-full overflow-x-hidden bg-background text-foreground flex flex-col items-center justify-center px-4 py-10 pt-safe">
       {confirmed ? (
         <WelcomeStep firstName={firstName} config={confirmed} payPeriodAnchor={payPeriodAnchor} setPayPeriodAnchor={setPayPeriodAnchor} onStart={onStart} />
       ) : (
@@ -132,7 +132,7 @@ const PayOnboarding = ({ onComplete, onStart }) => {
             </p>
           </div>
 
-          <label className="home-field">Current 4-week period start date<input type="date" value={payPeriodAnchor} onChange={e=>{setPayPeriodAnchor(e.target.value);setPeriodError('');}} /></label>
+          <label className="home-field">Start tracking from<input type="date" value={payPeriodAnchor} onChange={e=>{setPayPeriodAnchor(e.target.value);setPeriodError('');}} /></label>
           {periodError&&<p role="alert">{periodError}</p>}
           <div className="rounded-[18px] border border-border bg-card p-5 shadow-sm">
             <PayStructureAISetup onConfirm={confirm} />
