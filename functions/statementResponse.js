@@ -62,6 +62,9 @@ function parseStatementResponse(payload) {
   if(typeof raw!=='string'||!raw.trim())throw new StatementResponseError("empty");
   let text=raw.trim().replace(/^\uFEFF/,"");
   if(/^```(?:json)?\s*/i.test(text))text=text.replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"").trim();
+  // A JSON array response is not a pay statement. Do not fish an inner row
+  // out of it and mistakenly treat that row as the full statement.
+  if(text.startsWith('['))throw new StatementResponseError("json");
   const candidates=[text];
   // Allow a JSON object surrounded by harmless prose without accepting any
   // partial object. Content and text are not persisted or logged.
