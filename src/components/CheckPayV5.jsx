@@ -270,6 +270,11 @@ export default function CheckPayV5(){
      {vatChoice==='included'&&<label className="home-field">VAT amount printed on the statement (£)<input inputMode="decimal" placeholder="Only enter an amount shown on the original" value={vatEntry} onChange={e=>setVatEntry(e.target.value)}/></label>}</>}
     {rowSummary.payout==null&&<p className="home-muted text-sm">Some historical pay settings are missing. You can save the statement now, then confirm those settings without re-uploading.</p>}
    </section>}
+   {issues.missingGross.length>0&&<section className="home-card v5-missing-work" role="region" aria-label="Review missing work earnings">
+     <h2>{issues.missingGross.length} saved {issues.missingGross.length===1?'day needs':'days need'} earnings reviewed</h2>
+     <p className="home-muted text-sm">Your recorded stops are safe, but those historical gross amounts are missing. Open just the affected days; no new statement scan is needed.</p>
+     <Link className="home-secondary w-full" to="/app/records?payReview=1" state={{periodId:period.id}}>Review saved workdays <ArrowRight size={16}/></Link>
+   </section>}
    {issues.missingFee.length>0&&<details className="home-card v5-fee-repair" aria-label="Confirm historical pay deduction">
     <summary>One missing detail · Confirm a contractor deduction for {issues.missingFee.length} saved {issues.missingFee.length===1?'day':'days'}</summary>
     <p className="home-muted text-sm">Your original work and gross earnings stay unchanged. Confirm this percentage only if it applied then.</p>
