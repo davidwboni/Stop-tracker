@@ -42,6 +42,14 @@ test('when shared budget denies retry, no second paid call is made',async()=>{
  await assert.rejects(readWithSummaryFallback(async()=>{throw new StatementResponseError('empty');},async()=>{retries++;},async()=>{throw limit;}),limit);
  assert.equal(retries,0);
 });
+test('provider content filters cannot trigger a paid retry',async()=>{
+ let attempts=0;
+ await assert.rejects(readWithSummaryFallback(
+   async()=>parseStatementResponse(envelop('{}','content_filter')),
+   async()=>{attempts++;},async()=>{attempts++;}
+ ),{kind:'filtered'});
+ assert.equal(attempts,0);
+});
 test('never accepts a partial response even when it contains valid nested objects',()=>{
  assert.throws(()=>parseStatementResponse(envelop('{"statementAmount": 100, "daily": [{"date": "2026-09-14", "amount": 8}]')),{kind:'json'});
 });
