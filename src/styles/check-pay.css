@@ -142,3 +142,10 @@
 .check-fee-dialog .check-basis{margin:0}
 .check-fee-dialog .home-primary,.check-fee-dialog .home-secondary{min-height:48px}
 @media(max-width:500px){.check-fee-dialog-position{align-items:flex-end;padding:12px 12px calc(14px + env(safe-area-inset-bottom))}.check-fee-dialog{border-radius:20px}}
+
+/* V5: a single thumb-friendly upload directly from Pay, with keyboard access. */
+.check-direct-upload{position:relative;display:flex;gap:9px;align-items:center;justify-content:center;min-height:54px;cursor:pointer;border-radius:14px;text-align:center}
+.check-direct-upload input[type=file]{position:absolute;inset:0;display:block;width:100%;height:100%;opacity:0;cursor:pointer;z-index:1}
+.check-direct-upload:focus-within{outline:3px solid var(--home-purple);outline-offset:3px}
+.check-direct-upload:active{transform:scale(.99)}
+@media(prefers-reduced-motion:reduce){.check-direct-upload:active{transform:none}}
