@@ -1,7 +1,7 @@
 {
   "short_name": "Stop Tracker",
-  "name": "Stop Tracker 3.0 - Delivery & Invoice Management",
-  "description": "Track deliveries and manage invoices with a sleek, modern interface",
+  "name": "Stop Tracker — Delivery Pay & Invoices",
+  "description": "Your work. Your records. Your pay. Log deliveries, check contractor statements, and create invoices.",
   "icons": [
     {
       "src": "favicon.ico",
@@ -24,9 +24,11 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
-  "theme_color": "#0A84FF",
-  "background_color": "#0F1419",
-  "categories": ["productivity", "business"],
+  "theme_color": "#080C14",
+  "background_color": "#080C14",
+  "categories": [
+    "productivity",
+    "business"
+  ],
   "prefer_related_applications": false
 }
