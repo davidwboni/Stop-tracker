@@ -75,4 +75,14 @@ function parseStatementResponse(payload) {
   }
   throw new StatementResponseError("json");
 }
-module.exports={parseStatementResponse,StatementResponseError};
+// Reserve the second provider call under the same daily shared cost budget.
+// Never retry permission or provider HTTP failures, only response-format failures.
+async function readWithSummaryFallback(full,summary,reserveRetry){
+  try{return {data:await full(),summaryOnly:false};}
+  catch(error){
+    if(!(error instanceof StatementResponseError))throw error;
+    await reserveRetry();
+    return {data:await summary(),summaryOnly:true};
+  }
+}
+module.exports={parseStatementResponse,StatementResponseError,readWithSummaryFallback};
