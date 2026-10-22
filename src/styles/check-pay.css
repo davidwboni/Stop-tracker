@@ -142,3 +142,10 @@
 .check-fee-dialog .check-basis{margin:0}
 .check-fee-dialog .home-primary,.check-fee-dialog .home-secondary{min-height:48px}
 @media(max-width:500px){.check-fee-dialog-position{align-items:flex-end;padding:12px 12px calc(14px + env(safe-area-inset-bottom))}.check-fee-dialog{border-radius:20px}}
+
+/* Statement-first Pay: one primary upload instead of an invoice-first funnel. */
+.check-simple-actions>.check-upload-primary{position:relative;display:flex;min-height:54px;cursor:pointer;text-align:center}
+.check-upload-primary input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.check-upload-primary:focus-within{outline:3px solid var(--home-purple);outline-offset:3px}
+.check-simple-actions .check-invoice-link{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;text-align:center;font-size:13px}
+@media(prefers-reduced-motion:reduce){.check-upload-primary{animation:none!important;transition:none!important}}
