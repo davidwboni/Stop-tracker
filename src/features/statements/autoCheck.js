@@ -58,21 +58,37 @@ export function buildStatementAutoCheck(statement,period,rows=[],days=[],expecte
       const theirsStops=listed.length===1?safeStops(item.stops):null;
       const theirsGross=listed.length===1?safePence(item.amount):null;
       const oursGross=own?.hasGross?own.grossPence:null;
-      const mismatch=listed.length>1||!own||listed.length===0||
-        (theirsStops!=null&&own.loggedStops!=null&&theirsStops!==own.loggedStops)||
-        (theirsGross!=null&&oursGross!=null&&theirsGross!==oursGross);
-      const compared=(theirsStops!=null&&own?.loggedStops!=null)||(theirsGross!=null&&oursGross!=null);
-      const status=mismatch?'review':compared?'match':'unknown';
-      dayRows.push({date,status,reason:listed.length>1?'Duplicate dates on statement':!own?'Not logged in Stop Tracker':listed.length===0?'No statement row for logged day':status==='unknown'?'Insufficient daily figures':null,loggedStops:own?.loggedStops??null,statementStops:theirsStops,loggedGross:oursGross,statementGross:theirsGross});
+      const comparableStops=theirsStops!=null&&own?.loggedStops!=null;
+      const stopsDiffer=comparableStops&&theirsStops!==own.loggedStops;
+      const dailyAmountsDiffer=theirsGross!=null&&oursGross!=null&&theirsGross!==oursGross;
+      // Contractor delivery-day 'total' may already contain excess parcels,
+      // top-ups and route adjustments. Stop Tracker's gross is an independent
+      // saved estimate. A day with identical stop counts is NOT 27 separate
+      // unpaid-stop discrepancies merely because all-in figures differ.
+      // Keep the difference visible and unverified, with a single period-wide
+      // acceptance of limited daily earnings coverage before invoicing.
+      const mismatch=listed.length>1||!own||listed.length===0||stopsDiffer;
+      const status=mismatch?'review':comparableStops?'match':'unknown';
+      const earningsUnverified=status==='match'&&dailyAmountsDiffer;
+      const reason=listed.length>1?'Duplicate dates on statement':
+        !own?'Not logged in Stop Tracker':
+        listed.length===0?'No statement row for logged day':
+        stopsDiffer?'Different stop counts':
+        status==='unknown'?'Insufficient daily stop figures':null;
+      dayRows.push({date,status,reason,earningsUnverified,
+        loggedStops:own?.loggedStops??null,statementStops:theirsStops,
+        loggedGross:oursGross,statementGross:theirsGross,
+        grossDifferencePence:dailyAmountsDiffer?theirsGross-oursGross:null});
     }
   }
   const flagged=dayRows.filter(r=>r.status==='review');
   const matched=dayRows.filter(r=>r.status==='match');
+  const earningsVariations=dayRows.filter(r=>r.earningsUnverified);
   const unknown=dayRows.filter(r=>r.status==='unknown');
   const canCompare=currencyOk&&periodOk&&payoutBeforeVat!=null&&Number.isSafeInteger(expectedPence);
   return {currencyOk,periodOk,rawPayout,vat,printedNet,payoutBeforeVat,vatSource,
     expectedPence:Number.isSafeInteger(expectedPence)?expectedPence:null,
     difference:canCompare?payoutBeforeVat-expectedPence:null,canCompare,hasDaily,
-    flagged,matched,unknown,dayRows,outsidePeriod,
+    flagged,matched,unknown,earningsVariations,dayRows,outsidePeriod,
     summaryOnly:statement?.extractionMode==='summary_only'};
 }
