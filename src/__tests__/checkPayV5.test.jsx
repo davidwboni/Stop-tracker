@@ -68,7 +68,7 @@ describe('V5 one-upload pay journey',()=>{
  it('detects the dates on a non-28-day statement without rewriting the work history',async()=>{
   stub.extract.mockResolvedValue(statement({periodStart:'2026-09-14',periodEnd:'2026-10-04',contractorPayout:300}));
   open();await upload();
-  expect(screen.getByText(/14 Sep 2026 – 4 Oct 2026/)).toBeInTheDocument();
+  expect(screen.getByText(/14 Sept 2026 – 4 Oct 2026/)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button',{name:'Save pay check'}));
   await waitFor(()=>expect(stub.save).toHaveBeenCalled());
   expect(stub.save.mock.calls[0][0]).toBe('2026-09-14_2026-10-04');
