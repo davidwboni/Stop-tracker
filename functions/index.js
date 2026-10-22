@@ -13,6 +13,7 @@ const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 const {classifyProviderStatus,classifyProviderException} = require("./statementProviderErrors");
 const {parseStatementResponse,StatementResponseError,readWithSummaryFallback}=require("./statementResponse");
+const {buildStatementDeepSeekRequest}=require("./statementDeepSeekRequest");
 
 function stripeApiError(response, data) {
   const error = new Error(data?.error?.message || "Stripe request failed");
@@ -348,16 +349,12 @@ exports.extractStatement = onCall(
             "Content-Type": "application/json",
             Authorization: `Bearer ${DEEPSEEK_API_KEY.value()}`
           },
-          body: JSON.stringify({
-            model: "deepseek-flash",
-            temperature: 0,
-            max_tokens: outputLimit,
-            response_format: { type: "json_object" },
-            messages: [
-              { role: "system", content: prompt },
-              { role: "user", content: [{type:"text",text:instructions},...content.slice(1)] }
-            ]
-          })
+          body: JSON.stringify(buildStatementDeepSeekRequest({
+            prompt,
+            outputLimit,
+            instructions,
+            imageBlocks:content.slice(1)
+          }))
         });
         if (!response.ok) {
           // Never expose provider responses, uploaded pages or API keys.
