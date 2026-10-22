@@ -96,7 +96,7 @@ export default function InvoiceCreate({ prefill }) {
             <h3 className="font-semibold">Your invoice details</h3>
           </div>
           <p className="text-sm text-muted-foreground">
-            Set this up once and Stop Tracker will reuse it for future four-week invoices. Guest details stay on this device; signed-in details are saved to your account.
+            Set this up once and Stop Tracker will reuse it for future invoices. Guest details stay on this device; signed-in details are saved to your account.
           </p>
         </div>
 
