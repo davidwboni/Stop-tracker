@@ -110,6 +110,13 @@ describe('V5 one-upload pay journey',()=>{
   expect(screen.getByRole('textbox',{name:'Contractor fee (%)'})).toHaveValue('0');
   expect(screen.getByRole('button',{name:'Confirm old deduction'})).toBeDisabled();
  });
+ it('links only missing gross earnings to the correct saved period instead of blocking an AI scan',async()=>{
+   stub.data.logs=[{...logs[0],total:null,payStructureSnapshot:{contractorFeePercent:0}},logs[1]];
+   open();await upload();
+   expect(screen.getByRole('region',{name:'Review missing work earnings'})).toBeInTheDocument();
+   expect(screen.getByRole('link',{name:/Review saved workdays/})).toHaveAttribute('href','/app/records?payReview=1');
+   expect(screen.getByRole('button',{name:'Save statement — check later'})).toBeEnabled();
+ });
  it('detects the dates on a non-28-day statement without rewriting the work history',async()=>{
   stub.extract.mockResolvedValue(statement({periodStart:'2026-09-14',periodEnd:'2026-10-04',contractorPayout:300}));
   open();await upload();
