@@ -48,6 +48,9 @@ function findBalancedObject(text,start) {
 function parseObject(source) {
   const value=JSON.parse(source);
   if(!value||typeof value!=='object'||Array.isArray(value))throw new Error("Not a JSON object");
+  // Do not mistake a nested charge/daily row for the statement itself.
+  if(!['statementStops','statementAmount','contractorPayout','contractorFee','contractorCharges','periodStart','periodEnd'].some(k=>Object.hasOwn(value,k)))
+    throw new Error("Not a statement response");
   return value;
 }
 function parseStatementResponse(payload) {
