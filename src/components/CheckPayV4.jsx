@@ -22,6 +22,14 @@ import '../styles/money.css';
 import '../styles/check-pay.css';
 const fmt = d => new Date(d+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
 const amountValid = s => /^-?\d+(\.\d{1,2})?$/.test(s) && Number.isSafeInteger(pennies(Number(s)));
+const safeAiAmount = v => v==null||!amountValid(String(v))?'':String(v);
+const safeAiStops = v => v!=null&&/^\d+$/.test(String(v))&&Number.isSafeInteger(Number(v))?String(v):'';
+const safeAiDaily = (data,period) => Object.fromEntries(
+ (Array.isArray(data?.daily)?data.daily:[])
+ .filter(d=>typeof d?.date==='string'&&d.date>=period.start&&d.date<=period.end)
+ .map(d=>[d.date,{stops:safeAiStops(d.stops),amount:data.currency==='GBP'?safeAiAmount(d.amount):''}])
+);
+
 export default function CheckPayV4() {
  const {logs=[],payPeriodAnchor,periodRecords={},updatePeriodRecord,updateLogs,paymentConfig,loading,loadError,forceSync}=useData();
  const costs=useExpenses(), location=useLocation(), navigate=useNavigate();
@@ -91,8 +99,23 @@ export default function CheckPayV4() {
  function reset(){if(dirty&&!window.confirm('Discard this unsaved statement draft?'))return;setMode('idle');setResolved(false);setReview(null);setReviewedStatement(null);setDetails(emptyStatementDetails());setAmount('');setBasis(false);setFile(null);setAiDraft(null);setError('');setShowAnotherCheck(false);}
  function manual(saved=false){setResolved(false);const previous=periodRecords[period.id];if(saved&&previous?.reviewedStatement){const r=previous.reviewedStatement;const daily=previous.statementWorkDetails?.daily||{};setDetails(previous.statementWorkDetails||emptyStatementDetails());setReview({...createStatementReview({periodStart:r.start,periodEnd:r.end,currency:r.currency,taxBasis:r.taxBasis,contractorPayout:r.payoutPence/100,statementAmount:r.grossPence==null?null:r.grossPence/100,contractorFee:r.feePence==null?null:r.feePence/100,contractorCharges:r.chargesPence==null?null:r.chargesPence/100,charges:r.charges.map(i=>({label:i.label,amount:i.amountPence/100}))}),items:r.charges.map((i,index)=>({id:String(index),label:i.label,amount:String(i.amountPence/100),reviewed:true}))});setReviewedStatement(null);setAiDraft({currency:r.currency,daily:Object.entries(daily).map(([date,d])=>({date,stops:d.stops===''?null:Number(d.stops),amount:d.amount===''?null:Number(d.amount)}))});setFile(null);setBasis(false);setError('');setMode('review');return;}setReview(null);setReviewedStatement(null);setAiDraft(null);setDetails(saved?(periodRecords[period.id]?.statementWorkDetails||{...emptyStatementDetails(),stops:periodRecords[period.id]?.statementStops==null?'':String(periodRecords[period.id].statementStops),gross:periodRecords[period.id]?.statementAmount==null?'':String(periodRecords[period.id].statementAmount),extras:periodRecords[period.id]?.extraPayments==null?'':String(periodRecords[period.id].extraPayments),charges:periodRecords[period.id]?.charges==null?'':String(periodRecords[period.id].charges),vat:periodRecords[period.id]?.vat==null?'':String(periodRecords[period.id].vat)}):emptyStatementDetails());setAmount(saved&&comparison.statement!=null?String(comparison.statement/100):previous?.statementAmount!=null?String(previous.statementAmount):'');setBasis(false);setError('');setMode('manual');track('statement_manual_started');}
  function viewSaved(){const record=periodRecords[period.id];if(!record?.payoutComparison||!['matched','difference','reconciled'].includes(comparison.state)){manual(true);return;}setReview(null);setReviewedStatement(record.reviewedStatement||null);setDetails(record.statementWorkDetails||emptyStatementDetails());setAmount(String(record.payoutComparison.statementPence/100));setBasis(true);setPreviewSnapshot({key:recordsKey,payout:record.payoutComparison.expectedPence});setResolved(comparison.state==='reconciled');setError('');setMode('saved');}
+ function compareSavedStatement(){
+  const saved=periodRecords[period.id];
+  const accepted=saved?.reviewedStatement;
+  if(!ready||!accepted?.reviewed||!Number.isSafeInteger(accepted.payoutPence)||
+    accepted.start!==period.start||accepted.end!==period.end||
+    accepted.currency!=='GBP'||!['excluded','not_applicable'].includes(accepted.taxBasis))return;
+  setReviewedStatement(saved.reviewedStatement);
+  setDetails(saved.statementWorkDetails||emptyStatementDetails());
+  setAmount(String(saved.reviewedStatement.payoutPence/100));
+  setBasis(true);
+  setPreviewSnapshot({key:recordsKey,payout:summary.payout});
+  setError('');
+  setMode('preview');
+  track('statement_comparison_resumed');
+ }
  function chooseFile(f){if(!f)return;setError('');if(f.size>12*1024*1024){setError('Choose a file under 12 MB.');return;}if(!['application/pdf','image/jpeg','image/png','image/webp'].includes(f.type)&&!f.name.toLowerCase().endsWith('.pdf')){setError('Choose a PDF, JPEG, PNG or WebP file. Export a spreadsheet as PDF first.');return;}setFile(f);setMode('upload');}
- async function readFile(){if(lock.current||offline)return;lock.current=true;setStage('Preparing file…');setError('');track('statement_ai_started');try{const data=await extractStatement(file,()=>{if(mounted.current)setStage('Reading statement…');});if(!mounted.current)return;setAiDraft(data);setReview(createStatementReview(data));setReviewedStatement(null);setDetails({...emptyStatementDetails(),stops:data.statementStops==null?'':String(data.statementStops),gross:data.currency!=='GBP'||data.statementAmount==null?'':String(data.statementAmount),daily:Object.fromEntries((data.daily||[]).filter(d=>d.date>=period.start&&d.date<=period.end).map(d=>[d.date,{stops:d.stops==null?'':String(d.stops),amount:data.currency!=='GBP'||d.amount==null?'':String(d.amount)}]))});setAmount(data.currency==='GBP'&&typeof data.contractorPayout==='number'?String(data.contractorPayout):'');setBasis(false);setMode('review');setStatusRequest(n=>n+1);track('statement_ai_completed');}catch(e){if(mounted.current){setError(describeStatementExtractionError(e));track('statement_ai_failed');}}finally{lock.current=false;if(mounted.current)setStage('');}}
+ async function readFile(){if(lock.current||offline)return;lock.current=true;setStage('Preparing file…');setError('');track('statement_ai_started');try{const data=await extractStatement(file,()=>{if(mounted.current)setStage('Reading statement…');});if(!mounted.current)return;setAiDraft(data);setReview(createStatementReview(data));setReviewedStatement(null);setDetails({...emptyStatementDetails(),stops:safeAiStops(data.statementStops),gross:data.currency==='GBP'?safeAiAmount(data.statementAmount):'',daily:safeAiDaily(data,period)});setAmount(data.currency==='GBP'&&typeof data.contractorPayout==='number'?String(data.contractorPayout):'');setBasis(false);setMode('review');setStatusRequest(n=>n+1);track('statement_ai_completed');}catch(e){if(mounted.current){setError(describeStatementExtractionError(e));track('statement_ai_failed');}}finally{lock.current=false;if(mounted.current)setStage('');}}
  function preview(){if(!ready||!basis||!amountValid(amount)||!validStatementDetails(details)){setError('Check the payout and optional figures, then confirm the comparison basis.');return;}setError('');setPreviewSnapshot({key:recordsKey,payout:summary.payout});setMode('preview');track('statement_reviewed');}
  async function save(advanceToInvoice=false){if(previewStale){setError('Records changed. Review the comparison again before saving.');return;}if(lock.current||!ready||!basis||!amountValid(amount)||!validStatementDetails(details))return;lock.current=true;setSaving(true);setError('');try{const currentRevision=await moneyRevision(logs,costs.expenses,period);const statementPence=pennies(Number(amount));await updatePeriodRecord(period.id,{reviewedStatement:reviewedStatement||null,statementWorkDetails:details,status:'checked',needsReview:false,resolvedAt:null,resolutionReason:null,checkedAt:new Date().toISOString(),payoutComparison:{source:aiDraft?'ai':'manual',scope:'contractor_payout',currency:'GBP',taxBasis:'same_as_records',basisConfirmed:true,start:period.start,end:period.end,statementPence,expectedPence:previewExpected,revision:currentRevision}},true);setResolved(false);setMode('saved');setFile(null);track('statement_compared');if(statementPence!==summary.payout)track('discrepancy_found');else if(advanceToInvoice)navigate(invoicePath.pathname,{state:invoicePath.state});}catch(_){setError('Could not save this check. Your figures are still here; please retry.');}finally{lock.current=false;setSaving(false);}}
  async function saveUncompared(approved=null){
@@ -105,7 +128,7 @@ export default function CheckPayV4() {
   }catch(_){setError('Could not save the statement. Your figures are still here; please retry.');}
   finally{lock.current=false;setSaving(false);}
  }
- async function continueReview(){if(unavailable||!fullPeriod||reviewIssues(review,period).length)return;const approved=confirmedReview(review);if(!ready){await saveUncompared(approved);return;}setReviewedStatement(approved);setAmount(review.payout);setDetails(d=>({...d,gross:review.gross,charges:review.charges,daily:Object.fromEntries((aiDraft?.daily||[]).filter(r=>r.date>=period.start&&r.date<=period.end).map(r=>[r.date,{stops:r.stops==null?'':String(r.stops),amount:aiDraft.currency!=='GBP'||r.amount==null?'':String(r.amount)}]))}));setBasis(true);setError('');setPreviewSnapshot({key:recordsKey,payout:summary.payout});setMode('preview');track('statement_reviewed');}
+ async function continueReview(){if(unavailable||!fullPeriod||reviewIssues(review,period).length)return;const approved=confirmedReview(review);if(!ready){await saveUncompared(approved);return;}setReviewedStatement(approved);setAmount(review.payout);setDetails(d=>({...d,gross:safeAiAmount(review.gross),charges:safeAiAmount(review.charges),daily:safeAiDaily(aiDraft,period)}));setBasis(true);setError('');setPreviewSnapshot({key:recordsKey,payout:summary.payout});setMode('preview');track('statement_reviewed');}
  async function resolveComparison(reason){if(lock.current||previewStale||!ready)return;const record=periodRecords[period.id];if(!record?.payoutComparison){setError('Reload this saved check before resolving it.');return;}lock.current=true;setSaving(true);setError('');try{const latest=await moneyRevision(logs,costs.expenses,period);if(latest!==record.payoutComparison.revision)throw new Error('stale');await updatePeriodRecord(period.id,{...record,status:'reconciled',resolvedAt:new Date().toISOString(),resolutionReason:reason,needsReview:false},true);setResolved(true);track('reconciliation_completed');}catch(_){setError('Could not resolve this check. Verify your records and retry.');}finally{lock.current=false;setSaving(false);}}
  const hasSaved=!!periodRecords[period.id];
  const blocked=!ready;
@@ -172,7 +195,10 @@ export default function CheckPayV4() {
  {(loadError||costs.error)&&<div className="home-banner" role="alert">Records could not be loaded. <button className="home-text-button" onClick={()=>{costs.retry?.();forceSync?.();}}>Retry records</button></div>}
   {mode==='idle'&&<>
   <section className="check-simple-actions" aria-label="Your pay actions">
-   {canInvoice?<Link className="home-primary w-full" to="/app/invoice" state={invoicePath.state}>Prepare invoice <ArrowRight size={18}/></Link>:<Link className="home-primary w-full" to="/app/invoice" state={{periodId:period.id,startInvoice:true}}>Create invoice <ArrowRight size={18}/></Link>}
+   {ready&&periodRecords[period.id]?.reviewedStatement?.reviewed&&!periodRecords[period.id]?.payoutComparison?
+       <button type="button" className="home-primary w-full" onClick={compareSavedStatement}>Compare saved statement <ArrowRight size={18}/></button>:
+       canInvoice?<Link className="home-primary w-full" to="/app/invoice" state={invoicePath.state}>Prepare invoice <ArrowRight size={18}/></Link>:
+       <Link className="home-primary w-full" to="/app/invoice" state={{periodId:period.id,startInvoice:true}}>Create invoice <ArrowRight size={18}/></Link>}
    {comparison.state==='difference'?<button className="home-secondary w-full" type="button" onClick={viewSaved}>Review payout difference <ArrowRight size={18}/></button>:<button className="home-secondary w-full" type="button" disabled={unavailable||!fullPeriod} onClick={()=>{setMode('choose');setStatusRequest(n=>n+1);}}>Check statement <ArrowRight size={18}/></button>}
    <p className="home-muted text-xs">Only create an invoice if your contractor needs one. This doesn't confirm payment.</p>
   </section>
@@ -206,8 +232,14 @@ export default function CheckPayV4() {
    <p className="home-muted check-privacy">PDF or photo, up to 12 MB. Check AI figures before saving.</p>
  </section>}
  {mode==='savedPending'&&<section className="home-card check-next-step" role="status"><h2>Statement saved</h2>
-   <p className="home-muted text-sm">Saved for future comparison. Your workday records were not changed. This is not a verified pay check.</p>
-   <Link className="home-primary w-full" to="/app/invoice" state={{periodId:period.id,startInvoice:true}}>Create invoice <ArrowRight size={18}/></Link>
+   <p className="home-muted text-sm">Your contractor's payout is saved. Your workday records have not changed. This is not yet a completed pay check.</p>
+   {ready&&periodRecords[period.id]?.reviewedStatement?
+     <button className="home-primary w-full" onClick={compareSavedStatement}>Compare saved statement with my workdays <ArrowRight size={18}/></button>:
+     issues.missingFee.length>0?
+       <><p className="home-muted text-sm">Confirm the missing contractor deduction on {issues.missingFee.length} saved workdays, then compare. No second AI scan is needed.</p>
+       <button className="home-primary w-full" onClick={openFeeRepair} disabled={offline||unavailable}>Confirm historical fee <ArrowRight size={18}/></button></>:
+       <><p className="home-muted text-sm">Your saved workdays need reviewing before the payout can be compared. You will not need to scan the statement again.</p>
+       <Link className="home-secondary w-full" to="/app/records?payReview=1" state={{periodId:period.id}}>Review missing workday earnings</Link></>}
    <button className="home-secondary w-full" onClick={reset}>Back to Pay</button>
  </section>}
  {mode==='upload'&&<section className="home-card check-draft"><h2>Ready to read your statement?</h2><p className="check-filename">{file?.name}</p><p className="home-muted">DeepSeek processes this file to extract figures. You will review them before comparing. {entitlement?.betaAccess?'AI scanning is included during the temporary beta, subject to daily usage limits. For screenshots, empty dark borders are trimmed when possible; your original is kept for review.':'A successful extraction uses one free check unless you have Pro.'}</p><button className="home-primary" disabled={!!stage||offline} onClick={readFile}>{stage||'Read statement with AI'}</button>{stage&&<p role="status">{stage} Please keep this screen open.</p>}<button className="home-secondary" disabled={!!stage} onClick={()=>{setFile(null);manual();}}>Enter manually instead</button><button className="home-text-button" disabled={!!stage} onClick={reset}>Discard file</button></section>}
