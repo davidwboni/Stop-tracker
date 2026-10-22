@@ -207,8 +207,10 @@ export default function CheckPayV5(){
  }
  const history=available.filter(p=>periodRecords[p.id]?.reviewedStatement||periodRecords[p.id]?.payoutComparison).slice(0,7);
  const latestCheck=periodRecords[period.id];
+ // After upload, show the result headline on small mobile screens.
+ useEffect(()=>{if(step==='result')document.querySelector('.st-app-shell > main')?.scrollTo?.({top:0,behavior:'auto'});},[step]);
  const displayResult=step==='result'||step==='saved';
- return <main className="home-screen st-page v5-pay">
+ return <div className="home-screen st-page v5-pay">
   <header className="home-row v5-header"><div><h1>{displayResult?'Your pay check':'Check your pay'}</h1><p className="home-muted">{displayResult?'AI compared the figures it could read. Review what matters.':'Log your work. Upload the statement. See what changed.'}</p></div><HeaderControls hidden={hidden} onToggleMoney={()=>{setHidden(v=>{try{localStorage.setItem('home-hide-money',v?'0':'1');}catch(_){}return !v;});}}/></header>
   {step==='home'&&<>
    <section className="home-card v5-upload">
@@ -302,5 +304,5 @@ export default function CheckPayV5(){
   {busy&&<p className="home-banner v5-stage" role="status"><Loader2 size={18} className="v5-spinner" aria-hidden="true"/>{stage||'Saving your check…'}</p>}
   {error&&<p className="home-banner home-error" role="alert">{error}</p>}
   <p className="home-muted text-xs v5-disclaimer">Stop Tracker checks your records independently. AI findings require review; matching amounts don't prove payment was received. Invoices are only marked sent when you confirm sending them.</p>
- </main>;
+ </div>;
 }
