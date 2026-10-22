@@ -12,7 +12,7 @@ export default function StatementReview({draft,onChange,period,periods,onPeriodC
  useEffect(()=>{if(!file)return;const next=URL.createObjectURL(file);setUrl(next);return()=>URL.revokeObjectURL(next);},[file]);
  function change(key,value){
   if(key!=='reviewed'&&draft[key]!==value)track('statement_field_corrected');
-  onChange({...draft,[key]:value,...(key==='reviewed'?{}:{reviewed:false})});
+  onChange({...draft,[key]:value,...(['start','end','currency','taxBasis','payout'].includes(key)?{reviewed:false}:{})});
  }
  function focusIssue(){
   const target=document.getElementById('review-'+issues[0]?.field);
