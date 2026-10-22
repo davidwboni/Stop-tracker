@@ -158,12 +158,30 @@ jobs:
           /tmp/st-synthetic-venv/bin/python - <<'PY'
           from PIL import Image,ImageDraw,ImageFont
           import io,base64,json
-          img=Image.new("RGB",(1200,490),"white")
+          # Complex, fabricated 23-row statement: no customer documents.
+          from datetime import date,timedelta
+          img=Image.new("RGB",(1600,1900),"white")
           d=ImageDraw.Draw(img)
-          try: font=ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",31)
+          try: font=ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",25)
           except OSError: font=ImageFont.load_default()
-          lines=["TEST ONLY: Fictional contractor pay statement","Period: 14 Sep 2026 to 11 Oct 2026","Currency: GBP","Total gross work earnings: GBP 100.00","Contractor admin fee: GBP 6.00","Final contractor payout: GBP 94.00","VAT treatment: excluded"]
-          for i,line in enumerate(lines): d.text((35,30+62*i),line,font=font,fill="black")
+          lines=["TEST ONLY - FICTIONAL CONTRACTOR PAY STATEMENT",
+                 "Period: 14 Sep 2026 to 11 Oct 2026",
+                 "DATE       ROUTE   STOPS  PARCELS     GROSS"]
+          start=date(2026,9,14)
+          for i in range(23):
+            day=start+timedelta(days=i)
+            lines.append(f"{day.isoformat()}    232    {100+i:3d}     {110+i:3d}     GBP {208.50+i*2:.2f}")
+          lines.extend([
+             "EXTRA WORK - GBP 150.00",
+             "TOTAL GROSS WORK EARNINGS - GBP 5900.00",
+             "CONTRACTOR FRANCHISE FEE - GBP 354.00",
+             "LEASE COST - GBP 200.00",
+             "INSURANCE - GBP 50.00",
+             "FUEL COST - GBP 200.00",
+             "TOTAL OTHER CONTRACTOR CHARGES - GBP 450.00",
+             "FINAL CONTRACTOR PAYOUT - GBP 5096.00",
+             "VAT - EXCLUDED"])
+          for i,line in enumerate(lines): d.text((35,24+51*i),line,font=font,fill="black")
           buf=io.BytesIO();img.save(buf,format="PNG")
           payload={"data":{"images":[{"mimeType":"image/png","fileBase64":base64.b64encode(buf.getvalue()).decode("ascii")}]}}
           with open("/tmp/st-synthetic-payload.json","w") as out:json.dump(payload,out)
@@ -191,7 +209,7 @@ jobs:
           response_code="$(curl --max-time 116 --silent --show-error -o "$result" -w '%{http_code}' -H 'content-type: application/json' -H "Authorization: Bearer $token" --data-binary @/tmp/st-synthetic-payload.json "$url")"
           echo "Synthetic DeepSeek extraction HTTP $response_code"
           if [ "$response_code" = "200" ]; then
-            jq -c '{hasResult:(.result!=null),hasStops:(.result.statementStops!=null),hasGross:(.result.statementAmount!=null),hasPayout:(.result.contractorPayout!=null)}' "$result"
+            jq -c '{hasResult:(.result!=null),hasStops:(.result.statementStops!=null),hasGross:(.result.statementAmount!=null),hasPayout:(.result.contractorPayout!=null),mode:(.result.extractionMode//"detailed"),dailyRows:(.result.daily|length)}' "$result"
           else
             jq -c '{code:.error.status,message:.error.message}' "$result" | head -c 350 || true
             echo
