@@ -4,6 +4,7 @@ import {ChevronRight,Plus,Search,ArrowLeft} from 'lucide-react';
 import {useData} from '../contexts/DataContext';
 import DailyQuickEntry from './DailyQuickEntry';
 import DayRecordSheet from './DayRecordSheet';
+import PreviousWorkImport from './PreviousWorkImport';
 import {money,summarizeDay} from '../features/home/homeModel';
 import {isoDate} from '../features/payperiod/periods';
 
@@ -27,6 +28,7 @@ export default function EntriesPage({privacyHidden}){
  const [selectedId,setSelectedId]=useState(null);
  const [error,setError]=useState('');
  const [busy,setBusy]=useState(false);
+ const [importOpen,setImportOpen]=useState(false);
  const [page,setPage]=useState(0);
  const [localHidden]=useState(moneyPreference);
  const hidden=privacyHidden??localHidden;
@@ -35,6 +37,14 @@ export default function EntriesPage({privacyHidden}){
  const perPage=10,maxPage=Math.max(0,Math.ceil(rows.length/perPage)-1),currentPage=Math.min(page,maxPage),pagedRows=rows.slice(currentPage*perPage,(currentPage+1)*perPage);
  const selected=logs.find(r=>r.id===selectedId)||null;
  const duplicate=selected?logs.filter(r=>r.date===selected.date).length>1:false;
+ async function importPrevious(rows){
+  if(!rows?.length)return;
+  const existing=new Set(logs.map(row=>row.date));
+  if(rows.some(row=>existing.has(row.date)))throw new Error('Import conflicts with already recorded dates.');
+  const now=new Date().toISOString();
+  const imported=rows.map(row=>({...row,id:crypto.randomUUID(),timestamp:now,notes:'Imported from driver-provided work CSV'}));
+  await updateLogs([...logs,...imported].sort((a,b)=>b.date.localeCompare(a.date)));
+ }
  async function remove(row){
   setBusy(true);setError('');
   try{
@@ -53,6 +63,10 @@ export default function EntriesPage({privacyHidden}){
   </header>
   {loc.state?.walkthrough?<div className="home-card" data-tour="entry-example"><h2>Example work day</h2><p>150 stops · 185 parcels</p><p className="home-muted">Temporary example; nothing is saved.</p></div>:<>
    {needsPayReview&&<div className="home-banner work-pay-review" role="status"><strong>Days needing pay details</strong><p className="home-muted text-sm">Open a day to review the correct historical pay rate or contractor fee. Saved work totals are not changed automatically.</p><Link className="home-text-button" to="/app/check-pay" state={loc.state?.periodId?{periodId:loc.state.periodId}:undefined}><ArrowLeft size={16}/> Back to Pay</Link></div>}
+   {!needsPayReview&&<div className="work-import-action">
+     {!importOpen?<button type="button" className="home-text-button" onClick={()=>setImportOpen(true)}>Have previous work records? Import your own CSV</button>:
+       <PreviousWorkImport existing={logs} onImport={importPrevious} onClose={()=>setImportOpen(false)}/>}
+   </div>}
    <details className="home-card work-search"><summary><Search size={17} aria-hidden="true"/> Find a day{from||to||query?' · Filters active':''}</summary>
     <label className="home-field">Search date, stops or notes<input value={query} onChange={e=>updateFilter(setQuery,e.target.value)}/></label>
     <div className="review-fields">

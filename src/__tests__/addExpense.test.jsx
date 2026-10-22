@@ -34,6 +34,27 @@ describe('Add Expense',()=>{
   await waitFor(()=>expect(fixture.save).toHaveBeenCalledTimes(1));
   expect(fixture.save.mock.calls[0][0]).toMatchObject({amount:45.2,source:'my_expense',category:'Other',receipt:null});
  });
+ it('records a fleet-card discount separately from the full pump receipt without automatically changing the receipt amount',async()=>{
+  mount();fireEvent.click(screen.getByRole('button',{name:/Enter manually/}));
+  fireEvent.change(screen.getByLabelText(/What was it for/),{target:{value:'Diesel - fleet fuel card'}});
+  expect(screen.getByText('Fuel-card discount (optional)')).toBeInTheDocument();
+  fireEvent.click(screen.getByText('Fuel-card discount (optional)'));
+  fireEvent.change(screen.getByLabelText('Amount (£)'),{target:{value:'80.00'}});
+  fireEvent.change(screen.getByLabelText('Fuel-card discount shown (£)'),{target:{value:'6.00'}});
+  fireEvent.click(screen.getByRole('button',{name:'Save expense'}));
+  await waitFor(()=>expect(fixture.save).toHaveBeenCalled());
+  expect(fixture.save.mock.calls[0][0]).toMatchObject({amount:80,category:'Fuel',fuelCardDiscount:6,source:'my_expense'});
+ });
+ it('does not save an ungrounded fuel-card discount larger than the receipt',async()=>{
+  mount();fireEvent.click(screen.getByRole('button',{name:/Enter manually/}));
+  fireEvent.change(screen.getByLabelText(/What was it for/),{target:{value:'Fuel'}});
+  fireEvent.click(screen.getByText('Fuel-card discount (optional)'));
+  fireEvent.change(screen.getByLabelText('Amount (£)'),{target:{value:'20.00'}});
+  fireEvent.change(screen.getByLabelText('Fuel-card discount shown (£)'),{target:{value:'25.00'}});
+  fireEvent.click(screen.getByRole('button',{name:'Save expense'}));
+  expect(await screen.findByText(/exact fuel-card discount shown/)).toBeInTheDocument();
+  expect(fixture.save).not.toHaveBeenCalled();
+ });
  it('keeps today selected by default with an optional description and changeable date',()=>{
    mount();
    fireEvent.click(screen.getByRole('button',{name:/Enter manually/}));

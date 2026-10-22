@@ -17,7 +17,7 @@ const receipts = () => import('../services/expenseReceipts');
 export default function HomeExpenseDialog({ open, onClose, save, isGuest, initialExpense = null, confirmExpected = false, initialSource = 'my_expense', eventSource = 'home' }) {
   const { user } = useAuth();
   const [id] = useState(() => initialExpense?.id || crypto.randomUUID());
-  const [initial] = useState(() => ({date:initialExpense?.date || isoDate(new Date()),amount:initialExpense ? String(initialExpense.amount) : '',source:initialExpense?.source || (confirmExpected ? initialSource : 'my_expense'),category:initialExpense?.category || 'Other',description:initialExpense?.description || '',notes:initialExpense?.notes || ''}));
+  const [initial] = useState(() => ({date:initialExpense?.date || isoDate(new Date()),amount:initialExpense ? String(initialExpense.amount) : '',source:initialExpense?.source || (confirmExpected ? initialSource : 'my_expense'),category:initialExpense?.category || 'Other',description:initialExpense?.description || '',notes:initialExpense?.notes || '',fuelCardDiscount:initialExpense?.fuelCardDiscount == null ? '' : String(initialExpense.fuelCardDiscount)}));
   const [draft, setDraft] = useState(initial);
   const [mode, setMode] = useState(initialExpense || confirmExpected ? 'manual' : 'choice');
   const [changeDate, setChangeDate] = useState(false);
@@ -104,6 +104,11 @@ export default function HomeExpenseDialog({ open, onClose, save, isGuest, initia
     event.preventDefault();if(lock.current)return;
     if(mode==='ai'&&!review){setError('Scan and review the receipt, or choose Manual to enter it yourself.');return;}
     if(!validDate(draft.date)||!/^\d+(\.\d{1,2})?$/.test(draft.amount)||Number(draft.amount)<=0||!Number.isSafeInteger(Math.round(Number(draft.amount)*100))){setError('Enter a valid date and an amount greater than £0, with up to two decimal places.');return;}
+    if(fuelExpense&&draft.fuelCardDiscount!==''){
+      if(!/^\d+(\.\d{1,2})?$/.test(draft.fuelCardDiscount)||Number(draft.fuelCardDiscount)>Number(draft.amount)){
+        setError('Enter the exact fuel-card discount shown, between £0 and the pump amount.');return;
+      }
+    }
     if(review&&!reviewed){setError('Check the extracted fields and confirm your review before saving.');return;}
     if(!navigator.onLine&&!isGuest){setError('You’re offline. Keep this form open and save when connected.');return;}
     lock.current=true;setPhase('saving');setError('');
@@ -115,7 +120,12 @@ export default function HomeExpenseDialog({ open, onClose, save, isGuest, initia
         attached.current=newReceipt;
       }
       const receipt=retain ? newReceipt || existing : null;
-      await save({...initialExpense,id,...draft,amount:Number(draft.amount),description:draft.description.trim(),notes:draft.notes.trim(),receipt});
+      const {fuelCardDiscount,...base}=draft;
+      const fuelEvidence=fuelExpense&&fuelCardDiscount!==''?{fuelCardDiscount:Number(fuelCardDiscount)}:{};
+      await save({...initialExpense,id,...base,amount:Number(draft.amount),
+        category:fuelExpense&&draft.category==='Other'?'Fuel':draft.category,
+        description:draft.description.trim(),notes:draft.notes.trim(),receipt,
+        fuelCardDiscount:null,...fuelEvidence});
       // Signed-in replacements/deletions are retried by a server trigger. Guest files remain local.
       if(initialExpense?.receipt?.local && initialExpense.receipt.path!==receipt?.path) await (await receipts()).removeReceipt(user?.uid,initialExpense.receipt).catch(()=>{});
       track(review?'expense_ai_saved':'expense_manual_saved',{source:eventSource,mode:initialExpense?'edit':'new'});
@@ -126,6 +136,7 @@ export default function HomeExpenseDialog({ open, onClose, save, isGuest, initia
       track('expense_save_failed',{source:eventSource});setError('Couldn’t save. Your details are still here. Please retry.');
     }finally{lock.current=false;setPhase('idle');}
   }
+  const fuelExpense=draft.source==='my_expense'&&(draft.category==='Fuel'||/\b(fuel|diesel|petrol|fuel card)\b/i.test(draft.description));
   const canScan=status?.enabled&&(status?.isPro||status?.betaAccess)&&!isGuest;
   const displayDate=value=>validDate(value)?new Date(value+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'Choose date';
   const dayLabel=draft.date===isoDate(new Date())?'Today · '+displayDate(draft.date):displayDate(draft.date);
@@ -171,6 +182,13 @@ export default function HomeExpenseDialog({ open, onClose, save, isGuest, initia
             {(mode==='manual'||review)&&<fieldset disabled={busy} className="ae-fields ae-simple-fields">
               <label className="home-field ae-amount">Amount (£)<input inputMode="decimal" autoComplete="off" value={draft.amount} onChange={e=>change('amount',e.target.value)} placeholder="0.00" required/></label>
               <label className="home-field">What was it for? <span className="home-muted text-xs">(optional)</span><input maxLength={200} value={draft.description} onChange={e=>change('description',e.target.value)} placeholder="e.g. Fuel, repair, parking"/></label>
+              {fuelExpense&&<details className="ae-fuel-discount" open={draft.fuelCardDiscount!==''||undefined}>
+                <summary>Fuel-card discount (optional)</summary>
+                <p className="home-muted text-xs">The receipt may show the pump price, but your contractor may bill less. Only enter a discount shown in your records. We won't guess.</p>
+                <label className="home-field">Fuel-card discount shown (£)
+                  <input inputMode="decimal" aria-label="Fuel-card discount shown (£)" value={draft.fuelCardDiscount} onChange={e=>change('fuelCardDiscount',e.target.value)} placeholder="e.g. 6.00"/>
+                </label>
+              </details>}
               <div className="ae-date-choice">
                 <button type="button" className="ae-date-toggle" aria-expanded={changeDate||!validDate(draft.date)} onClick={()=>setChangeDate(value=>!value)}>
                   <span>{dayLabel}</span><span className="ae-date-action">{changeDate?'Close':'Change date'}</span>
