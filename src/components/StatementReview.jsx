@@ -72,6 +72,7 @@ export default function StatementReview({draft,onChange,period,periods,onPeriodC
   <label className="check-basis" htmlFor="review-reviewed"><input id="review-reviewed" type="checkbox" checked={draft.reviewed} onChange={e=>change('reviewed',e.target.checked)}/><span>I've checked the final payout, statement dates and VAT basis against the original statement.</span></label>
   {issues.length>0&&<p className="home-muted text-sm" role="status">{issues[0].message}</p>}
   <button type="button" className="home-primary w-full" disabled={issues.length>0||!ready||saving} onClick={continueAction}>{saving?'Saving…':nextLabel}</button>
+  {!captureMode&&issues.length>0&&<button type="button" className="home-secondary w-full" disabled={captureIssues(draft,period).length>0||!ready||saving} onClick={onSaveDraft}>Save as received — compare later</button>}
   <p className="home-muted text-sm">{issues.length?'Check the highlighted field above.':!ready?'Records unavailable — reconnect before saving.':captureMode?'Save the statement without claiming it matches your work. You can review VAT or restore historical pay details later without another scan.':'Next: see the difference between your reviewed payout and your logged workdays.'}</p>
  </section>
  </div>
