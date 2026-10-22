@@ -77,7 +77,7 @@ describe('Check Pay entry',()=>{
    expect(f.save.mock.calls[0][1]).toMatchObject({status:'statement_received',needsReview:false,statementAmount:200,reviewedStatement:null});
    expect(f.save.mock.calls[0][1]).not.toHaveProperty('payoutComparison');
    expect(screen.getByText('Statement saved')).toBeInTheDocument();
-   expect(screen.getByRole('link',{name:'Create invoice'})).toHaveAttribute('href','/app/invoice');
+   expect(screen.getByRole('button',{name:'Confirm historical fee'})).toBeEnabled();
  });
 
  it('keeps the fee repair available inside the statement chooser',()=>{
