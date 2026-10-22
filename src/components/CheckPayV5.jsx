@@ -7,6 +7,7 @@ import HeaderControls from './HeaderControls';
 import {isoDate,listPeriods,summarizePeriod} from '../features/payperiod/periods';
 import {moneyRevision,moneySummary,payoutComparison,validRange} from '../features/money/moneyModel';
 import {buildStatementAutoCheck} from '../features/statements/autoCheck';
+import {statementChargeEvidence} from '../features/statements/chargeEvidence';
 import {createStatementReview,confirmedReview,captureIssues} from '../features/statements/reviewModel';
 import {historicalFeeIssue,applyConfirmedHistoricalFee,validHistoricalFee} from '../features/money/historicalFeeRepair';
 import {extractStatement,getPremiumStatus} from '../services/premium';
@@ -80,6 +81,7 @@ export default function CheckPayV5(){
    return buildStatementAutoCheck(enriched,period,rowSummary.rows,rowSummary.days,rowSummary.payout);
  },[ai,period.start,period.end,rowSummary,vatChoice,vatEntry]);
  const issues=historicalFeeIssue(logs,period);
+ const chargeEvidence=useMemo(()=>ai?statementChargeEvidence(ai,costs.expenses||[],period):[],[ai,costs.expenses,period.start,period.end]);
  const sourceNet=ai?{...ai,taxBasis:vatChoice||ai.taxBasis,vatAmount:vatEntry.trim()&&/^\d+(\.\d{1,2})?$/.test(vatEntry)?Number(vatEntry):ai.vatAmount}:null;
  const canCompare=!!view?.canCompare&&!loading&&!costs.loading&&!loadError&&!costs.error;
  const scanEnabled=!!permission&&(permission.isPro||permission.betaAccess||permission.statementAiUses<3);
@@ -118,7 +120,7 @@ export default function CheckPayV5(){
  function loadRecord(item){
    const range={start:item.start,end:item.end,id:item.id};
    setChosen(summarizePeriod(logs,range));setScanSource(item.record?.payoutComparison?.source||'saved');
-   setAi(savedStatementDraft(item.record));setVatChoice('');setVatEntry('');setConfirmedDays({});setStep('result');setError('');
+   setAi(savedStatementDraft(item.record));setVatChoice('');setVatEntry('');setConfirmedDays({});setStep(item.record?.payoutComparison?'saved':'result');setError('');
  }
  async function saveCheck(){
    if(savingLock.current||!ai)return;
@@ -244,6 +246,9 @@ export default function CheckPayV5(){
     {view.flagged.length>4&&<button type="button" className="home-secondary w-full" onClick={()=>setOpenDays(v=>!v)}>{openDays?'Show fewer':`See all ${view.flagged.length} workdays`}</button>}
    </section>}
    {view?.unknown.length>0&&<p className="home-banner">{view.unknown.length} workdays have insufficient figures for a full comparison. They are not marked as matching.</p>}
+   {chargeEvidence.length>0&&<details className="home-card v5-charge-evidence"><summary>Contractor charges & fuel — {chargeEvidence.length} read</summary><p className="home-muted text-sm">AI checked these charges only where independent records exist. Fuel-card discounts are never assumed.</p>
+    {chargeEvidence.map(row=><div className="v5-charge-row" key={row.id}><div><strong>{row.label}</strong><p className="home-muted text-xs">{row.explanation}</p></div><span>{cash(row.amountPence)}</span></div>)}
+   </details>}
    {ai&&step==='result'&&(!view?.canCompare||!view?.periodOk)&&<section className="home-card v5-one-question">
     <h2>One detail needs checking</h2>
     {!view?.periodOk&&<p className="home-muted">The statement dates don't match the selected range. Choose the matching period:</p>}
