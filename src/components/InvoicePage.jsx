@@ -8,6 +8,7 @@ import {moneyRevision,moneySummary,payoutComparison,validRange} from '../feature
 import InvoiceCreate from './InvoiceCreate';
 import {shareSavedInvoice} from '../services/invoicePdf';
 import {money} from '../features/home/homeModel';
+import {statementInvoiceReady,unresolvedStatementFindings} from '../features/statements/findingGate';
 
 export default function InvoicePage(){
  const {logs=[],payPeriodAnchor,periodRecords={},loading,loadError}=useData();
@@ -27,7 +28,7 @@ export default function InvoicePage(){
  const summary=useMemo(()=>moneySummary(logs,expenses.expenses,p),[logs,expenses.expenses,p.start,p.end]);
  const record=periodRecords[p.id];
  const checked=fromPay?payoutComparison(record,p,summary,revision,loading||expenses.loading||!!loadError||!!expenses.error):null;
- const allowed=fromPay&&(checked?.state==='matched'||checked?.state==='reconciled');
+ const allowed=fromPay&&(checked?.state==='matched'||checked?.state==='reconciled')&&statementInvoiceReady(record);
  const prior=(invoice.invoices||[]).filter(i=>i.periodId===p.id);
  const blocked=loading||expenses.loading||invoice.loading||(fromPay&&revision===null);
  useEffect(()=>{
@@ -54,7 +55,7 @@ export default function InvoicePage(){
   {blocked?<div className="home-skeleton" role="status" aria-label="Loading invoice records"/>:
    loadError||invoice.loadError||expenses.error?<p role="alert" className="home-banner">Invoice or pay records could not be verified. Retry when connected. <button className="home-text-button" onClick={()=>{invoice.retry?.();expenses.retry?.()}}>Retry</button></p>:
    fromPay&&!allowed?<section className="home-card space-y-3"><h2>Check your statement first</h2>
-     <p className="home-muted">{checked?.state==='stale'?'Your work or contractor figures changed since the check. Review them before preparing an invoice.':checked?.state==='difference'?'The payout difference needs reviewing and accepting before creating an invoice.':'A valid saved pay comparison is required before this invoice can be prepared.'}</p>
+     <p className="home-muted">{checked?.state==='stale'?'Your work or contractor figures changed since the check. Review them before preparing an invoice.':unresolvedStatementFindings(record).length?'Your saved statement has workday differences you still need to review and accept before invoicing.':checked?.state==='difference'?'The payout difference needs reviewing and accepting before creating an invoice.':'A valid saved pay comparison is required before this invoice can be prepared.'}</p>
      <Link className="home-primary w-full" state={{periodId:p.id}} to="/app/check-pay">Return to Pay</Link>
    </section>:
    (fromPay||creating)&&prior.length&&!createDuplicate?<section className="home-card space-y-3">

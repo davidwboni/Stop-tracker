@@ -96,7 +96,7 @@ export default function InvoiceCreate({ prefill }) {
             <h3 className="font-semibold">Your invoice details</h3>
           </div>
           <p className="text-sm text-muted-foreground">
-            Set this up once and Stop Tracker will reuse it for future four-week invoices. Guest details stay on this device; signed-in details are saved to your account.
+            Set this up once and Stop Tracker will reuse it for future invoices. Guest details stay on this device; signed-in details are saved to your account.
           </p>
         </div>
 
@@ -230,7 +230,7 @@ export default function InvoiceCreate({ prefill }) {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
       {prefill?.periodId && <div className="rounded-[18px] border border-border bg-card p-4">
-        <div className="text-xs font-bold uppercase tracking-wider text-primary">FOUR-WEEK PAY PERIOD</div>
+        <div className="text-xs font-bold uppercase tracking-wider text-primary">STATEMENT PERIOD</div>
         <div className="mt-1 font-semibold">{prefill.startDate} → {prefill.endDate}</div>
         <div className="mt-1 text-sm text-muted-foreground">{prefill.statementAmount != null ? "Checked statement amount prefilled. Review VAT and the recipient before sending." : "No verified statement amount. Review all invoice details before sending."}</div>
       </div>}

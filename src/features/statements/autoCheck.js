@@ -29,7 +29,7 @@ export function buildStatementAutoCheck(statement,period,rows=[],days=[],expecte
     if(!r?.date||r.date<period.start||r.date>period.end)continue;
     if(!entries.has(r.date))entries.set(r.date,{date:r.date,loggedStops:0,grossPence:0,hasGross:true});
     const e=entries.get(r.date);
-    const count=safeStops(Number(r.stops));
+    const count=r.stops==null||r.stops===''?null:safeStops(Number(r.stops));
     if(count==null)e.loggedStops=null;
     else if(e.loggedStops!=null)e.loggedStops+=count;
     const gross=day&&!day.unavailable?safePence(day.gross):null;
@@ -50,6 +50,11 @@ export function buildStatementAutoCheck(statement,period,rows=[],days=[],expecte
     for(const date of [...dates].sort()){
       const own=entries.get(date),listed=statementRows.get(date)||[];
       const item=listed[0];
+      // Contractors often print zero-delivery rows for days off. Drivers
+      // should not have to log a zero-work day to make the statement match.
+      // Ignore only a single row with *explicit* zero stops AND zero pay;
+      // missing pay or any positive amount still needs investigation.
+      if(!own&&listed.length===1&&safeStops(item.stops)===0&&safePence(item.amount)===0)continue;
       const theirsStops=listed.length===1?safeStops(item.stops):null;
       const theirsGross=listed.length===1?safePence(item.amount):null;
       const oursGross=own?.hasGross?own.grossPence:null;

@@ -36,6 +36,27 @@ describe('Pay → Invoice handoff',()=>{
   expect(screen.queryByText('InvoiceCreate')).not.toBeInTheDocument();
   expect(screen.getByText(/difference needs reviewing/)).toBeInTheDocument();
  });
+ it('blocks direct invoice URLs while individual daily differences remain unresolved',async()=>{
+  f.data.periodRecords[period.id]={
+    ...await checked(),
+    reviewedStatement:{reviewed:true},
+    statementFindings:{hasDaily:true,flagged:[{date:period.start,loggedStops:50,statementStops:49,acceptedReason:null}]}
+  };
+  mount();
+  await screen.findByText('Check your statement first');
+  expect(screen.getByText(/workday differences you still need to review/)).toBeInTheDocument();
+  expect(screen.queryByText('InvoiceCreate')).not.toBeInTheDocument();
+ });
+ it('permits an invoice after explicitly accepting the recorded stop discrepancy',async()=>{
+  f.data.periodRecords[period.id]={
+    ...await checked(),
+    reviewedStatement:{reviewed:true},
+    statementFindings:{flagged:[{date:period.start,acceptedReason:'possible_duplicate_accepted'}]}
+  };
+  mount();
+  await screen.findByText('InvoiceCreate');
+  expect(screen.getByTestId('prefill-total')).toHaveTextContent('94.00');
+ });
  it('allows an explicitly reconciled difference',async()=>{
   f.data.periodRecords[period.id]={...await checked({statementPence:9300}),status:'reconciled',resolvedAt:'2026-09-20'};mount();
   await screen.findByText('InvoiceCreate');

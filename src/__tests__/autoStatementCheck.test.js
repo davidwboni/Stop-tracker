@@ -57,6 +57,29 @@ describe('AI-first comparison',()=>{
   const c=buildStatementAutoCheck({...statement,daily:[],extractionMode:'summary_only'},period,rows,days,null);
   expect(c.hasDaily).toBe(false);expect(c.matched).toHaveLength(0);expect(c.summaryOnly).toBe(true);
  });
+ it('never converts a missing logged stop number into a false zero-stop mismatch',()=>{
+  const c=buildStatementAutoCheck(
+    {...statement,daily:[{date:'2026-09-14',stops:104,amount:207.62}]},
+    period,
+    [{date:'2026-09-14',stops:null}],
+    [{gross:207.62,unavailable:false}],null
+  );
+  expect(c.flagged).toHaveLength(0);
+  expect(c.dayRows[0].loggedStops).toBeNull();
+  expect(c.dayRows[0].statementStops).toBe(104);
+ });
+ it('does not flag contractor off-days with confirmed zero work and zero pay as missing driver logs',()=>{
+  const c=buildStatementAutoCheck({
+    ...statement,
+    daily:[
+      {date:'2026-09-14',stops:104,amount:207.62},
+      {date:'2026-09-16',stops:0,amount:0},
+      {date:'2026-09-17',stops:0,amount:15}
+    ]
+  },period,rows.slice(0,1),days.slice(0,1),null);
+  expect(c.flagged.map(x=>x.date)).toEqual(['2026-09-17']);
+  expect(c.dayRows.some(x=>x.date==='2026-09-16')).toBe(false);
+ });
  it('does not call missing gross values a mismatch when stop counts match',()=>{
   const s={...statement,daily:[{date:'2026-09-14',stops:104,amount:null}]};
   const c=buildStatementAutoCheck(s,period,rows.slice(0,1),[{gross:null,unavailable:true}],null);

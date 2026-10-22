@@ -65,6 +65,24 @@ describe('V5 one-upload pay journey',()=>{
   expect(patch).toMatchObject({status:'checked',needsReview:false,reviewedStatement:{payoutPence:28000,reviewed:true},payoutComparison:{source:'ai',statementPence:28000,expectedPence:30000},statementFindings:{hasDaily:true,flagged:[{date:'2026-09-14',acceptedReason:'possible_duplicate_accepted'}]}});
   expect(stub.data.logs).toEqual(logs);
  });
+ it('keeps the invoice closed when identical totals hide a missing stop until the driver accepts it',async()=>{
+  stub.extract.mockResolvedValue(statement({contractorPayout:300,contractorCharges:0,statementAmount:300}));
+  stub.save.mockImplementation(async(id,patch)=>{stub.data.periodRecords={...stub.data.periodRecords,[id]:patch};return true;});
+  open();await upload();
+  expect(screen.getByText(/1 workday needs attention/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Save pay check'}));
+  await waitFor(()=>expect(stub.save).toHaveBeenCalledOnce());
+  expect(stub.save.mock.calls[0][1]).toMatchObject({status:'checked',needsReview:true});
+  expect(await screen.findByRole('button',{name:'Review differences'})).toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:'Prepare invoice from statement'})).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Review differences'}));
+  expect(screen.getByText(/120 yours \/ 119 statement/)).toBeInTheDocument();
+  fireEvent.change(screen.getByDisplayValue('Needs review'),{target:{value:'possible_duplicate_accepted'}});
+  fireEvent.click(screen.getByRole('button',{name:'Save pay check'}));
+  await waitFor(()=>expect(stub.save).toHaveBeenCalledTimes(2));
+  expect(stub.save.mock.calls[1][1]).toMatchObject({needsReview:false,statementFindings:{flagged:[{date:'2026-09-14',acceptedReason:'possible_duplicate_accepted'}]}});
+  expect(await screen.findByRole('button',{name:'Prepare invoice from statement'})).toBeInTheDocument();
+ });
  it('detects the dates on a non-28-day statement without rewriting the work history',async()=>{
   stub.extract.mockResolvedValue(statement({periodStart:'2026-09-14',periodEnd:'2026-10-04',contractorPayout:300}));
   open();await upload();
