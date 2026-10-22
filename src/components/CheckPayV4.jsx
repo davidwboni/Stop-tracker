@@ -93,7 +93,10 @@ export default function CheckPayV4() {
  function viewSaved(){const record=periodRecords[period.id];if(!record?.payoutComparison||!['matched','difference','reconciled'].includes(comparison.state)){manual(true);return;}setReview(null);setReviewedStatement(record.reviewedStatement||null);setDetails(record.statementWorkDetails||emptyStatementDetails());setAmount(String(record.payoutComparison.statementPence/100));setBasis(true);setPreviewSnapshot({key:recordsKey,payout:record.payoutComparison.expectedPence});setResolved(comparison.state==='reconciled');setError('');setMode('saved');}
  function compareSavedStatement(){
   const saved=periodRecords[period.id];
-  if(!saved?.reviewedStatement||!ready||!Number.isSafeInteger(saved.reviewedStatement.payoutPence))return;
+  const accepted=saved?.reviewedStatement;
+  if(!ready||!accepted?.reviewed||!Number.isSafeInteger(accepted.payoutPence)||
+    accepted.start!==period.start||accepted.end!==period.end||
+    accepted.currency!=='GBP'||!['excluded','not_applicable'].includes(accepted.taxBasis))return;
   setReviewedStatement(saved.reviewedStatement);
   setDetails(saved.statementWorkDetails||emptyStatementDetails());
   setAmount(String(saved.reviewedStatement.payoutPence/100));
@@ -184,7 +187,10 @@ export default function CheckPayV4() {
  {(loadError||costs.error)&&<div className="home-banner" role="alert">Records could not be loaded. <button className="home-text-button" onClick={()=>{costs.retry?.();forceSync?.();}}>Retry records</button></div>}
   {mode==='idle'&&<>
   <section className="check-simple-actions" aria-label="Your pay actions">
-   {canInvoice?<Link className="home-primary w-full" to="/app/invoice" state={invoicePath.state}>Prepare invoice <ArrowRight size={18}/></Link>:<Link className="home-primary w-full" to="/app/invoice" state={{periodId:period.id,startInvoice:true}}>Create invoice <ArrowRight size={18}/></Link>}
+   {ready&&periodRecords[period.id]?.reviewedStatement?.reviewed&&!periodRecords[period.id]?.payoutComparison?
+       <button type="button" className="home-primary w-full" onClick={compareSavedStatement}>Compare saved statement <ArrowRight size={18}/></button>:
+       canInvoice?<Link className="home-primary w-full" to="/app/invoice" state={invoicePath.state}>Prepare invoice <ArrowRight size={18}/></Link>:
+       <Link className="home-primary w-full" to="/app/invoice" state={{periodId:period.id,startInvoice:true}}>Create invoice <ArrowRight size={18}/></Link>}
    {comparison.state==='difference'?<button className="home-secondary w-full" type="button" onClick={viewSaved}>Review payout difference <ArrowRight size={18}/></button>:<button className="home-secondary w-full" type="button" disabled={unavailable||!fullPeriod} onClick={()=>{setMode('choose');setStatusRequest(n=>n+1);}}>Check statement <ArrowRight size={18}/></button>}
    <p className="home-muted text-xs">Only create an invoice if your contractor needs one. This doesn't confirm payment.</p>
   </section>
