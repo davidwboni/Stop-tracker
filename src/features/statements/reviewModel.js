@@ -37,5 +37,5 @@ export function confirmedReview(d){
  grossPence:reviewAmount(d.gross)?reviewPence(d.gross):null,
  feePence:reviewAmount(d.fee)?reviewPence(d.fee):null,
  chargesPence:reviewAmount(d.charges)?reviewPence(d.charges):null,
- charges:d.items.filter(i=>reviewAmount(i.amount)).map(i=>({label:i.label,amountPence:reviewPence(i.amount),reviewed:!!i.reviewed})),reviewed:true};
+ charges:d.items.filter(i=>i.reviewed&&reviewAmount(i.amount)&&i.label.trim()).map(i=>({label:i.label.trim(),amountPence:reviewPence(i.amount),reviewed:true})),reviewed:true};
 }
