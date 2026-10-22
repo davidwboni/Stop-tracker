@@ -7,10 +7,19 @@ export function unresolvedStatementFindings(record){
  if(!Array.isArray(flagged))return [];
  return flagged.filter(item=>!settledReasons.has(item?.acceptedReason));
 }
+// Partial or summary-only scans are not fully reconciled simply because the
+// visible totals match. The driver may explicitly accept that limitation.
+export function requiresLimitedCoverageAcceptance(findings){
+ if(!findings || typeof findings!=='object')return false; // legacy checked records
+ return findings.summaryOnly===true || findings.hasDaily===false ||
+   Number(findings.incompleteDays||0)>0 || Number(findings.outsidePeriod||0)>0;
+}
 export function statementInvoiceReady(record){
+ const findings=record?.statementFindings;
  return !!record?.payoutComparison &&
-   (!record?.statementFindings || record?.reviewedStatement?.reviewed===true) &&
-   unresolvedStatementFindings(record).length===0;
+   (!findings || record?.reviewedStatement?.reviewed===true) &&
+   unresolvedStatementFindings(record).length===0 &&
+   (!requiresLimitedCoverageAcceptance(findings)||findings?.limitedCoverageAccepted===true);
 }
 export function mergeFindingDecisions(record){
  const flagged=record?.statementFindings?.flagged;

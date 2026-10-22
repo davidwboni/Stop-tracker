@@ -83,6 +83,40 @@ describe('V5 one-upload pay journey',()=>{
   expect(stub.save.mock.calls[1][1]).toMatchObject({needsReview:false,statementFindings:{flagged:[{date:'2026-09-14',acceptedReason:'possible_duplicate_accepted'}]}});
   expect(await screen.findByRole('button',{name:'Prepare invoice from statement'})).toBeInTheDocument();
  });
+ it('saves a totals-only AI check but prevents invoicing until the driver accepts incomplete coverage',async()=>{
+  stub.extract.mockResolvedValue(statement({daily:[],extractionMode:'summary_only',contractorPayout:300,contractorCharges:0}));
+  stub.save.mockImplementation(async(id,patch)=>{stub.data.periodRecords={...stub.data.periodRecords,[id]:patch};return true;});
+  open();await upload();
+  expect(screen.getByText(/Limited check: some workdays could not be verified/)).toBeInTheDocument();
+  const ack=screen.getByRole('checkbox',{name:/I understand that not every workday was verified/});
+  expect(ack).not.toBeChecked();
+  fireEvent.click(screen.getByRole('button',{name:'Save pay check'}));
+  await waitFor(()=>expect(stub.save).toHaveBeenCalledOnce());
+  const first=stub.save.mock.calls[0][1];
+  expect(first).toMatchObject({status:'checked',needsReview:true,statementFindings:{summaryOnly:true,hasDaily:false,limitedCoverageAccepted:false}});
+  expect(screen.queryByRole('button',{name:'Prepare invoice from statement'})).not.toBeInTheDocument();
+  fireEvent.click(await screen.findByRole('button',{name:/Review limited pay check/}));
+  fireEvent.click(screen.getByRole('checkbox',{name:/I understand that not every workday was verified/}));
+  fireEvent.click(screen.getByRole('button',{name:'Save pay check'}));
+  await waitFor(()=>expect(stub.save).toHaveBeenCalledTimes(2));
+  expect(stub.save.mock.calls[1][1]).toMatchObject({needsReview:false,statementFindings:{limitedCoverageAccepted:true}});
+  expect(await screen.findByRole('button',{name:'Prepare invoice from statement'})).toBeInTheDocument();
+ });
+ it('shows the historic fee repair action alongside result instead of burying it in old settings',async()=>{
+  stub.data.logs=[{...logs[0],payStructureSnapshot:{}}];
+  open();await upload();
+  expect(screen.getByText(/One missing detail · Confirm a contractor deduction for 1 saved day/)).toBeInTheDocument();
+  fireEvent.click(screen.getByText(/One missing detail · Confirm a contractor deduction for 1 saved day/));
+  expect(screen.getByRole('textbox',{name:'Contractor fee (%)'})).toHaveValue('0');
+  expect(screen.getByRole('button',{name:'Confirm old deduction'})).toBeDisabled();
+ });
+ it('links only missing gross earnings to the correct saved period instead of blocking an AI scan',async()=>{
+   stub.data.logs=[{...logs[0],total:null,payStructureSnapshot:{contractorFeePercent:0}},logs[1]];
+   open();await upload();
+   expect(screen.getByRole('region',{name:'Review missing work earnings'})).toBeInTheDocument();
+   expect(screen.getByRole('link',{name:/Review saved workdays/})).toHaveAttribute('href','/app/records?payReview=1');
+   expect(screen.getByRole('button',{name:'Save statement — check later'})).toBeEnabled();
+ });
  it('detects the dates on a non-28-day statement without rewriting the work history',async()=>{
   stub.extract.mockResolvedValue(statement({periodStart:'2026-09-14',periodEnd:'2026-10-04',contractorPayout:300}));
   open();await upload();

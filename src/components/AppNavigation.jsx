@@ -10,10 +10,16 @@ const items=[
 ];
 export default function AppNavigation(){
  const navigate=useNavigate(),location=useLocation();
- const toTop=()=>window.scrollTo({top:0,behavior:(window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false)?'auto':'smooth'});
+ const toTop=()=>{
+  const behavior=(window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false)?'auto':'smooth';
+  window.scrollTo?.({top:0,behavior});
+  // In the installed PWA, the scrolling surface is the app shell's main,
+  // not always the browser window.
+  document.querySelector('.st-app-shell > main')?.scrollTo?.({top:0,behavior});
+ };
  return <nav aria-label="Main navigation" className="st-app-navigation fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur-xl pb-safe">
  <div className="mx-auto flex max-w-2xl items-center px-3 py-2">{items.map(({path,label,Icon,active})=><button key={path} data-tour={'nav-'+label.toLowerCase()} aria-label={label} aria-current={active(location.pathname)?'page':undefined}
- onClick={()=>{if(location.pathname===path&&label!=='Pay')toTop();else{navigate(path);requestAnimationFrame(toTop)}}}
+ onClick={()=>{if(location.pathname===path&&label!=='Pay')toTop();else{navigate(path,label==='Pay'?{state:{payHome:true}}:undefined);requestAnimationFrame(toTop)}}}
  className={`relative flex min-h-[58px] flex-1 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-semibold transition-transform duration-200 active:scale-95 ${active(location.pathname)?'text-primary':'text-muted-foreground'}`}>
  <Icon size={22} strokeWidth={active(location.pathname)?2.5:2} aria-hidden="true"/><span>{label}</span>
  {active(location.pathname)&&<span aria-hidden="true" className="absolute bottom-0 h-1 w-5 rounded-full bg-primary"/>}
