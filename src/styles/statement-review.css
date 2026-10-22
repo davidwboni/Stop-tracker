@@ -17,3 +17,11 @@
 .review-confirm .check-basis{margin:0;align-items:flex-start}
 .review-attention{width:100%;line-height:1.5}
 @media(max-width:699px){.statement-review{gap:13px}.review-layout,.review-form{gap:12px}.review-payout{gap:12px}}
+
+/* VAT-inclusive invoices remain saveable but never compare against net wages. */
+.review-vat-adjust{border:1px solid var(--border);border-radius:14px;padding:14px;display:grid;gap:12px;margin-top:8px;min-width:0}
+.review-vat-adjust .home-field{min-width:0}
+.review-vat-adjust input{max-width:100%}
+.review-vat-adjust .home-secondary{min-height:50px}
+.review-net-preview{font-size:16px;line-height:1.5}
+.review-net-preview strong{font-size:20px;color:var(--home-money)}
