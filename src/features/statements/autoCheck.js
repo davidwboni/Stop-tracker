@@ -29,7 +29,7 @@ export function buildStatementAutoCheck(statement,period,rows=[],days=[],expecte
     if(!r?.date||r.date<period.start||r.date>period.end)continue;
     if(!entries.has(r.date))entries.set(r.date,{date:r.date,loggedStops:0,grossPence:0,hasGross:true});
     const e=entries.get(r.date);
-    const count=safeStops(Number(r.stops));
+    const count=r.stops==null||r.stops===''?null:safeStops(Number(r.stops));
     if(count==null)e.loggedStops=null;
     else if(e.loggedStops!=null)e.loggedStops+=count;
     const gross=day&&!day.unavailable?safePence(day.gross):null;
