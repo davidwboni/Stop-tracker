@@ -26,7 +26,7 @@ describe('Check Pay entry',()=>{
    expect(amount).toBeTruthy();
    expect(actions).toBeTruthy();
    expect(amount.compareDocumentPosition(actions)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-   expect(screen.getByRole('link',{name:'Create invoice'})).toHaveAttribute('href','/app/invoice');
+   expect(screen.getByRole('link',{name:/Need to create an invoice/})).toHaveAttribute('href','/app/invoice');
    expect(screen.getByRole('button',{name:'Check statement'})).toBeEnabled();
    expect(screen.queryByRole('button',{name:'Enter manually'})).not.toBeInTheDocument();
    fireEvent.click(screen.getByRole('button',{name:'Check statement'}));
@@ -34,6 +34,32 @@ describe('Check Pay entry',()=>{
    expect(page.querySelectorAll('.check-action')).toHaveLength(2);
    expect(screen.getByRole('button',{name:'Enter manually'})).toBeEnabled();
    await screen.findByText('2 free AI checks left');
+ });
+ it('starts AI as soon as a contractor statement is chosen, without a second Read button',async()=>{
+    f.status.mockResolvedValue({isPro:false,betaAccess:true,statementAiUses:3,routeOptimizationUses:3});
+    f.extract.mockResolvedValue({periodStart:period.start,periodEnd:period.end,currency:'GBP',taxBasis:'excluded',contractorPayout:94,statementAmount:100,statementStops:120,daily:[{date:period.start,stops:120,amount:100}]});
+    const view=open();
+    const upload=await screen.findByLabelText('Upload contractor statement with AI');
+    expect(screen.getByText('Upload contractor statement')).toBeInTheDocument();
+    expect(screen.getByRole('link',{name:/Need to create an invoice/})).toBeInTheDocument();
+    fireEvent.change(upload,{target:{files:[new File(['test image'],'pay.png',{type:'image/png'})]}});
+    await waitFor(()=>expect(f.extract).toHaveBeenCalledTimes(1));
+    expect(await screen.findByRole('heading',{name:'Your statement compared'})).toBeInTheDocument();
+    expect(screen.queryByRole('button',{name:'Read statement with AI'})).not.toBeInTheDocument();
+    view.unmount();
+ });
+ it('switches to an exact existing historic pay period from statement dates, never silently reassigns workdays',async()=>{
+    f.status.mockResolvedValue({isPro:false,betaAccess:true,statementAiUses:3,routeOptimizationUses:3});
+    f.data.logs=[{date:period.start,total:100,stops:120,payStructureSnapshot:{contractorFeePercent:6}}];
+    f.extract.mockResolvedValue({periodStart:period.start,periodEnd:period.end,currency:'GBP',taxBasis:'excluded',contractorPayout:94,statementAmount:100,statementStops:120,daily:[{date:period.start,stops:120,amount:100}]});
+    render(<MemoryRouter initialEntries={[{pathname:'/app/check-pay',state:{start:'2026-09-14',end:'2026-10-11'}}]}><CheckPayV4/></MemoryRouter>);
+    const upload=await screen.findByLabelText('Upload contractor statement with AI');
+    fireEvent.change(upload,{target:{files:[new File(['test'],'pay.png',{type:'image/png'})]}});
+    expect(await screen.findByRole('heading',{name:'Your statement compared'})).toBeInTheDocument();
+    expect(screen.queryByText(/statement dates differ/i)).not.toBeInTheDocument();
+    expect(screen.getByText('120', {exact:false})).toBeInTheDocument();
+    expect(f.save).not.toHaveBeenCalled();
+    expect(f.anchor).not.toHaveBeenCalled();
  });
  it('unlocks statement AI for a free beta account even when three previous trials are used',async()=>{
    f.status.mockResolvedValue({isPro:false,betaAccess:true,statementAiUses:3,routeOptimizationUses:3});
@@ -127,7 +153,7 @@ describe('Check Pay entry',()=>{
  it('hides the missing-rate explanation until requested, without blocking invoicing',()=>{
    f.data.logs=[{id:'old-day',date:period.start,total:281.1,stops:120}];
    open();
-   expect(screen.getByRole('link',{name:'Create invoice'})).toHaveAttribute('href','/app/invoice');
+   expect(screen.getByRole('link',{name:/Need to create an invoice/})).toHaveAttribute('href','/app/invoice');
    expect(screen.getByRole('button',{name:'Check statement'})).toBeEnabled();
    expect(screen.getByText('Why is the estimate unavailable?')).toBeInTheDocument();
    expect(screen.queryByRole('link',{name:/Review those days/})).not.toBeVisible();
