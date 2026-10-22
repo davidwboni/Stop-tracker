@@ -18,7 +18,13 @@ function classifyProviderStatus(status) {
 function classifyProviderException(error) {
   if(['TimeoutError','AbortError'].includes(error?.name))
     return {code:'deadline-exceeded',message:'Statement AI timed out (DS-TIMEOUT). Try a smaller image or retry.'};
-  if(error?.message==='provider-json' || error?.message==='provider-response')
+  if(error?.kind==='filtered')
+    return {code:'failed-precondition',message:'The AI provider did not return this document (DS-FILTER). Enter your totals manually.'};
+  if(error?.kind==='length')
+    return {code:'failed-precondition',message:'The AI response was cut off (DS-LENGTH). Try a cropped image or upload the original PDF.'};
+  if(error?.kind==='empty')
+    return {code:'unavailable',message:'The AI provider returned no statement data (DS-EMPTY). Try again with a clearer image.'};
+  if(error?.kind==='json' || error?.message==='provider-json' || error?.message==='provider-response')
     return {code:'internal',message:'The AI provider returned an unreadable response (DS-PARSE). Try again or report this code.'};
   return {code:'unavailable',message:'Statement AI could not connect to the provider (DS-NETWORK). Please retry.'};
 }
