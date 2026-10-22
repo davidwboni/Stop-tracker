@@ -91,7 +91,7 @@ export default function CheckPayV5(){
  const unresolvedSaved=unresolvedStatementFindings(statusRecord);
  const invoiceReady=statementInvoiceReady(statusRecord);
  const unresolvedCurrent=(view?.flagged||[]).filter(row=>!['figures_verified','possible_duplicate_accepted'].includes(confirmedDays[row.date]));
- const limitedCoverage=!!view&&requiresLimitedCoverageAcceptance({summaryOnly:view.summaryOnly,hasDaily:view.hasDaily,incompleteDays:view.unknown.length,outsidePeriod:view.outsidePeriod});
+ const limitedCoverage=!!view&&requiresLimitedCoverageAcceptance({summaryOnly:view.summaryOnly,hasDaily:view.hasDaily,incompleteDays:view.unknown.length,outsidePeriod:view.outsidePeriod,earningsDifferences:view.earningsVariations.length});
  const savedCoveragePending=requiresLimitedCoverageAcceptance(statusRecord?.statementFindings)&&statusRecord?.statementFindings?.limitedCoverageAccepted!==true;
  const requiredPeriod=period.start+' – '+period.end;
  useEffect(()=>{let active=true;getPremiumStatus().then(s=>{if(active)setPermission(s);}).catch(()=>{if(active)setPermissionError(true);});return()=>{active=false;};},[]);
@@ -164,7 +164,7 @@ export default function CheckPayV5(){
        statementFindings:{
          source:scanSource,summaryOnly:view.summaryOnly,hasDaily:view.hasDaily,outsidePeriod:view.outsidePeriod,limitedCoverageAccepted:limitedCoverage?limitedAccepted:true,
          flagged:view.flagged.map(d=>({date:d.date,reason:d.reason,loggedStops:d.loggedStops,statementStops:d.statementStops,loggedGross:d.loggedGross,statementGross:d.statementGross,acceptedReason:confirmedDays[d.date]||null})),
-         incompleteDays:view.unknown.length,recordedAt:new Date().toISOString()
+         incompleteDays:view.unknown.length,earningsDifferences:view.earningsVariations.length,recordedAt:new Date().toISOString()
        }
      };
      if(netKnown){
@@ -245,9 +245,17 @@ export default function CheckPayV5(){
      <div className={'v5-difference '+(view?.canCompare&&view.difference!==0?'v5-warning-difference':'')}><dt>Potential difference</dt><dd>{view?.canCompare?cash(Math.abs(view.difference)):'Not comparable yet'}</dd></div>
     </dl>
     {view?.canCompare&&<p className="home-muted text-sm">{view.difference===0?'The before-VAT payout totals match.':view.difference<0?'The statement payout is lower than your expected amount.':'The statement payout is higher than your expected amount.'} A totals match does not prove each day or charge is correct.</p>}
-    {view?.hasDaily&&<p className="home-muted text-sm" role="status">{view.matched.length} workdays matched · {view.flagged.length} to review · {view.unknown.length} without enough detail</p>}
-    {limitedCoverage?<p className="home-banner" role="status">Limited check: some workdays could not be verified. You can save this payout now, but an invoice requires acknowledging that limitation.</p>:null}
+    {view?.hasDaily&&<p className="home-muted text-sm" role="status">{view.matched.length} days with matching stop counts · {view.flagged.length} day{view.flagged.length===1?'':'s'} need{view.flagged.length===1?'s':''} action · {view.unknown.length} without enough stop detail</p>}
+    {limitedCoverage?<p className="home-banner" role="status">Limited check: {view?.earningsVariations?.length?view.earningsVariations.length+' days have different all-in earnings figures; these are not confirmed underpayments. ':'Some workday details could not be verified. '}You can save the payout now. One acknowledgement of the limitation is needed before invoicing.</p>:null}
    </section>
+   {view?.earningsVariations.length>0&&<section className="home-card v5-earnings-note" aria-label="Daily amounts not directly comparable">
+     <div className="v5-topline"><h2>Stops match · Daily earnings differ</h2><span className="st-badge">{view.earningsVariations.length}</span></div>
+     <p className="home-muted text-sm">These days have the same number of stops in both records. The contractor's daily total may include excess parcels, top-ups or extra work; VAT treatment can also differ. <strong>These are not confirmed missing stops or underpayments.</strong></p>
+     <p className="home-muted text-sm">Without an itemised breakdown, AI cannot prove why the amounts differ. The differences remain visible in your saved check, but you don't need to review each day separately.</p>
+     <details className="v5-earnings-details"><summary>View {view.earningsVariations.length} daily amount differences</summary>
+       <div className="v5-earnings-list">{view.earningsVariations.map(row=><div key={row.date} className="v5-earnings-row"><strong>{showDate(row.date)}</strong><span>{cash(row.loggedGross)} logged / {cash(row.statementGross)} statement</span></div>)}</div>
+     </details>
+   </section>}
    {view?.flagged.length>0&&<section className="home-card v5-differences"><div className="v5-topline"><h2>Workdays to review</h2><span className="st-badge">{view.flagged.length}</span></div>
     <p className="home-muted text-sm">A small stop difference may be a duplicate, but AI cannot prove it. Review only the affected days. You can save now; preparing an invoice waits until you resolve them.</p>
     {(openDays?view.flagged:view.flagged.slice(0,4)).map(row=><div className="v5-day" key={row.date}>
@@ -284,7 +292,7 @@ export default function CheckPayV5(){
    </details>}
    {step==='result'&&<section className="home-card v5-finish"><h2>Finish checking</h2>
      <p className="home-muted text-sm">{canCompare?'Check the payout and dates against your original statement. Individually matched charges need no extra taps.':'Save the statement as received. Finish any missing details later without another scan.'}</p>
-     {limitedCoverage&&canCompare&&<label className="v5-ack"><input type="checkbox" checked={limitedAccepted} onChange={e=>setLimitedAccepted(e.target.checked)}/> I understand that not every workday was verified. I accept a limited comparison for invoicing.</label>}
+     {limitedCoverage&&canCompare&&<label className="v5-ack"><input type="checkbox" checked={limitedAccepted} onChange={e=>setLimitedAccepted(e.target.checked)}/> I understand that {view.earningsVariations.length?view.earningsVariations.length+' days have all-in earnings amounts that were not fully reconciled, and ':''}not every workday detail was verified. I accept this limited comparison for invoicing.</label>}
      <button type="button" className="home-primary w-full" disabled={busy||!ai||!sourceNet||!view?.periodOk||!view?.currencyOk||view.rawPayout==null} onClick={saveCheck}>{busy?'Saving…':canCompare?'Save pay check':'Save statement — check later'}</button>
      <details className="v5-manual"><summary>View extracted totals and charges</summary>
        <p className="home-muted text-sm">These are unverified AI figures from the contractor document. Never assume that a missing amount is £0.</p>
@@ -295,7 +303,7 @@ export default function CheckPayV5(){
    {step==='saved'&&<section className="home-card v5-finish">
      <h2>{savedCheck?'Pay check saved':'Statement saved · Needs review'}</h2>
      <p className="home-muted">{savedCheck?'Your statement was compared with the saved work available for this period. The actual payment is not independently confirmed.':'Your statement is saved. The app did not falsely mark VAT, missing rates or unknown daily figures as verified.'}</p>
-     {unresolvedSaved.length>0&&<div className="home-banner" role="status"><strong>{unresolvedSaved.length} workday {unresolvedSaved.length===1?'difference':'differences'} to review</strong><p className="home-muted text-sm">Your statement is saved. Before preparing an invoice, mark each difference as accepted. You don't need to scan again.</p>
+     {unresolvedSaved.length>0&&<div className="home-banner" role="status"><strong>{unresolvedSaved.length} workday {unresolvedSaved.length===1?'difference':'differences'} to review</strong><p className="home-muted text-sm">Your statement is saved. Only genuine stop or date mismatches need decisions, not each daily earnings variation. You don't need to scan again.</p>
        <button className="home-primary w-full" type="button" onClick={()=>{setConfirmedDays(mergeFindingDecisions(statusRecord));setStep('result');setOpenDays(true);}}>Review differences <ArrowRight size={18}/></button>
      </div>}
      {statusRecord?.payoutComparison&&savedCoveragePending&&unresolvedSaved.length===0&&<button className="home-primary w-full" type="button" onClick={()=>{setLimitedAccepted(false);setStep('result');}}>Review limited pay check <ArrowRight size={18}/></button>}

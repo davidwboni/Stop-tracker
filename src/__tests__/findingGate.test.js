@@ -35,6 +35,21 @@ describe('V5 statement-to-invoice safeguards',()=>{
    expect(statementInvoiceReady({...unknown,statementFindings:{...unknown.statementFindings,limitedCoverageAccepted:true}})).toBe(true);
    expect(statementInvoiceReady({...base,statementFindings:{...base.statementFindings,flagged:[{date:'2026-09-14',acceptedReason:'dispute'}],limitedCoverageAccepted:true}})).toBe(false);
  });
+ it('asks once before invoicing when 27 daily amounts differ despite equal stops',()=>{
+   const unaccepted={
+     payoutComparison:{statementPence:380000},
+     reviewedStatement:{reviewed:true},
+     statementFindings:{
+       flagged:[],hasDaily:true,summaryOnly:false,incompleteDays:0,
+       outsidePeriod:0,earningsDifferences:27,limitedCoverageAccepted:false
+     }
+   };
+   expect(unresolvedStatementFindings(unaccepted)).toEqual([]);
+   expect(requiresLimitedCoverageAcceptance(unaccepted.statementFindings)).toBe(true);
+   expect(statementInvoiceReady(unaccepted)).toBe(false);
+   const confirmed={...unaccepted,statementFindings:{...unaccepted.statementFindings,limitedCoverageAccepted:true}};
+   expect(statementInvoiceReady(confirmed)).toBe(true);
+ });
  it('keeps invoice readiness when all real daily entries are reviewed and complete',()=>{
    const full={payoutComparison:{statementPence:28000},reviewedStatement:{reviewed:true},statementFindings:{hasDaily:true,summaryOnly:false,incompleteDays:0,outsidePeriod:0,limitedCoverageAccepted:true,flagged:[]}};
    expect(requiresLimitedCoverageAcceptance(full.statementFindings)).toBe(false);

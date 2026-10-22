@@ -24,6 +24,43 @@ describe('AI-first comparison',()=>{
   expect(c.flagged[0]).toMatchObject({date:'2026-09-15',loggedStops:139,statementStops:140,loggedGross:26350,statementGross:26450});
   expect(c.matched).toHaveLength(1);
  });
+ it('groups all-in earnings changes when contractor and logged stops are identical',()=>{
+  const dates=Array.from({length:27},(_,i)=>{
+   const date=new Date(Date.UTC(2026,8,14+i));
+   return date.toISOString().slice(0,10);
+  }).filter(date=>date<=period.end);
+  const statementDays=dates.map((date,i)=>({date,stops:104+i,amount:207.62+i}));
+  const own=dates.map((date,i)=>({date,stops:104+i,totalParcels:110+i,extraWorkAmount:5}));
+  const saved=dates.map((date,i)=>({gross:205.92+i,unavailable:false}));
+  const result=buildStatementAutoCheck({...statement,daily:statementDays},period,own,saved,368469);
+  expect(result.flagged).toHaveLength(0);
+  expect(result.matched).toHaveLength(dates.length);
+  expect(result.earningsVariations).toHaveLength(dates.length);
+  expect(result.earningsVariations[0]).toMatchObject({date:'2026-09-14',loggedStops:104,statementStops:104,loggedGross:20592,statementGross:20762,grossDifferencePence:170,earningsUnverified:true});
+  expect(result.payoutBeforeVat).toBe(368469);
+  expect(result.canCompare).toBe(true); // period payout still uses like-for-like pre-VAT total
+ });
+ it('flags real missing stops but groups only same-stop daily earnings variances',()=>{
+  const testStatement={...statement,daily:[
+   {date:'2026-09-14',stops:104,amount:207.62},
+   {date:'2026-09-15',stops:139,amount:264.50}
+  ]};
+  const own=[{date:'2026-09-14',stops:104},{date:'2026-09-15',stops:140}];
+  const dayGross=[{gross:205.92,unavailable:false},{gross:262.2,unavailable:false}];
+  const result=buildStatementAutoCheck(testStatement,period,own,dayGross,368469);
+  expect(result.flagged).toHaveLength(1);
+  expect(result.flagged[0]).toMatchObject({date:'2026-09-15',reason:'Different stop counts'});
+  expect(result.earningsVariations).toHaveLength(1);
+  expect(result.earningsVariations[0].date).toBe('2026-09-14');
+ });
+ it('does not silently verify earnings when the contractor gives no daily stop counts',()=>{
+  const result=buildStatementAutoCheck({...statement,daily:[{date:period.start,stops:null,amount:250}]},period,
+    [{date:period.start,stops:104}],[{gross:200,unavailable:false}],368469);
+  expect(result.flagged).toHaveLength(0);
+  expect(result.matched).toHaveLength(0);
+  expect(result.unknown).toHaveLength(1);
+  expect(result.unknown[0].reason).toBe('Insufficient daily stop figures');
+ });
  it('does not call an absent day a confirmed match',()=>{
   const more={...statement,daily:[...statement.daily,{date:'2026-09-16',stops:120,amount:212}]};
   const c=buildStatementAutoCheck(more,period,rows,days,null);

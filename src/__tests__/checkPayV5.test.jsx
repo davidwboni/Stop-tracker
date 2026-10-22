@@ -65,6 +65,35 @@ describe('V5 one-upload pay journey',()=>{
   expect(patch).toMatchObject({status:'checked',needsReview:false,reviewedStatement:{payoutPence:28000,reviewed:true},payoutComparison:{source:'ai',statementPence:28000,expectedPence:30000},statementFindings:{hasDaily:true,flagged:[{date:'2026-09-14',acceptedReason:'possible_duplicate_accepted'}]}});
   expect(stub.data.logs).toEqual(logs);
  });
+ it('groups all-in pay variations into one acknowledgement rather than requiring each day accepted',async()=>{
+  stub.extract.mockResolvedValue(statement({
+    daily:[{date:'2026-09-14',stops:120,amount:101.70},{date:'2026-09-15',stops:130,amount:201.10}],
+    contractorPayout:280,statementAmount:303,contractorCharges:23
+  }));
+  stub.save.mockImplementation(async(id,patch)=>{stub.data.periodRecords={...stub.data.periodRecords,[id]:patch};return true;});
+  open();await upload();
+  expect(screen.getByText('Stops match · Daily earnings differ')).toBeInTheDocument();
+  expect(screen.getByText(/2 days with matching stop counts/)).toBeInTheDocument();
+  expect(screen.queryByText('Workdays to review')).not.toBeInTheDocument();
+  expect(screen.getByText(/you don't need to review each day separately/i)).toBeInTheDocument();
+  expect(screen.queryByDisplayValue('Needs review')).not.toBeInTheDocument();
+  const disclosure=screen.getByText('View 2 daily amount differences');
+  fireEvent.click(disclosure);
+  expect(screen.getByText(/£100.00 logged \/ £101.70 statement/)).toBeInTheDocument();
+  expect(screen.getByRole('checkbox',{name:/I understand that 2 days have all-in earnings amounts/})).not.toBeChecked();
+  fireEvent.click(screen.getByRole('button',{name:'Save pay check'}));
+  await waitFor(()=>expect(stub.save).toHaveBeenCalledTimes(1));
+  expect(stub.save.mock.calls[0][1]).toMatchObject({
+    needsReview:true,statementFindings:{flagged:[],earningsDifferences:2,limitedCoverageAccepted:false}
+  });
+  expect(screen.queryByRole('button',{name:'Prepare invoice from statement'})).not.toBeInTheDocument();
+  fireEvent.click(await screen.findByRole('button',{name:'Review limited pay check'}));
+  fireEvent.click(screen.getByRole('checkbox',{name:/I understand that 2 days have all-in earnings amounts/}));
+  fireEvent.click(screen.getByRole('button',{name:'Save pay check'}));
+  await waitFor(()=>expect(stub.save).toHaveBeenCalledTimes(2));
+  expect(stub.save.mock.calls[1][1]).toMatchObject({needsReview:false,statementFindings:{flagged:[],earningsDifferences:2,limitedCoverageAccepted:true}});
+  expect(await screen.findByRole('button',{name:'Accept difference & prepare invoice'})).toBeInTheDocument();
+ });
  it('keeps the invoice closed when identical totals hide a missing stop until the driver accepts it',async()=>{
   stub.extract.mockResolvedValue(statement({contractorPayout:300,contractorCharges:0,statementAmount:300}));
   stub.save.mockImplementation(async(id,patch)=>{stub.data.periodRecords={...stub.data.periodRecords,[id]:patch};return true;});
@@ -87,8 +116,8 @@ describe('V5 one-upload pay journey',()=>{
   stub.extract.mockResolvedValue(statement({daily:[],extractionMode:'summary_only',contractorPayout:300,contractorCharges:0}));
   stub.save.mockImplementation(async(id,patch)=>{stub.data.periodRecords={...stub.data.periodRecords,[id]:patch};return true;});
   open();await upload();
-  expect(screen.getByText(/Limited check: some workdays could not be verified/)).toBeInTheDocument();
-  const ack=screen.getByRole('checkbox',{name:/I understand that not every workday was verified/});
+  expect(screen.getByText(/Limited check: Some workday details could not be verified/)).toBeInTheDocument();
+  const ack=screen.getByRole('checkbox',{name:/I understand that not every workday detail was verified/});
   expect(ack).not.toBeChecked();
   fireEvent.click(screen.getByRole('button',{name:'Save pay check'}));
   await waitFor(()=>expect(stub.save).toHaveBeenCalledOnce());
@@ -96,7 +125,7 @@ describe('V5 one-upload pay journey',()=>{
   expect(first).toMatchObject({status:'checked',needsReview:true,statementFindings:{summaryOnly:true,hasDaily:false,limitedCoverageAccepted:false}});
   expect(screen.queryByRole('button',{name:'Prepare invoice from statement'})).not.toBeInTheDocument();
   fireEvent.click(await screen.findByRole('button',{name:/Review limited pay check/}));
-  fireEvent.click(screen.getByRole('checkbox',{name:/I understand that not every workday was verified/}));
+  fireEvent.click(screen.getByRole('checkbox',{name:/I understand that not every workday detail was verified/}));
   fireEvent.click(screen.getByRole('button',{name:'Save pay check'}));
   await waitFor(()=>expect(stub.save).toHaveBeenCalledTimes(2));
   expect(stub.save.mock.calls[1][1]).toMatchObject({needsReview:false,statementFindings:{limitedCoverageAccepted:true}});
