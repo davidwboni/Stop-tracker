@@ -33,6 +33,9 @@
 .v5-totals dd{font-weight:730;font-size:19px;overflow-wrap:anywhere;text-align:right;font-variant-numeric:tabular-nums;}
 .v5-difference dt{font-weight:700;color:var(--foreground);}
 .v5-difference dd{color:var(--home-money);font-size:clamp(20px,5vw,27px);}
+.v5-warning-difference dd{color:#b76b15;}
+.dark .v5-warning-difference dd{color:#f3bb5a;}
+
 .v5-differences .v5-day{padding:16px 0;border-top:1px solid var(--border);display:grid;gap:7px;}
 .v5-day-numbers{display:grid;gap:4px;color:var(--home-muted);font-size:14px;line-height:1.5;}
 .v5-day-accept{display:grid;gap:4px;color:var(--home-muted);font-size:13px;margin-top:4px;}
