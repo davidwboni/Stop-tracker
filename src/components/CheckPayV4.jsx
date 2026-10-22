@@ -163,7 +163,16 @@ export default function CheckPayV4() {
  }
  async function saveAutoPending(){
    if(!autoCheck||!review||captureIssues(review,period).length||lock.current||saving)return;
-   await saveUncompared(confirmedReview(review,{asReceived:true}));
+   // One explicit tap confirms the read payout even if older workdays still
+   // lack contractor fee snapshots. VAT-ambiguous values remain unreviewed.
+   const netKnown=autoCheck.payoutBeforeVat!=null;
+   const captured=netKnown?{
+     ...review,payout:String(autoCheck.payoutBeforeVat/100),taxBasis:'excluded',
+     vatAmount:autoCheck.vat==null?'':String(autoCheck.vat/100),
+     vatIncludedPayout:aiDraft?.taxBasis==='included'?String(autoCheck.rawPayout/100):'',
+     reviewed:true
+   }:review;
+   await saveUncompared(confirmedReview(captured,{asReceived:!netKnown}));
  }
  async function saveReviewAsReceived(){if(!review||unavailable||!fullPeriod||captureIssues(review,period).length)return;await saveUncompared(confirmedReview(review,{asReceived:true}));}
  async function continueReview(){if(unavailable||!fullPeriod||reviewIssues(review,period).length)return;const approved=confirmedReview(review);if(!ready){await saveUncompared(approved);return;}setReviewedStatement(approved);setAmount(review.payout);setDetails(d=>({...d,gross:safeAiAmount(review.gross),charges:safeAiAmount(review.charges),daily:safeAiDaily(aiDraft,period)}));setBasis(true);setError('');setPreviewSnapshot({key:recordsKey,payout:summary.payout});setMode('preview');track('statement_reviewed');}
