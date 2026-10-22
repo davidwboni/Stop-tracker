@@ -2,7 +2,9 @@ import { pennies } from '../home/homeModel';
 export const SOURCES = { contractor_charge: 'Contractor charge', my_expense: 'My expense' };
 export const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(value || '') && Number.isFinite(Date.parse(value + 'T12:00:00Z')) && new Date(value + 'T12:00:00Z').toISOString().slice(0,10) === value;
 export function validateExpense(e) {
-  return !!e.id && validDate(e.date) && Number.isFinite(e.amount) && e.amount > 0 && Number.isSafeInteger(pennies(e.amount)) && !!SOURCES[e.source];
+  const discount=e.fuelCardDiscount;
+  const validDiscount=discount==null || (typeof discount==='number'&&Number.isFinite(discount)&&discount>=0&&Number.isSafeInteger(pennies(discount))&&discount<=e.amount);
+  return !!e.id && validDate(e.date) && Number.isFinite(e.amount) && e.amount > 0 && Number.isSafeInteger(pennies(e.amount)) && !!SOURCES[e.source] && validDiscount;
 }
 export function splitExpenseRecords(rows) {
   if (!Array.isArray(rows)) throw new Error('Invalid expense records');
