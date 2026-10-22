@@ -1,29 +1,70 @@
 import React,{useEffect,useRef,useState} from 'react';
-import {reviewIssues} from '../features/statements/reviewModel';
+import {reviewIssues,reviewWarnings} from '../features/statements/reviewModel';
 import {trackProductEvent as track} from '../services/productAnalytics';
 import '../styles/statement-review.css';
+
 export default function StatementReview({draft,onChange,period,periods,onPeriodChange,file,onContinue,onBack,ready,captureOnly=false,saving=false,summaryOnly=false}){
- const [source,setSource]=useState(false),[url,setUrl]=useState('');const root=useRef(null);
+ const [source,setSource]=useState(false),[url,setUrl]=useState('');
+ const root=useRef(null);
  const issues=reviewIssues(draft,period);
+ const warnings=reviewWarnings(draft);
  useEffect(()=>{track('statement_review_opened');root.current?.focus();},[]);
  useEffect(()=>{if(!file)return;const next=URL.createObjectURL(file);setUrl(next);return()=>URL.revokeObjectURL(next);},[file]);
- function change(key,value){if(key!=='reviewed'&&draft[key]!==value)track('statement_field_corrected');onChange({...draft,[key]:value,...(key==='reviewed'?{}:{reviewed:false})});}
- function focusIssue(){const target=document.getElementById('review-'+issues[0]?.field);const disclosure=target?.closest('details');if(disclosure)disclosure.open=true;target?.focus();target?.scrollIntoView({block:'center',behavior:'auto'});track('statement_review_validation_failed');}
+ function change(key,value){
+  if(key!=='reviewed'&&draft[key]!==value)track('statement_field_corrected');
+  onChange({...draft,[key]:value,...(key==='reviewed'?{}:{reviewed:false})});
+ }
+ function focusIssue(){
+  const target=document.getElementById('review-'+issues[0]?.field);
+  const details=target?.closest('details');if(details)details.open=true;
+  target?.focus();target?.scrollIntoView?.({block:'center',behavior:'auto'});
+  track('statement_review_validation_failed');
+ }
  const field=(key,label,type='text')=><label className="home-field" key={key} htmlFor={'review-'+key}>{label}<input id={'review-'+key} type={type} inputMode={type==='text'?'decimal':undefined} value={draft[key]} onChange={e=>change(key,e.target.value)}/></label>;
+ const nextLabel=captureOnly?'Save statement — compare later':'Compare with my workdays';
  return <section className="statement-review" ref={root} tabIndex={-1} aria-label="Review statement">
- <button className="home-text-button" onClick={onBack}>← Back to Check Pay</button><header><h1>Review statement</h1><p className="home-muted">{captureOnly?'Check the figures before saving. We cannot compare this period yet.':'Check the figures before comparing.'}</p></header>{summaryOnly&&<p className="home-banner" role="status">AI could read the statement summary but not the individual workdays. Review each extracted total and use your original statement to check daily figures. No amount has been verified or saved.</p>}
- <p className="review-steps">Upload <span>/</span> <strong>Review</strong> <span>/</span> {captureOnly?'Save':'Compare'}</p>
- {issues.length>0&&<button className="review-attention" onClick={focusIssue}>{issues.length} {issues.length===1?'item needs':'items need'} attention →</button>}
+ <button type="button" className="home-text-button" onClick={onBack}>← Back to Check Pay</button>
+ <header><h1>Review statement</h1><p className="home-muted">Check the final payout and dates. Optional charge details can be checked later.</p></header>
+ {summaryOnly&&<p className="home-banner" role="status">AI could read the statement summary but not the individual workdays. Review the totals against your original. No amount is verified or saved automatically.</p>}
+ <p className="review-steps">Upload <span>/</span> <strong>Review payout</strong> <span>/</span> {captureOnly?'Save, then compare':'Compare'}</p>
+ {issues.length>0&&<button type="button" className="review-attention" onClick={focusIssue}>{issues.length} required {issues.length===1?'check':'checks'} left · {issues[0].message} →</button>}
  <div className="review-layout"><div className="review-form">
- <section className="home-card"><label className="home-field">Compare with pay period<select value={period.id} onChange={e=>{onPeriodChange(periods.find(p=>p.id===e.target.value));change('reviewed',false);}}>{periods.map(p=><option key={p.id} value={p.id}>{p.start} – {p.end}</option>)}</select></label><div className="review-fields">{field('start','Statement period start','date')}{field('end','Statement period end','date')}</div><label className="home-field" htmlFor="review-currency">Statement currency<select id="review-currency" value={draft.currency} onChange={e=>change('currency',e.target.value)}><option value="">Not found</option>{draft.currency&&draft.currency!=='GBP'&&<option value={draft.currency}>{draft.currency} · unsupported</option>}<option value="GBP">GBP (£)</option></select></label><label className="home-field mt-4" htmlFor="review-taxBasis">Payout VAT treatment<select id="review-taxBasis" value={draft.taxBasis} onChange={e=>change('taxBasis',e.target.value)}><option value="unknown">Needs confirmation</option><option value="excluded">VAT excluded</option><option value="not_applicable">VAT does not apply</option><option value="included">VAT included · adjustment needed</option></select></label><p className="home-muted text-sm mt-3">Use a payout before VAT and check that your recorded rates also exclude VAT. VAT-inclusive comparisons need adjustment first.</p></section>
- <section className="home-card review-payout"><span className="money-badge">Unverified · From statement</span>{field('payout','Final contractor payout (£)')}<p className="home-muted">After contractor fees and charges; before your own business expenses.</p></section>
- <section className="home-card"><details className="money-details"><summary>Work earnings and contractor fee</summary><div className="review-fields">{field('gross','Gross work earnings (£)')}{field('fee','Contractor / admin fee (£)')}</div><p className="home-muted text-sm">Optional subtotals. Include extras in the work earnings total. Leave a subtotal blank if it is not shown.</p></details></section>
- <section className="home-card"><h2>Contractor charges</h2>{field('charges','Total contractor charges (£)')}<p className="home-muted text-sm">Verify against the statement. These figures will not create or change expense records.</p>
- {draft.items.map((item,index)=><div className="review-charge" key={item.id}><label className="home-field">Charge description<input value={item.label} maxLength={80} onChange={e=>change('items',draft.items.map((r,i)=>i===index?{...r,label:e.target.value,reviewed:false}:r))}/></label><label className="home-field" htmlFor={'review-item-'+item.id}>{item.label} (£)<input id={'review-item-'+item.id} inputMode="decimal" value={item.amount} onChange={e=>change('items',draft.items.map((r,i)=>i===index?{...r,amount:e.target.value,reviewed:false}:r))}/></label><label className="check-basis"><input type="checkbox" checked={item.reviewed} onChange={e=>change('items',draft.items.map((r,i)=>i===index?{...r,reviewed:e.target.checked}:r))}/>I checked this charge</label><button className="home-text-button" onClick={()=>change('items',draft.items.filter((_,i)=>i!==index))}>Remove this extracted item</button></div>)}
- <button className="home-text-button" onClick={()=>change('items',[...draft.items,{id:crypto.randomUUID(),label:'Other charge',amount:'',reviewed:false}])}>+ Add missing charge</button></section>
- <label className="check-basis"><input id="review-reviewed" type="checkbox" checked={draft.reviewed} onChange={e=>change('reviewed',e.target.checked)}/><span>I checked these figures against my statement. My recorded rates and this payout both exclude VAT, or VAT does not apply.</span></label>
- <div aria-live="polite">{issues.length>0&&<p className="home-banner">{issues[0].message}</p>}</div>
- </div><aside className="review-source"><button className="home-secondary w-full" disabled={!url} onClick={()=>setSource(!source)}>{source?'Hide source':'View original statement'}</button>{!url&&<p className="home-muted">The original is no longer available. Check your own copy.</p>}{source&&url&&<div className="review-preview">{file.type==='application/pdf'||file.name?.toLowerCase().endsWith('.pdf')?<><object data={url} type="application/pdf" aria-label="Original statement"><p>PDF preview is unavailable on this device.</p></object><a href={url} target="_blank" rel="noreferrer" className="home-text-button">Open original PDF</a></>:<img src={url} alt="Original statement for checking extracted figures"/>}</div>}<p className="home-muted text-sm">The original stays only in this open draft. Nothing is saved until you confirm.</p></aside></div>
- <footer className="review-footer"><button className="home-primary w-full" disabled={issues.length>0||!ready||saving} onClick={onContinue}>{saving?'Saving…':captureOnly?'Save statement without comparison':'Continue to comparison'}</button><p className="home-muted text-sm">{issues.length?'Review the highlighted items to continue.':!ready?'Records unavailable — retry when connected.':captureOnly?'We will save the statement, not mark your pay checked or paid.':'Next: compare these reviewed figures with your records.'}</p></footer>
+ <section className="home-card review-payout"><span className="money-badge">AI estimate · Confirm with original</span>{field('payout','Final contractor payout (£)')}<p className="home-muted text-sm">Use the amount after contractor fees and charges but before VAT and your own expenses. This is the amount we compare with your saved work.</p></section>
+ <section className="home-card review-required"><h2>Check the statement period</h2>
+  <label className="home-field" htmlFor="review-period">Compare with pay period
+   <select id="review-period" value={period.id} onChange={e=>{onPeriodChange(periods.find(p=>p.id===e.target.value));change('reviewed',false);}}>{periods.map(p=><option key={p.id} value={p.id}>{p.start} – {p.end}</option>)}</select>
+  </label>
+  <div className="review-fields">{field('start','Statement period start','date')}{field('end','Statement period end','date')}</div>
+  <label className="home-field" htmlFor="review-currency">Currency
+   <select id="review-currency" value={draft.currency} onChange={e=>change('currency',e.target.value)}><option value="">Not found</option>{draft.currency&&draft.currency!=='GBP'&&<option value={draft.currency}>{draft.currency} · unsupported</option>}<option value="GBP">GBP (£)</option></select>
+  </label>
+  <label className="home-field mt-4" htmlFor="review-taxBasis">Final payout VAT treatment
+   <select id="review-taxBasis" value={draft.taxBasis} onChange={e=>change('taxBasis',e.target.value)}><option value="unknown">Choose VAT treatment</option><option value="excluded">VAT excluded (before VAT)</option><option value="not_applicable">VAT does not apply</option><option value="included">VAT included · needs adjustment</option></select>
+  </label>
+  <p className="home-muted text-sm mt-3">Compare like-for-like totals. If the statement shows VAT separately, use its before-VAT payout.</p>
+ </section>
+ <section className="home-card"><details className="money-details review-optional">
+  <summary>Optional breakdown · earnings and charges</summary>
+  <p className="home-muted text-sm mt-3">These figures can help explain a difference, but are not required to compare final payout totals. Any unchecked charge is kept unverified.</p>
+  <div className="review-fields">{field('gross','Gross work earnings (£)')}{field('fee','Contractor / admin fee (£)')}</div>
+  {field('charges','Total contractor charges (£)')}
+  {draft.items.map((item,index)=><div className="review-charge" key={item.id}>
+   <label className="home-field">Charge description<input value={item.label} maxLength={80} onChange={e=>change('items',draft.items.map((r,i)=>i===index?{...r,label:e.target.value,reviewed:false}:r))}/></label>
+   <label className="home-field" htmlFor={'review-item-'+item.id}>Amount (£)<input id={'review-item-'+item.id} inputMode="decimal" value={item.amount} onChange={e=>change('items',draft.items.map((r,i)=>i===index?{...r,amount:e.target.value,reviewed:false}:r))}/></label>
+   <label className="check-basis"><input type="checkbox" checked={item.reviewed} onChange={e=>change('items',draft.items.map((r,i)=>i===index?{...r,reviewed:e.target.checked}:r))}/>I checked this optional charge</label>
+   <button type="button" className="home-text-button" onClick={()=>change('items',draft.items.filter((_,i)=>i!==index))}>Remove this extracted item</button>
+  </div>)}
+  <button type="button" className="home-text-button" onClick={()=>change('items',[...draft.items,{id:crypto.randomUUID(),label:'Other charge',amount:'',reviewed:false}])}>+ Add missing charge</button>
+  {warnings.length>0&&<div className="review-warning-list" role="status"><strong>Breakdown to review later</strong>{warnings.map((w,i)=><p className="home-muted text-sm" key={i}>{w.message}</p>)}</div>}
+ </details></section>
+ <section className="home-card review-confirm">
+  <label className="check-basis" htmlFor="review-reviewed"><input id="review-reviewed" type="checkbox" checked={draft.reviewed} onChange={e=>change('reviewed',e.target.checked)}/><span>I've checked the final payout, statement dates and VAT basis against the original statement.</span></label>
+  {issues.length>0&&<p className="home-muted text-sm" role="status">{issues[0].message}</p>}
+  <button type="button" className="home-primary w-full" disabled={issues.length>0||!ready||saving} onClick={onContinue}>{saving?'Saving…':nextLabel}</button>
+  <p className="home-muted text-sm">{issues.length?'Complete the required checks above.':!ready?'Records unavailable — reconnect before saving.':captureOnly?'Your statement will be saved. To compare totals, restore any missing historical pay details — no second AI scan needed.':'Next: view the difference between the reviewed payout and your saved work.'}</p>
+ </section>
+ </div>
+ <aside className="review-source"><button type="button" className="home-secondary w-full" disabled={!url} onClick={()=>setSource(!source)}>{source?'Hide source':'View original statement'}</button>{!url&&<p className="home-muted">The original is no longer available. Check your own copy.</p>}{source&&url&&<div className="review-preview">{file.type==='application/pdf'||file.name?.toLowerCase().endsWith('.pdf')?<><object data={url} type="application/pdf" aria-label="Original statement"><p>PDF preview unavailable on this device.</p></object><a href={url} target="_blank" rel="noreferrer" className="home-text-button">Open original PDF</a></>:<img src={url} alt="Original statement for checking extracted figures"/>}</div>}<p className="home-muted text-sm">The original stays in this open draft. Nothing is saved until you confirm.</p></aside>
+ </div>
  </section>;
 }
