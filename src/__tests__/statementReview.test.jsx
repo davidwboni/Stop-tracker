@@ -34,7 +34,7 @@ it('review screen shows one primary action and hides optional charges by default
  const next=vi.fn();
  render(<StatementReview draft={reviewed} onChange={()=>{}} period={period} periods={[period]} ready onContinue={next}/>);
  expect(screen.getByRole('button',{name:'Compare with my workdays'})).toBeEnabled();
- expect(screen.getByRole('button',{name:'1 required check left'})).not.toBeInTheDocument();
+ expect(screen.queryByRole('button',{name:/required check left/})).not.toBeInTheDocument();
  expect(screen.getByText(/Optional breakdown/)).toBeInTheDocument();
  expect(document.querySelector('.review-optional')).not.toHaveAttribute('open');
  fireEvent.click(screen.getByRole('button',{name:'Compare with my workdays'}));
