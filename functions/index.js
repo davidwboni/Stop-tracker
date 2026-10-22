@@ -12,7 +12,7 @@ const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 const {classifyProviderStatus,classifyProviderException} = require("./statementProviderErrors");
-const {parseStatementResponse,StatementResponseError}=require("./statementResponse");
+const {parseStatementResponse,StatementResponseError,readWithSummaryFallback}=require("./statementResponse");
 
 function stripeApiError(response, data) {
   const error = new Error(data?.error?.message || "Stripe request failed");
@@ -370,23 +370,23 @@ exports.extractStatement = onCall(
         return parseStatementResponse(payload);
       };
 
-      try {
-        data=await requestModel(STATEMENT_SYSTEM_PROMPT,6000,65000,
-          "Extract every visible statement total and daily row as JSON.");
-      } catch (err) {
-        if (!(err instanceof StatementResponseError)) throw err;
-        // Complex tables can exhaust JSON output or yield empty responses.
-        // Retrying once with *summary only* is safer than repairing truncated
-        // JSON and accidentally treating incomplete figures as verified.
-        if (beta) {
-          const retryNow=Date.now();
-          await admin.firestore().runTransaction(async tx =>
-            reserveBetaRequest(tx,admin.firestore(),retryNow,HttpsError));
+      const extracted=await readWithSummaryFallback(
+        ()=>requestModel(STATEMENT_SYSTEM_PROMPT,6000,65000,
+          "Extract every visible statement total and daily row as JSON."),
+        ()=>requestModel(STATEMENT_SUMMARY_PROMPT,1800,40000,
+          "Extract summary totals only as one valid JSON object. Leave daily empty."),
+        async()=>{
+          // Complex tables can exhaust output or return empty data. One
+          // summary-only retry is safer than repairing partial numbers.
+          if(beta){
+            const retryNow=Date.now();
+            await admin.firestore().runTransaction(async tx=>
+              reserveBetaRequest(tx,admin.firestore(),retryNow,HttpsError));
+          }
         }
-        data=await requestModel(STATEMENT_SUMMARY_PROMPT,1800,40000,
-          "Extract summary totals only as one valid JSON object. Leave daily empty.");
-        summaryOnly=true;
-      }
+      );
+      data=extracted.data;
+      summaryOnly=extracted.summaryOnly;
     } catch (err) {
       if (err instanceof HttpsError) throw err;
       const info=classifyProviderException(err);
