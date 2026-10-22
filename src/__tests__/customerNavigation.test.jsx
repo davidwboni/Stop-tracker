@@ -11,7 +11,7 @@ vi.mock('../components/ExpensesOverview',()=>({default:()=> <div>Expense records
 vi.mock('../components/DocumentsPage',()=>({default:()=> <div>Statement and invoice documents visible</div>}));
 
 beforeEach(()=>{vi.stubGlobal('scrollTo',vi.fn());vi.stubGlobal('matchMedia',()=>({matches:false,addListener:()=>{},removeListener:()=>{}}));});
-const LocationLabel=()=>{const location=useLocation();return <output data-testid="location">{location.pathname+location.search}</output>};
+const LocationLabel=()=>{const location=useLocation();return <output data-testid="location">{location.pathname+location.search+(location.state?.payHome?'#pay-home':'')}</output>};
 function mount(path){
  return render(<MemoryRouter initialEntries={[path]}>
   <AppNavigation/>
@@ -40,6 +40,12 @@ describe('Customer-first navigation',()=>{
   fireEvent.click(screen.getByRole('button',{name:'Documents'}));
   expect(screen.getByText('Statement and invoice documents visible')).toBeTruthy();
   expect(screen.getByTestId('location').textContent).toBe('/app/records?tab=documents');
+ });
+ it('returns to the Pay upload hub when tapping the active Pay tab',()=>{
+   mount('/app/check-pay');
+   expect(screen.getByTestId('location')).toHaveTextContent('/app/check-pay');
+   fireEvent.click(screen.getByRole('button',{name:'Pay'}));
+   expect(screen.getByTestId('location')).toHaveTextContent('/app/check-pay#pay-home');
  });
  it('deep-links to documents, returns to Pay, and keeps Profile reachable',()=>{
   mount('/app/records?tab=documents');
