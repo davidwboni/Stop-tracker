@@ -1,5 +1,6 @@
 import { httpsCallable } from "firebase/functions";
 import { functions, auth } from "./firebase";
+import { prepareStatementImage } from "../features/statements/prepareImage";
 
 export const getPremiumStatus = async () => {
   const callable = httpsCallable(functions, "getPremiumStatus", {timeout:25000});
@@ -83,7 +84,13 @@ export const extractStatement = async (file, onPrepared = () => {}) => {
     if (!["image/jpeg","image/png","image/webp"].includes(file.type)) {
       throw new Error("Choose a PDF, JPEG, PNG or WebP statement.");
     }
-    images = [{ fileBase64: await fileToBase64(file), mimeType: file.type }];
+    // Phone screenshots often have huge black bars around a small white
+    // statement. Crop blank margins when confidence is high, never mutate
+    // the source File (which is shown during the human review step).
+    const prepared=await prepareStatementImage(file);
+    images = prepared
+      ? [{fileBase64:await fileToBase64(prepared),mimeType:"image/jpeg"}]
+      : [{fileBase64:await fileToBase64(file),mimeType:file.type}];
   }
 
   onPrepared();
