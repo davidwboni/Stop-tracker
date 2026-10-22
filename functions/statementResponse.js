@@ -57,6 +57,7 @@ function parseStatementResponse(payload) {
   const choice=payload?.choices?.[0];
   // DeepSeek documents that finish_reason=length can truncate otherwise valid JSON.
   if(choice?.finish_reason==='length')throw new StatementResponseError("length");
+  if(choice?.finish_reason==='content_filter')throw new StatementResponseError("filtered");
   const raw=choice?.message?.content;
   if(typeof raw!=='string'||!raw.trim())throw new StatementResponseError("empty");
   let text=raw.trim().replace(/^\uFEFF/,"");
@@ -80,7 +81,7 @@ function parseStatementResponse(payload) {
 async function readWithSummaryFallback(full,summary,reserveRetry){
   try{return {data:await full(),summaryOnly:false};}
   catch(error){
-    if(!(error instanceof StatementResponseError))throw error;
+    if(!(error instanceof StatementResponseError)||error.kind==='filtered')throw error;
     await reserveRetry();
     return {data:await summary(),summaryOnly:true};
   }
