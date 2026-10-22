@@ -14,6 +14,7 @@ import DocumentsPage from '../components/DocumentsPage';
 import RecordsHub from '../components/RecordsHub';
 import InvoicePage from '../components/InvoicePage';
 import CheckPayV4 from '../components/CheckPayV4';
+import CheckPayV5 from '../components/CheckPayV5';
 import PeriodHistoryV4 from '../components/PeriodHistoryV4';
 import ErrorBoundary from '../components/ErrorBoundary';
 import ProfileWrapper from '../components/ProfileWrapper';
@@ -94,7 +95,8 @@ const router = createBrowserRouter([
           { path: 'entries', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><EntriesWrapper /></React.Suspense></ErrorBoundary> },
           { path: 'routes', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><RoutePlannerWrapper /></React.Suspense></ErrorBoundary> },
           { path: 'invoice', element: <ErrorBoundary><React.Suspense fallback={<div>Loading...</div>}><InvoicePage /></React.Suspense></ErrorBoundary> },
-          { path: 'check-pay', element: <ErrorBoundary><PayRoot /></ErrorBoundary> },
+          { path: 'check-pay', element: <ErrorBoundary><CheckPayV5 /></ErrorBoundary> },
+          { path: 'check-pay/advanced', element: <ErrorBoundary><PayRoot /></ErrorBoundary> },
           { path: 'periods', element: <ErrorBoundary><div className="max-w-2xl mx-auto pb-24 -mt-2"><div className="mb-4 flex items-center justify-between gap-3"><h1 className="text-2xl font-bold tracking-tight">Pay Periods</h1><span className="text-xs text-[#8e9ab2]">4-week history</span></div><PeriodHistoryV4 /></div></ErrorBoundary> },
           { path: 'money/expenses', element: <ErrorBoundary><ExpensesOverview /></ErrorBoundary> },
           { path: 'money', element: <ErrorBoundary><MoneyOverview /></ErrorBoundary> },
