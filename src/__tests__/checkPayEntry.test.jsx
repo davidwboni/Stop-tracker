@@ -35,6 +35,39 @@ describe('Check Pay entry',()=>{
    expect(screen.getByRole('button',{name:'Enter manually'})).toBeEnabled();
    await screen.findByText('2 free AI checks left');
  });
+ it('shows AI upload before the invoice shortcut on Pay home',async()=>{
+   f.status.mockResolvedValue({isPro:false,betaAccess:true,statementAiUses:3,routeOptimizationUses:3});
+   open();
+   const upload=await screen.findByLabelText('Upload statement with AI');
+   expect(upload).toBeEnabled();
+   expect(screen.getByRole('link',{name:'Create invoice'})).toHaveAttribute('href','/app/invoice');
+   const uploader=document.querySelector('.check-ai-first');
+   const invoice=screen.getByRole('link',{name:'Create invoice'});
+   expect(uploader.compareDocumentPosition(invoice)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+ });
+ it('starts AI extraction immediately after selecting a valid file on Pay, without another confirmation step',async()=>{
+   f.status.mockResolvedValue({isPro:false,betaAccess:true,statementAiUses:3,routeOptimizationUses:3});
+   f.extract.mockResolvedValue({
+     currency:'GBP',periodStart:period.start,periodEnd:period.end,
+     taxBasis:'excluded',contractorPayout:94,statementAmount:100,
+     statementStops:120,daily:[{date:period.start,stops:120,amount:100}]
+   });
+   open();
+   const input=await screen.findByLabelText('Upload statement with AI');
+   fireEvent.change(input,{target:{files:[new File(['test payload'],'pay.png',{type:'image/png'})]}});
+   await waitFor(()=>expect(f.extract).toHaveBeenCalledTimes(1));
+   expect(await screen.findByRole('heading',{name:'Your statement compared'})).toBeInTheDocument();
+   expect(screen.queryByRole('heading',{name:'Ready to read your statement?'})).not.toBeInTheDocument();
+   expect(f.save).not.toHaveBeenCalled();
+ });
+ it('never starts AI scanning on Pay when entitlement lookup is rejected',async()=>{
+   f.status.mockRejectedValue(Object.assign(new Error('forbidden'),{code:'functions/permission-denied'}));
+   open();
+   expect(await screen.findByRole('button',{name:'Retry AI availability'})).toBeEnabled();
+   expect(screen.queryByLabelText('Upload statement with AI')).not.toBeInTheDocument();
+   expect(f.extract).not.toHaveBeenCalled();
+   expect(screen.getByRole('button',{name:'Check statement'})).toBeEnabled();
+ });
  it('unlocks statement AI for a free beta account even when three previous trials are used',async()=>{
    f.status.mockResolvedValue({isPro:false,betaAccess:true,statementAiUses:3,routeOptimizationUses:3});
    choose();
