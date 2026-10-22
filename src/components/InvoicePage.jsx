@@ -3,7 +3,7 @@ import {Link,useLocation} from 'react-router-dom';
 import {useData} from '../contexts/DataContext';
 import {useInvoice} from '../contexts/InvoiceContext';
 import useExpenses from '../hooks/useExpenses';
-import {isoDate,listPeriods,getPeriodForDate,summarizePeriod} from '../features/payperiod/periods';
+import {isoDate,listPeriods,summarizePeriod} from '../features/payperiod/periods';
 import {moneyRevision,moneySummary,payoutComparison,validRange} from '../features/money/moneyModel';
 import InvoiceCreate from './InvoiceCreate';
 import {shareSavedInvoice} from '../services/invoicePdf';
@@ -18,11 +18,10 @@ export default function InvoicePage(){
  const [revision,setRevision]=useState(null),[sending,setSending]=useState(false),[sendError,setSendError]=useState('');
  const periods=useMemo(()=>listPeriods(logs,payPeriodAnchor||isoDate(new Date()),13),[logs,payPeriodAnchor]);
  const requestedId=loc.state?.periodId;
- // A checked period may be older than the 13 shown in the picker. Retain
- // its original four-week dates instead of silently switching to today.
+ // Statement dates control billing, even for non-28-day contractor cycles.
+ // A saved, server-synced comparison is the sole authority for invoice prefill.
  const savedRange=fromPay?periodRecords[requestedId]?.payoutComparison:null;
- const archivedPeriod=savedRange&&validRange(savedRange)&&requestedId===savedRange.start+'_'+savedRange.end&&
-  getPeriodForDate(savedRange.start,savedRange.start).end===savedRange.end?
+ const archivedPeriod=savedRange&&validRange(savedRange)&&requestedId===savedRange.start+'_'+savedRange.end?
   summarizePeriod(logs,{id:requestedId,start:savedRange.start,end:savedRange.end}):null;
  const p=periods.find(row=>row.id===(selected||requestedId))||archivedPeriod||periods[0];
  const summary=useMemo(()=>moneySummary(logs,expenses.expenses,p),[logs,expenses.expenses,p.start,p.end]);
@@ -49,7 +48,7 @@ export default function InvoicePage(){
    ← {fromPayHub?'Back to Pay':'Documents'}
   </Link>
   <header><h1>{fromPay?'Prepare your invoice':loc.state?.startInvoice?'Invoice from statement':'Create invoice'}</h1>
-   <p className="home-muted">{fromPay?'From your checked four-week statement.':loc.state?.startInvoice?'For an agreed contractor payment that you have not checked against your work.':'For drivers who invoice their contractor.'}</p>
+   <p className="home-muted">{fromPay?'From your saved, checked contractor statement.':loc.state?.startInvoice?'For an agreed contractor payment that you have not checked against your work.':'For drivers who invoice their contractor.'}</p>
   </header>
   {loc.state?.startInvoice&&<div className="home-banner" role="status"><strong>Manual invoice · Pay not checked</strong><p>Use the amount on your contractor's statement and confirm the recipient and VAT details. This does not verify your earnings or mark you as paid.</p></div>}
   {blocked?<div className="home-skeleton" role="status" aria-label="Loading invoice records"/>:
