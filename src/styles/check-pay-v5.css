@@ -69,3 +69,16 @@
 .v5-charge-row>div{min-width:0;display:grid;gap:4px;}
 .v5-charge-row strong{font-size:14px;}
 .v5-charge-row span{font-weight:650;white-space:nowrap;font-variant-numeric:tabular-nums;}
+
+/* All-in contractor daily amounts are informative, not missing-stop findings.
+   Keep the detailed figures tucked away unless the driver wants evidence. */
+.v5-earnings-note{gap:10px!important;}
+.v5-earnings-note h2{font-size:18px;}
+.v5-earnings-note strong{color:var(--foreground);}
+.v5-earnings-details{border-top:1px solid var(--border);padding-top:7px;}
+.v5-earnings-details summary{cursor:pointer;display:flex;align-items:center;min-height:48px;color:var(--home-purple);font-weight:660;list-style-position:inside;}
+.v5-earnings-details summary:focus-visible{outline:3px solid var(--home-purple);outline-offset:2px;border-radius:8px;}
+.v5-earnings-list{display:grid;gap:0;}
+.v5-earnings-row{border-top:1px solid var(--border);padding:11px 0;display:flex;gap:10px;align-items:baseline;justify-content:space-between;flex-wrap:wrap;}
+.v5-earnings-row span{color:var(--home-muted);font-variant-numeric:tabular-nums;font-size:13px;}
+@media(max-width:450px){.v5-earnings-row{display:grid;gap:3px;}}
