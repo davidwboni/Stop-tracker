@@ -58,7 +58,7 @@ export function confirmedReview(d,{asReceived=false}={}){
    d.taxBasis==='excluded';
  return {start:d.start,end:d.end,currency:d.currency,taxBasis:d.taxBasis,payoutPence:reviewPence(d.payout),
  vatIncludedPayoutPence:hasVatTrail?reviewPence(d.vatIncludedPayout):null,
- vatAmountPence:hasVatTrail?reviewPence(d.vatAmount):null,
+ vatAmountPence:reviewAmount(d.vatAmount)?reviewPence(d.vatAmount):null,
  requiresVatAdjustment:asReceived&&!['excluded','not_applicable'].includes(d.taxBasis),
  grossPence:reviewAmount(d.gross)?reviewPence(d.gross):null,
  feePence:reviewAmount(d.fee)?reviewPence(d.fee):null,
