@@ -38,7 +38,8 @@ Review date: 22 October 2026. This is a **source and CI review**, not a penetrat
 - [ ] Ensure payroll/invoicing data retention, account deletion and privacy disclosures match the real app behaviour. Confirm contractor statements aren't indefinitely stored as raw AI uploads.
 - [ ] Add automated 320px/375px/390px and desktop viewport tests plus dark/light screenshots and keyboard accessibility checks; source-level responsive checks alone are insufficient.
 - [ ] Confirm Stripe checkout/webhooks, subscription cancellation, entitlement expiry and first-three-trial enforcement using sandbox integration tests before removing the time-limited open beta.
-- [ ] Implement or clearly scope first-run **past-work import** with preview, provenance and overwrite protection. Never reclassify contractor-supplied historical rows as independently logged evidence.
+- [x] Work → optional **past-work CSV import** includes preview, explicit driver-source confirmation, row validation, provenance and no date overwrite. It is not AI extraction and cannot ingest arbitrary PDF/Excel yet.
+- [ ] Add optional AI-guided **past-work import from PDF/spreadsheets** with human review and separate provenance. Never reclassify contractor-supplied statement rows as independently logged evidence.
 - [ ] Add a first-class fuel-card discount and net-charge field to expense entry. Currently receipts can be marked *unverified*, not automatically declared a mismatch.
 
 ## Design system decisions
