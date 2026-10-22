@@ -117,8 +117,8 @@ export default function CheckPayV4() {
   setMode('preview');
   track('statement_comparison_resumed');
  }
- function chooseFile(f){if(!f)return;setError('');if(f.size>12*1024*1024){setError('Choose a file under 12 MB.');return;}if(!['application/pdf','image/jpeg','image/png','image/webp'].includes(f.type)&&!f.name.toLowerCase().endsWith('.pdf')){setError('Choose a PDF, JPEG, PNG or WebP file. Export a spreadsheet as PDF first.');return;}setFile(f);setMode('upload');}
- async function readFile(){if(lock.current||offline)return;lock.current=true;setStage('Preparing file…');setError('');track('statement_ai_started');try{const data=await extractStatement(file,()=>{if(mounted.current)setStage('Reading statement…');});if(!mounted.current)return;setAiDraft(data);setReview(createStatementReview(data));setReviewedStatement(null);setDetails({...emptyStatementDetails(),stops:safeAiStops(data.statementStops),gross:data.currency==='GBP'?safeAiAmount(data.statementAmount):'',daily:safeAiDaily(data,period)});setAmount(data.currency==='GBP'&&typeof data.contractorPayout==='number'?String(data.contractorPayout):'');setBasis(false);setMode('auto');setStatusRequest(n=>n+1);track('statement_ai_completed');}catch(e){if(mounted.current){setError(describeStatementExtractionError(e));track('statement_ai_failed');}}finally{lock.current=false;if(mounted.current)setStage('');}}
+ function chooseFile(f,scanImmediately=false){if(!f)return;setError('');if(f.size>12*1024*1024){setError('Choose a file under 12 MB.');return;}if(!['application/pdf','image/jpeg','image/png','image/webp'].includes(f.type)&&!f.name.toLowerCase().endsWith('.pdf')){setError('Choose a PDF, JPEG, PNG or WebP file. Export a spreadsheet as PDF first.');return;}setFile(f);setMode('upload');if(scanImmediately&&!offline&&entitlement&&(entitlement.isPro||entitlement.betaAccess||entitlement.statementAiUses<3))void readFile(f);}
+ async function readFile(selectedFile=file){if(lock.current||offline||!selectedFile)return;lock.current=true;setStage('Preparing file…');setError('');track('statement_ai_started');try{const data=await extractStatement(selectedFile,()=>{if(mounted.current)setStage('Reading statement…');});if(!mounted.current)return;setAiDraft(data);setReview(createStatementReview(data));setReviewedStatement(null);setDetails({...emptyStatementDetails(),stops:safeAiStops(data.statementStops),gross:data.currency==='GBP'?safeAiAmount(data.statementAmount):'',daily:safeAiDaily(data,period)});setAmount(data.currency==='GBP'&&typeof data.contractorPayout==='number'?String(data.contractorPayout):'');setBasis(false);setMode('auto');setStatusRequest(n=>n+1);track('statement_ai_completed');}catch(e){if(mounted.current){setError(describeStatementExtractionError(e));track('statement_ai_failed');}}finally{lock.current=false;if(mounted.current)setStage('');}}
  function preview(){if(!ready||!basis||!amountValid(amount)||!validStatementDetails(details)){setError('Check the payout and optional figures, then confirm the comparison basis.');return;}setError('');setPreviewSnapshot({key:recordsKey,payout:summary.payout});setMode('preview');track('statement_reviewed');}
  async function save(advanceToInvoice=false){if(previewStale){setError('Records changed. Review the comparison again before saving.');return;}if(lock.current||!ready||!basis||!amountValid(amount)||!validStatementDetails(details))return;lock.current=true;setSaving(true);setError('');try{const currentRevision=await moneyRevision(logs,costs.expenses,period);const statementPence=pennies(Number(amount));await updatePeriodRecord(period.id,{reviewedStatement:reviewedStatement||null,statementWorkDetails:details,status:'checked',needsReview:false,resolvedAt:null,resolutionReason:null,checkedAt:new Date().toISOString(),payoutComparison:{source:aiDraft?'ai':'manual',scope:'contractor_payout',currency:'GBP',taxBasis:'same_as_records',basisConfirmed:true,start:period.start,end:period.end,statementPence,expectedPence:previewExpected,revision:currentRevision}},true);setResolved(false);setMode('saved');setFile(null);track('statement_compared');if(statementPence!==summary.payout)track('discrepancy_found');else if(advanceToInvoice)navigate(invoicePath.pathname,{state:invoicePath.state});}catch(_){setError('Could not save this check. Your figures are still here; please retry.');}finally{lock.current=false;setSaving(false);}}
  async function saveUncompared(approved=null){
@@ -246,9 +246,30 @@ export default function CheckPayV4() {
    {ready&&periodRecords[period.id]?.reviewedStatement?.reviewed&&!periodRecords[period.id]?.payoutComparison?
        <button type="button" className="home-primary w-full" onClick={compareSavedStatement}>Compare saved statement <ArrowRight size={18}/></button>:
        canInvoice?<Link className="home-primary w-full" to="/app/invoice" state={invoicePath.state}>Prepare invoice <ArrowRight size={18}/></Link>:
-       <Link className="home-primary w-full" to="/app/invoice" state={{periodId:period.id,startInvoice:true}}>Create invoice <ArrowRight size={18}/></Link>}
-   {comparison.state==='difference'?<button className="home-secondary w-full" type="button" onClick={viewSaved}>Review payout difference <ArrowRight size={18}/></button>:<button className="home-secondary w-full" type="button" disabled={unavailable||!fullPeriod} onClick={()=>{setMode('choose');setStatusRequest(n=>n+1);}}>Check statement <ArrowRight size={18}/></button>}
-   <p className="home-muted text-xs">Only create an invoice if your contractor needs one. This doesn't confirm payment.</p>
+       comparison.state==='difference'?<button type="button" className="home-primary w-full" onClick={viewSaved}>Review payout difference <ArrowRight size={18}/></button>:
+       <div className="check-ai-first">
+         <h2>Received your contractor statement?</h2>
+         <p className="home-muted text-sm">Upload once. AI checks your recorded workdays and shows only differences needing attention.</p>
+         {entitlementError?
+           <button type="button" className="home-secondary w-full" onClick={()=>setStatusRequest(n=>n+1)}>Retry AI availability</button>:
+           entitlement&&!entitlement.isPro&&!entitlement.betaAccess&&entitlement.statementAiUses>=3?
+             <Link className="home-secondary w-full" to="/app/upgrade">View AI plans</Link>:
+             <label className={'home-primary check-file check-ai-upload '+(offline||!entitlement||unavailable?'check-disabled':'')}>
+               <Sparkles size={19} aria-hidden="true"/> Upload statement with AI <ArrowRight size={18} aria-hidden="true"/>
+               <input aria-label="Upload statement with AI" type="file" accept="application/pdf,image/jpeg,image/png,image/webp,.pdf"
+                 disabled={offline||!entitlement||unavailable}
+                 onChange={e=>{chooseFile(e.target.files?.[0],true);e.target.value='';}}/>
+             </label>}
+         {offline?<p className="home-muted text-xs">Connect to scan your statement.</p>:
+          entitlementError?<p className="home-muted text-xs">AI unavailable. Enter the payout manually instead.</p>:
+          !entitlement?<p className="home-muted text-xs">Checking AI availability…</p>:
+          <p className="home-muted text-xs">{entitlement.betaAccess?'Free AI beta access':entitlement.isPro?'Included in Pro':'Free checks available'} · Review results before saving</p>}
+       </div>}
+   {!canInvoice&&<div className="check-alternative-actions">
+     <button className="home-secondary w-full" type="button" disabled={unavailable||!fullPeriod} onClick={()=>{setMode('choose');setStatusRequest(n=>n+1);}}>Check statement <ArrowRight size={18}/></button>
+     <Link className="home-text-button" to="/app/invoice" state={{periodId:period.id,startInvoice:true}}>Create invoice</Link>
+   </div>}
+   <p className="home-muted text-xs">{canInvoice?'Check the invoice before sending.':'Manual checking and invoicing remain free. An invoice does not confirm payment.'}</p>
   </section>
   {comparison.state==='stale'&&<p className="home-banner" role="status">Your work or charges changed after your last check. Check the statement again before relying on the previous comparison.</p>}
   
