@@ -57,6 +57,17 @@ describe('AI-first comparison',()=>{
   const c=buildStatementAutoCheck({...statement,daily:[],extractionMode:'summary_only'},period,rows,days,null);
   expect(c.hasDaily).toBe(false);expect(c.matched).toHaveLength(0);expect(c.summaryOnly).toBe(true);
  });
+ it('never converts a missing logged stop number into a false zero-stop mismatch',()=>{
+  const c=buildStatementAutoCheck(
+    {...statement,daily:[{date:'2026-09-14',stops:104,amount:207.62}]},
+    period,
+    [{date:'2026-09-14',stops:null}],
+    [{gross:207.62,unavailable:false}],null
+  );
+  expect(c.flagged).toHaveLength(0);
+  expect(c.dayRows[0].loggedStops).toBeNull();
+  expect(c.dayRows[0].statementStops).toBe(104);
+ });
  it('does not call missing gross values a mismatch when stop counts match',()=>{
   const s={...statement,daily:[{date:'2026-09-14',stops:104,amount:null}]};
   const c=buildStatementAutoCheck(s,period,rows.slice(0,1),[{gross:null,unavailable:true}],null);
