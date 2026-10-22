@@ -50,6 +50,11 @@ export function buildStatementAutoCheck(statement,period,rows=[],days=[],expecte
     for(const date of [...dates].sort()){
       const own=entries.get(date),listed=statementRows.get(date)||[];
       const item=listed[0];
+      // Contractors often print zero-delivery rows for days off. Drivers
+      // should not have to log a zero-work day to make the statement match.
+      // Ignore only a single row with *explicit* zero stops AND zero pay;
+      // missing pay or any positive amount still needs investigation.
+      if(!own&&listed.length===1&&safeStops(item.stops)===0&&safePence(item.amount)===0)continue;
       const theirsStops=listed.length===1?safeStops(item.stops):null;
       const theirsGross=listed.length===1?safePence(item.amount):null;
       const oursGross=own?.hasGross?own.grossPence:null;
