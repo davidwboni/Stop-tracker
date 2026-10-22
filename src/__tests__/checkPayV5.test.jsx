@@ -116,7 +116,7 @@ describe('V5 one-upload pay journey',()=>{
   stub.extract.mockResolvedValue(statement({daily:[],extractionMode:'summary_only',contractorPayout:300,contractorCharges:0}));
   stub.save.mockImplementation(async(id,patch)=>{stub.data.periodRecords={...stub.data.periodRecords,[id]:patch};return true;});
   open();await upload();
-  expect(screen.getByText(/Limited check: some workdays could not be verified/)).toBeInTheDocument();
+  expect(screen.getByText(/Limited check: Some workday details could not be verified/)).toBeInTheDocument();
   const ack=screen.getByRole('checkbox',{name:/I understand that not every workday was verified/});
   expect(ack).not.toBeChecked();
   fireEvent.click(screen.getByRole('button',{name:'Save pay check'}));
