@@ -8,7 +8,8 @@ export function unresolvedStatementFindings(record){
  return flagged.filter(item=>!settledReasons.has(item?.acceptedReason));
 }
 export function statementInvoiceReady(record){
- return !!record?.payoutComparison && !!record?.reviewedStatement?.reviewed &&
+ return !!record?.payoutComparison &&
+   (!record?.statementFindings || record?.reviewedStatement?.reviewed===true) &&
    unresolvedStatementFindings(record).length===0;
 }
 export function mergeFindingDecisions(record){
