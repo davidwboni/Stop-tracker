@@ -14,6 +14,8 @@ import {describeStatementExtractionError} from '../features/statements/extractio
 import {trackProductEvent as track} from '../services/productAnalytics';
 import StatementComparison from './StatementComparison';
 import StatementReview from './StatementReview';
+import StatementAutoReview from './StatementAutoReview';
+import {buildStatementAutoCheck} from '../features/statements/autoCheck';
 import {createStatementReview,reviewIssues,captureIssues,confirmedReview} from '../features/statements/reviewModel';
 import StatementDraftGuard from './StatementDraftGuard';
 import StatementWorkDetails,{emptyStatementDetails,validStatementDetails} from './StatementWorkDetails';
@@ -50,6 +52,7 @@ export default function CheckPayV4() {
  const period=selected||requested||periods[0];
  const choices=periods.some(p=>p.id===period.id)?periods:[period,...periods];
  const summary=useMemo(()=>moneySummary(logs,costs.expenses,period),[logs,costs.expenses,period.start,period.end]);
+ const autoCheck=useMemo(()=>aiDraft?buildStatementAutoCheck(aiDraft,period,summary.rows,summary.days,summary.payout):null,[aiDraft,period.start,period.end,summary]);
  const busy=loading||costs.loading, unavailable=busy||!!loadError||!!costs.error;
  const fullPeriod=!!payPeriodAnchor&&getPeriodForDate(payPeriodAnchor,period.start).id===period.id;
  const ready=fullPeriod&&!unavailable&&summary.rows.length>0&&summary.payout!=null;
@@ -115,7 +118,7 @@ export default function CheckPayV4() {
   track('statement_comparison_resumed');
  }
  function chooseFile(f){if(!f)return;setError('');if(f.size>12*1024*1024){setError('Choose a file under 12 MB.');return;}if(!['application/pdf','image/jpeg','image/png','image/webp'].includes(f.type)&&!f.name.toLowerCase().endsWith('.pdf')){setError('Choose a PDF, JPEG, PNG or WebP file. Export a spreadsheet as PDF first.');return;}setFile(f);setMode('upload');}
- async function readFile(){if(lock.current||offline)return;lock.current=true;setStage('Preparing file…');setError('');track('statement_ai_started');try{const data=await extractStatement(file,()=>{if(mounted.current)setStage('Reading statement…');});if(!mounted.current)return;setAiDraft(data);setReview(createStatementReview(data));setReviewedStatement(null);setDetails({...emptyStatementDetails(),stops:safeAiStops(data.statementStops),gross:data.currency==='GBP'?safeAiAmount(data.statementAmount):'',daily:safeAiDaily(data,period)});setAmount(data.currency==='GBP'&&typeof data.contractorPayout==='number'?String(data.contractorPayout):'');setBasis(false);setMode('review');setStatusRequest(n=>n+1);track('statement_ai_completed');}catch(e){if(mounted.current){setError(describeStatementExtractionError(e));track('statement_ai_failed');}}finally{lock.current=false;if(mounted.current)setStage('');}}
+ async function readFile(){if(lock.current||offline)return;lock.current=true;setStage('Preparing file…');setError('');track('statement_ai_started');try{const data=await extractStatement(file,()=>{if(mounted.current)setStage('Reading statement…');});if(!mounted.current)return;setAiDraft(data);setReview(createStatementReview(data));setReviewedStatement(null);setDetails({...emptyStatementDetails(),stops:safeAiStops(data.statementStops),gross:data.currency==='GBP'?safeAiAmount(data.statementAmount):'',daily:safeAiDaily(data,period)});setAmount(data.currency==='GBP'&&typeof data.contractorPayout==='number'?String(data.contractorPayout):'');setBasis(false);setMode('auto');setStatusRequest(n=>n+1);track('statement_ai_completed');}catch(e){if(mounted.current){setError(describeStatementExtractionError(e));track('statement_ai_failed');}}finally{lock.current=false;if(mounted.current)setStage('');}}
  function preview(){if(!ready||!basis||!amountValid(amount)||!validStatementDetails(details)){setError('Check the payout and optional figures, then confirm the comparison basis.');return;}setError('');setPreviewSnapshot({key:recordsKey,payout:summary.payout});setMode('preview');track('statement_reviewed');}
  async function save(advanceToInvoice=false){if(previewStale){setError('Records changed. Review the comparison again before saving.');return;}if(lock.current||!ready||!basis||!amountValid(amount)||!validStatementDetails(details))return;lock.current=true;setSaving(true);setError('');try{const currentRevision=await moneyRevision(logs,costs.expenses,period);const statementPence=pennies(Number(amount));await updatePeriodRecord(period.id,{reviewedStatement:reviewedStatement||null,statementWorkDetails:details,status:'checked',needsReview:false,resolvedAt:null,resolutionReason:null,checkedAt:new Date().toISOString(),payoutComparison:{source:aiDraft?'ai':'manual',scope:'contractor_payout',currency:'GBP',taxBasis:'same_as_records',basisConfirmed:true,start:period.start,end:period.end,statementPence,expectedPence:previewExpected,revision:currentRevision}},true);setResolved(false);setMode('saved');setFile(null);track('statement_compared');if(statementPence!==summary.payout)track('discrepancy_found');else if(advanceToInvoice)navigate(invoicePath.pathname,{state:invoicePath.state});}catch(_){setError('Could not save this check. Your figures are still here; please retry.');}finally{lock.current=false;setSaving(false);}}
  async function saveUncompared(approved=null){
@@ -128,11 +131,55 @@ export default function CheckPayV4() {
   }catch(_){setError('Could not save the statement. Your figures are still here; please retry.');}
   finally{lock.current=false;setSaving(false);}
  }
+ async function confirmAutoCheck(){
+   if(lock.current||saving||unavailable||!ready||!autoCheck?.canCompare||!review)return;
+   const adjusted={...review,payout:String(autoCheck.payoutBeforeVat/100),
+     taxBasis:'excluded',reviewed:true,
+     vatIncludedPayout:aiDraft?.taxBasis==='included'?String(autoCheck.rawPayout/100):'',
+     vatAmount:autoCheck.vat==null?'':String(autoCheck.vat/100)};
+   if(reviewIssues(adjusted,period).length){setReview(adjusted);setMode('review');return;}
+   const approved=confirmedReview(adjusted);
+   const completeDetails={...details,gross:safeAiAmount(adjusted.gross),charges:safeAiAmount(adjusted.charges),daily:safeAiDaily(aiDraft,period)};
+   lock.current=true;setSaving(true);setError('');
+   try{
+     const latest=await moneyRevision(logs,costs.expenses,period);
+     if(revision&&revision!==latest)throw new Error('stale');
+     const statementPence=approved.payoutPence;
+     await updatePeriodRecord(period.id,{
+       reviewedStatement:approved,statementWorkDetails:completeDetails,
+       status:'checked',needsReview:false,resolvedAt:null,resolutionReason:null,
+       checkedAt:new Date().toISOString(),
+       payoutComparison:{source:'ai',scope:'contractor_payout',currency:'GBP',
+         taxBasis:'same_as_records',basisConfirmed:true,start:period.start,end:period.end,
+         statementPence,expectedPence:summary.payout,revision:latest}
+     },true);
+     setReview(adjusted);setReviewedStatement(approved);setDetails(completeDetails);
+     setAmount(String(statementPence/100));setBasis(true);
+     setPreviewSnapshot({key:recordsKey,payout:summary.payout});
+     setFile(null);setMode('saved');track('statement_compared');
+     if(statementPence!==summary.payout)track('discrepancy_found');
+   }catch(e){setError(e?.message==='stale'?'Your saved work changed. Refresh Pay to compare updated records.':'Could not save this comparison. Your workdays have not changed. Retry.');}
+   finally{lock.current=false;setSaving(false);}
+ }
+ async function saveAutoPending(){
+   if(!autoCheck||!review||captureIssues(review,period).length||lock.current||saving)return;
+   // One explicit tap confirms the read payout even if older workdays still
+   // lack contractor fee snapshots. VAT-ambiguous values remain unreviewed.
+   const netKnown=autoCheck.payoutBeforeVat!=null;
+   const captured=netKnown?{
+     ...review,payout:String(autoCheck.payoutBeforeVat/100),taxBasis:'excluded',
+     vatAmount:autoCheck.vat==null?'':String(autoCheck.vat/100),
+     vatIncludedPayout:aiDraft?.taxBasis==='included'?String(autoCheck.rawPayout/100):'',
+     reviewed:true
+   }:review;
+   await saveUncompared(confirmedReview(captured,{asReceived:!netKnown}));
+ }
  async function saveReviewAsReceived(){if(!review||unavailable||!fullPeriod||captureIssues(review,period).length)return;await saveUncompared(confirmedReview(review,{asReceived:true}));}
  async function continueReview(){if(unavailable||!fullPeriod||reviewIssues(review,period).length)return;const approved=confirmedReview(review);if(!ready){await saveUncompared(approved);return;}setReviewedStatement(approved);setAmount(review.payout);setDetails(d=>({...d,gross:safeAiAmount(review.gross),charges:safeAiAmount(review.charges),daily:safeAiDaily(aiDraft,period)}));setBasis(true);setError('');setPreviewSnapshot({key:recordsKey,payout:summary.payout});setMode('preview');track('statement_reviewed');}
  async function resolveComparison(reason){if(lock.current||previewStale||!ready)return;const record=periodRecords[period.id];if(!record?.payoutComparison){setError('Reload this saved check before resolving it.');return;}lock.current=true;setSaving(true);setError('');try{const latest=await moneyRevision(logs,costs.expenses,period);if(latest!==record.payoutComparison.revision)throw new Error('stale');await updatePeriodRecord(period.id,{...record,status:'reconciled',resolvedAt:new Date().toISOString(),resolutionReason:reason,needsReview:false},true);setResolved(true);track('reconciliation_completed');}catch(_){setError('Could not resolve this check. Verify your records and retry.');}finally{lock.current=false;setSaving(false);}}
  const hasSaved=!!periodRecords[period.id];
  const blocked=!ready;
+ if(mode==='auto'&&autoCheck)return <StatementAutoReview check={autoCheck} period={period} hidden={hidden} saving={saving} error={error} onCompare={confirmAutoCheck} onSaveDraft={saveAutoPending} onEdit={()=>{setError('');setMode('review');}} onBack={reset} feeMissing={issues.missingFee.length}/>;
  if(mode==='review'&&review)return <main className="home-screen check-pay-page"><StatementDraftGuard dirty={dirty}/>{offline&&<p className="home-banner">Offline · Edits stay in this open draft. Connect before saving to your account.</p>}<StatementReview draft={review} onChange={setReview} period={period} periods={choices} onPeriodChange={setSelected} file={file} onContinue={continueReview} onSaveDraft={saveReviewAsReceived} onBack={reset} ready={fullPeriod&&!unavailable} captureOnly={!ready} saving={saving} summaryOnly={aiDraft?.extractionMode==='summary_only'}/></main>;
  return <main className="home-screen check-pay-page"><StatementDraftGuard dirty={dirty}/>
  <header className="home-row check-page-header">

@@ -6,3 +6,13 @@ test('rejects invalid numeric types and preserves negative payouts',()=>{assert.
 test('keeps only generic charge labels and explicit VAT basis',()=>{const r=normalizeStatement({taxBasis:'guessed',charges:[{label:'Private Person',amount:525},{label:'Lease',amount:525}]});assert.equal(r.taxBasis,'unknown');assert.deepEqual(r.charges,[{label:'other',amount:525},{label:'lease',amount:525}]);});
 
 test('handles malformed charge labels without throwing',()=>{assert.deepEqual(normalizeStatement({charges:[{label:123,amount:null},null]}).charges,[{label:'other',amount:null},{label:'other',amount:null}]);});
+
+test('preserves explicit printed VAT and before-VAT payout separately without guessing',()=>{
+ const extracted=normalizeStatement({currency:'GBP',taxBasis:'included',contractorPayout:4421.63,vatAmount:736.94,beforeVatPayout:3684.69});
+ assert.equal(extracted.contractorPayout,4421.63);
+ assert.equal(extracted.vatAmount,736.94);
+ assert.equal(extracted.beforeVatPayout,3684.69);
+ const unknown=normalizeStatement({taxBasis:'included',contractorPayout:4421.63});
+ assert.equal(unknown.vatAmount,null);
+ assert.equal(unknown.beforeVatPayout,null);
+});

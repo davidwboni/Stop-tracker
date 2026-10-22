@@ -1,0 +1,23 @@
+.statement-auto-review{display:grid;gap:14px;max-width:800px;margin:0 auto}
+.auto-check-header{display:grid;gap:8px}.auto-check-header .money-badge{justify-self:start}
+.auto-check-header h1{font-size:clamp(23px,6vw,30px);font-weight:760;letter-spacing:-.03em}
+.auto-check-hero,.auto-check-dates,.auto-check-finish{display:grid;gap:15px;padding:18px!important}
+.auto-check-hero h2{font-size:20px;line-height:1.3}
+.auto-check-top{display:flex;gap:11px;align-items:flex-start}
+.auto-check-dot{width:12px;height:12px;margin-top:8px;border-radius:50%;background:var(--home-money);flex-shrink:0}
+.auto-check-dot-warn{background:#f3b34c}
+.auto-check-totals{display:grid;gap:11px}
+.auto-check-totals>div{display:flex;align-items:baseline;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);padding:4px 0 11px;min-width:0}
+.auto-check-totals dt{font-size:13px;color:var(--home-muted);line-height:1.5}
+.auto-check-totals dd{font-size:19px;font-weight:700;overflow-wrap:anywhere;text-align:right}
+.auto-check-totals .auto-check-difference dd{color:var(--home-money)}
+.auto-check-dates h2,.auto-check-finish h2{font-size:19px;font-weight:750}
+.auto-check-day{border-top:1px solid var(--border);padding:13px 0;display:grid;gap:7px}
+.auto-check-day strong{font-size:15px}
+.auto-check-day-grid{display:grid;gap:8px;grid-template-columns:1fr 1fr}
+.auto-check-day-grid div{min-width:0}
+.auto-check-day-grid dt{font-size:12px;line-height:1.4;color:var(--home-muted)}
+.auto-check-day-grid dd{font-size:14px;font-weight:620;overflow-wrap:anywhere}
+.auto-check-good{color:var(--home-money);font-weight:650}
+.auto-check-finish button{min-height:50px}
+@media(max-width:375px){.auto-check-totals dd{font-size:17px}.auto-check-day-grid{grid-template-columns:1fr}}
