@@ -117,8 +117,22 @@ export default function CheckPayV4() {
   setMode('preview');
   track('statement_comparison_resumed');
  }
- function chooseFile(f){if(!f)return;setError('');if(f.size>12*1024*1024){setError('Choose a file under 12 MB.');return;}if(!['application/pdf','image/jpeg','image/png','image/webp'].includes(f.type)&&!f.name.toLowerCase().endsWith('.pdf')){setError('Choose a PDF, JPEG, PNG or WebP file. Export a spreadsheet as PDF first.');return;}setFile(f);setMode('upload');}
- async function readFile(){if(lock.current||offline)return;lock.current=true;setStage('Preparing file…');setError('');track('statement_ai_started');try{const data=await extractStatement(file,()=>{if(mounted.current)setStage('Reading statement…');});if(!mounted.current)return;setAiDraft(data);setReview(createStatementReview(data));setReviewedStatement(null);setDetails({...emptyStatementDetails(),stops:safeAiStops(data.statementStops),gross:data.currency==='GBP'?safeAiAmount(data.statementAmount):'',daily:safeAiDaily(data,period)});setAmount(data.currency==='GBP'&&typeof data.contractorPayout==='number'?String(data.contractorPayout):'');setBasis(false);setMode('auto');setStatusRequest(n=>n+1);track('statement_ai_completed');}catch(e){if(mounted.current){setError(describeStatementExtractionError(e));track('statement_ai_failed');}}finally{lock.current=false;if(mounted.current)setStage('');}}
+ function chooseFile(f,{autoRead=false}={}){if(!f)return;setError('');if(f.size>12*1024*1024){setError('Choose a file under 12 MB.');return;}if(!['application/pdf','image/jpeg','image/png','image/webp'].includes(f.type)&&!f.name.toLowerCase().endsWith('.pdf')){setError('Choose a PDF, JPEG, PNG or WebP file. Export a spreadsheet as PDF first.');return;}setFile(f);setMode('upload');if(autoRead)void readFile(f);}
+ async function readFile(sourceFile=file){if(lock.current||offline||!sourceFile)return;lock.current=true;setStage('Preparing file…');setError('');track('statement_ai_started');try{
+   const data=await extractStatement(sourceFile,()=>{if(mounted.current)setStage('Reading statement…');});if(!mounted.current)return;
+   // The extracted dates may point to an earlier saved cycle. Never force a
+   // date mismatch to compare against the currently selected period.
+   const extractedPeriod=payPeriodAnchor&&typeof data.periodStart==='string'&&typeof data.periodEnd==='string'
+     ?getPeriodForDate(payPeriodAnchor,data.periodStart):null;
+   const matchedPeriod=extractedPeriod?.start===data.periodStart&&extractedPeriod?.end===data.periodEnd
+     ?periods.find(p=>p.id===extractedPeriod.id)||extractedPeriod:null;
+   const targetPeriod=matchedPeriod||period;
+   if(matchedPeriod)setSelected(matchedPeriod);
+   setAiDraft(data);setReview(createStatementReview(data));setReviewedStatement(null);
+   setDetails({...emptyStatementDetails(),stops:safeAiStops(data.statementStops),gross:data.currency==='GBP'?safeAiAmount(data.statementAmount):'',daily:safeAiDaily(data,targetPeriod)});
+   setAmount(data.currency==='GBP'&&typeof data.contractorPayout==='number'?String(data.contractorPayout):'');
+   setBasis(false);setMode('auto');setStatusRequest(n=>n+1);track('statement_ai_completed');
+ }catch(e){if(mounted.current){setError(describeStatementExtractionError(e));track('statement_ai_failed');}}finally{lock.current=false;if(mounted.current)setStage('');}}
  function preview(){if(!ready||!basis||!amountValid(amount)||!validStatementDetails(details)){setError('Check the payout and optional figures, then confirm the comparison basis.');return;}setError('');setPreviewSnapshot({key:recordsKey,payout:summary.payout});setMode('preview');track('statement_reviewed');}
  async function save(advanceToInvoice=false){if(previewStale){setError('Records changed. Review the comparison again before saving.');return;}if(lock.current||!ready||!basis||!amountValid(amount)||!validStatementDetails(details))return;lock.current=true;setSaving(true);setError('');try{const currentRevision=await moneyRevision(logs,costs.expenses,period);const statementPence=pennies(Number(amount));await updatePeriodRecord(period.id,{reviewedStatement:reviewedStatement||null,statementWorkDetails:details,status:'checked',needsReview:false,resolvedAt:null,resolutionReason:null,checkedAt:new Date().toISOString(),payoutComparison:{source:aiDraft?'ai':'manual',scope:'contractor_payout',currency:'GBP',taxBasis:'same_as_records',basisConfirmed:true,start:period.start,end:period.end,statementPence,expectedPence:previewExpected,revision:currentRevision}},true);setResolved(false);setMode('saved');setFile(null);track('statement_compared');if(statementPence!==summary.payout)track('discrepancy_found');else if(advanceToInvoice)navigate(invoicePath.pathname,{state:invoicePath.state});}catch(_){setError('Could not save this check. Your figures are still here; please retry.');}finally{lock.current=false;setSaving(false);}}
  async function saveUncompared(approved=null){
@@ -183,7 +197,7 @@ export default function CheckPayV4() {
  if(mode==='review'&&review)return <main className="home-screen check-pay-page"><StatementDraftGuard dirty={dirty}/>{offline&&<p className="home-banner">Offline · Edits stay in this open draft. Connect before saving to your account.</p>}<StatementReview draft={review} onChange={setReview} period={period} periods={choices} onPeriodChange={setSelected} file={file} onContinue={continueReview} onSaveDraft={saveReviewAsReceived} onBack={reset} ready={fullPeriod&&!unavailable} captureOnly={!ready} saving={saving} summaryOnly={aiDraft?.extractionMode==='summary_only'}/></main>;
  return <main className="home-screen check-pay-page"><StatementDraftGuard dirty={dirty}/>
  <header className="home-row check-page-header">
-  <div><h1>Your pay</h1><p className="home-muted">Know what you're owed. Check what you're paid.</p></div>
+  <div><h1>Check your pay</h1><p className="home-muted">Upload your contractor's statement. We'll compare it with your logged work.</p></div>
   <HeaderControls hidden={hidden} onToggleMoney={()=>{setHidden(!hidden);try{localStorage.setItem('home-hide-money',hidden?'0':'1');}catch(_){}}}/>
  </header>
  <section className="home-card check-period" aria-label="Current pay period">
@@ -244,11 +258,20 @@ export default function CheckPayV4() {
   {mode==='idle'&&<>
   <section className="check-simple-actions" aria-label="Your pay actions">
    {ready&&periodRecords[period.id]?.reviewedStatement?.reviewed&&!periodRecords[period.id]?.payoutComparison?
-       <button type="button" className="home-primary w-full" onClick={compareSavedStatement}>Compare saved statement <ArrowRight size={18}/></button>:
-       canInvoice?<Link className="home-primary w-full" to="/app/invoice" state={invoicePath.state}>Prepare invoice <ArrowRight size={18}/></Link>:
-       <Link className="home-primary w-full" to="/app/invoice" state={{periodId:period.id,startInvoice:true}}>Create invoice <ArrowRight size={18}/></Link>}
-   {comparison.state==='difference'?<button className="home-secondary w-full" type="button" onClick={viewSaved}>Review payout difference <ArrowRight size={18}/></button>:<button className="home-secondary w-full" type="button" disabled={unavailable||!fullPeriod} onClick={()=>{setMode('choose');setStatusRequest(n=>n+1);}}>Check statement <ArrowRight size={18}/></button>}
-   <p className="home-muted text-xs">Only create an invoice if your contractor needs one. This doesn't confirm payment.</p>
+     <button type="button" className="home-primary w-full" onClick={compareSavedStatement}>Compare saved statement <ArrowRight size={18}/></button>:
+     comparison.state==='difference'?
+     <button type="button" className="home-primary w-full" onClick={viewSaved}>Review payout difference <ArrowRight size={18}/></button>:
+     canInvoice?
+     <Link className="home-primary w-full" to="/app/invoice" state={invoicePath.state}>Prepare invoice <ArrowRight size={18}/></Link>:
+     entitlement&&!offline&&(entitlement.isPro||entitlement.betaAccess||entitlement.statementAiUses<3)?
+     <label className="home-primary check-file check-upload-primary">
+       Upload contractor statement
+       <input aria-label="Upload contractor statement with AI" type="file" accept="application/pdf,image/jpeg,image/png,image/webp,.pdf" onChange={e=>{chooseFile(e.target.files?.[0],{autoRead:true});e.target.value='';}}/>
+     </label>:
+     <button type="button" className="home-primary w-full" disabled={unavailable||!fullPeriod} onClick={()=>{setMode('choose');setStatusRequest(n=>n+1);}}>Check statement <ArrowRight size={18}/></button>}
+   <button type="button" className="home-secondary w-full" disabled={unavailable||!fullPeriod} onClick={()=>manual()}>Enter payout manually</button>
+   {!canInvoice&&<Link className="home-text-button check-invoice-link" to="/app/invoice" state={{periodId:period.id,startInvoice:true}}>Need to create an invoice? <ArrowRight size={16}/></Link>}
+   <p className="home-muted text-xs">AI checks your workdays automatically. Review only differences or missing details. Invoices use confirmed contractor figures.</p>
   </section>
   {comparison.state==='stale'&&<p className="home-banner" role="status">Your work or charges changed after your last check. Check the statement again before relying on the previous comparison.</p>}
   
