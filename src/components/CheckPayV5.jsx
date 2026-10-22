@@ -1,6 +1,6 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {useLocation,useNavigate,Link} from 'react-router-dom';
-import {FileUp,CheckCircle2,ArrowRight,ChevronDown,AlertTriangle,FileText,LoaderCircle,RotateCcw,Sparkles} from 'lucide-react';
+import {FileUp,ArrowRight,Loader2,Sparkles} from 'lucide-react';
 import {useData} from '../contexts/DataContext';
 import useExpenses from '../hooks/useExpenses';
 import HeaderControls from './HeaderControls';
@@ -271,7 +271,7 @@ export default function CheckPayV5(){
    </section>}
    {issues.missingFee.length>0&&<details className="home-card v5-fee-repair"><summary>{issues.missingFee.length} saved days need a historical contractor fee</summary><p className="home-muted text-sm">Confirm the old fee only if the percentage applied at the time. Existing stops, gross and parcel figures are preserved.</p><label className="home-field">Contractor fee (%)<input value={feeInput} placeholder="e.g. 6" inputMode="decimal" onChange={e=>setFeeInput(e.target.value)}/></label><label className="v5-ack"><input type="checkbox" checked={feeAck} onChange={e=>setFeeAck(e.target.checked)}/> I confirm the fee for these saved dates.</label><button type="button" className="home-secondary w-full" disabled={feeSaving||!feeAck||!validHistoricalFee(feeInput)} onClick={recoverFee}>Confirm historical fee</button></details>}
   </>}
-  {busy&&<p className="home-banner v5-stage" role="status"><LoaderCircle size={18} className="v5-spinner" aria-hidden="true"/>{stage||'Saving your check…'}</p>}
+  {busy&&<p className="home-banner v5-stage" role="status"><Loader2 size={18} className="v5-spinner" aria-hidden="true"/>{stage||'Saving your check…'}</p>}
   {error&&<p className="home-banner home-error" role="alert">{error}</p>}
   <p className="home-muted text-xs v5-disclaimer">Stop Tracker checks your records independently. AI findings require review; matching amounts don't prove payment was received. Invoices are only marked sent when you confirm sending them.</p>
  </main>;
