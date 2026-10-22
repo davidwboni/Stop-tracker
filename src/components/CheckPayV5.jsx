@@ -230,7 +230,7 @@ export default function CheckPayV5(){
      <div><dt>Contractor statement</dt><dd>{cash(view?.rawPayout)}</dd></div>
      <div><dt>Your expected payout</dt><dd>{cash(rowSummary.payout)}</dd></div>
      {view?.payoutBeforeVat!=null&&view.rawPayout!==view.payoutBeforeVat&&<div><dt>Statement, before VAT</dt><dd>{cash(view.payoutBeforeVat)}</dd></div>}
-     <div className="v5-difference"><dt>Potential difference</dt><dd>{view?.canCompare?cash(Math.abs(view.difference)):'Not comparable yet'}</dd></div>
+     <div className={'v5-difference '+(view?.canCompare&&view.difference!==0?'v5-warning-difference':'')}><dt>Potential difference</dt><dd>{view?.canCompare?cash(Math.abs(view.difference)):'Not comparable yet'}</dd></div>
     </dl>
     {view?.canCompare&&<p className="home-muted text-sm">{view.difference===0?'The before-VAT payout totals match.':view.difference<0?'The statement payout is lower than your expected amount.':'The statement payout is higher than your expected amount.'} A totals match does not prove each day or charge is correct.</p>}
     {view?.summaryOnly||!view?.hasDaily?<p className="home-banner" role="status">Totals-only check. The scan did not provide enough reliable daily figures to confirm each workday.</p>:null}
