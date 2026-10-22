@@ -98,6 +98,9 @@ export default function CheckPayV5(){
  useEffect(()=>{track('check_pay_opened');},[]);
  const cash=value=>hidden?'••••':currency(value);
  const reset=()=>{if(busy)return;setStep('home');setAi(null);setScanFile(null);setError('');setConfirmedDays({});setVatChoice('');setVatEntry('');setLimitedAccepted(false);};
+ // Re-tapping the persistent Pay tab returns to the beginning of the flow.
+ // It does not delete the server-side statement, comparisons or work history.
+ useEffect(()=>{if(location.state?.payHome&&!busy){setStep('home');setAi(null);setScanFile(null);setError('');setLimitedAccepted(false);setConfirmedDays({});}},[location.key]);
  async function readFile(file){
    if(!file||busy)return;
    if(!navigator.onLine){setError('Reconnect to upload a statement. Your saved workdays are safe.');return;}
