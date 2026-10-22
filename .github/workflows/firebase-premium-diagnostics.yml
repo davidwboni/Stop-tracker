@@ -179,8 +179,9 @@ jobs:
              "INSURANCE - GBP 50.00",
              "FUEL COST - GBP 200.00",
              "TOTAL OTHER CONTRACTOR CHARGES - GBP 450.00",
-             "FINAL CONTRACTOR PAYOUT - GBP 5096.00",
-             "VAT - EXCLUDED"])
+             "PAYOUT BEFORE VAT - GBP 5096.00",
+             "VAT AT 20 PERCENT - GBP 1019.20",
+             "FINAL CONTRACTOR PAYOUT INCLUDING VAT - GBP 6115.20"])
           for i,line in enumerate(lines): d.text((35,24+51*i),line,font=font,fill="black")
           buf=io.BytesIO();img.save(buf,format="PNG")
           payload={"data":{"images":[{"mimeType":"image/png","fileBase64":base64.b64encode(buf.getvalue()).decode("ascii")}]}}
@@ -209,7 +210,7 @@ jobs:
           response_code="$(curl --max-time 116 --silent --show-error -o "$result" -w '%{http_code}' -H 'content-type: application/json' -H "Authorization: Bearer $token" --data-binary @/tmp/st-synthetic-payload.json "$url")"
           echo "Synthetic DeepSeek extraction HTTP $response_code"
           if [ "$response_code" = "200" ]; then
-            jq -c '{hasResult:(.result!=null),hasStops:(.result.statementStops!=null),hasGross:(.result.statementAmount!=null),hasPayout:(.result.contractorPayout!=null),mode:(.result.extractionMode//"detailed"),dailyRows:(.result.daily|length)}' "$result"
+            jq -c '{hasResult:(.result!=null),hasStops:(.result.statementStops!=null),hasGross:(.result.statementAmount!=null),hasPayout:(.result.contractorPayout!=null),mode:(.result.extractionMode//"detailed"),dailyRows:(.result.daily|length),hasVat:(.result.vatAmount!=null),hasBeforeVat:(.result.beforeVatPayout!=null),vatArithmeticConsistent:(.result.contractorPayout!=null and .result.vatAmount!=null and .result.beforeVatPayout!=null and (((.result.contractorPayout-.result.vatAmount)-.result.beforeVatPayout)|fabs)<0.011)}' "$result"
           else
             jq -c '{code:.error.status,message:.error.message}' "$result" | head -c 350 || true
             echo
