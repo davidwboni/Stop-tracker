@@ -57,8 +57,8 @@ describe('Onboarding persistence',()=>{
   fireEvent.change(screen.getByLabelText('Rate per stop (£)'),{target:{value:'2.08'}});
   fireEvent.click(screen.getByRole('button',{name:'Confirm pay structure'}));
   await waitFor(()=>expect(persist).toHaveBeenCalledTimes(1));
-  expect(screen.queryByText(/You're all set/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/You're ready/)).not.toBeInTheDocument();
   resolve({...cfg,versionId:'saved'});
-  await screen.findByText(/You're all set/);
+  await screen.findByText(/You're ready/);
  });
 });
