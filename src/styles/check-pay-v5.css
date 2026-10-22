@@ -60,3 +60,9 @@
  .v5-pay .st-badge{font-size:11px;}
 }
 @media(prefers-reduced-motion:reduce){.v5-spinner{animation:none;}}
+
+.v5-charge-evidence summary{min-height:48px;cursor:pointer;font-weight:700;}
+.v5-charge-evidence .v5-charge-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:13px 0;border-top:1px solid var(--border);}
+.v5-charge-row>div{min-width:0;display:grid;gap:4px;}
+.v5-charge-row strong{font-size:14px;}
+.v5-charge-row span{font-weight:650;white-space:nowrap;font-variant-numeric:tabular-nums;}
