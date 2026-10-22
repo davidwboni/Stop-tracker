@@ -8,7 +8,7 @@ import {isoDate,listPeriods,summarizePeriod} from '../features/payperiod/periods
 import {moneyRevision,moneySummary,payoutComparison,validRange} from '../features/money/moneyModel';
 import {buildStatementAutoCheck} from '../features/statements/autoCheck';
 import {statementChargeEvidence} from '../features/statements/chargeEvidence';
-import {unresolvedStatementFindings,statementInvoiceReady,mergeFindingDecisions} from '../features/statements/findingGate';
+import {unresolvedStatementFindings,statementInvoiceReady,mergeFindingDecisions,requiresLimitedCoverageAcceptance} from '../features/statements/findingGate';
 import {createStatementReview,confirmedReview,captureIssues} from '../features/statements/reviewModel';
 import {historicalFeeIssue,applyConfirmedHistoricalFee,validHistoricalFee} from '../features/money/historicalFeeRepair';
 import {extractStatement,getPremiumStatus} from '../services/premium';
@@ -67,7 +67,8 @@ export default function CheckPayV5(){
  const [permission,setPermission]=useState(null),[permissionError,setPermissionError]=useState(false);
  const [confirmedDays,setConfirmedDays]=useState({});
  const [openDays,setOpenDays]=useState(false),[showMore,setShowMore]=useState(false);
- const [feeInput,setFeeInput]=useState(''),[feeAck,setFeeAck]=useState(false),[feeSaving,setFeeSaving]=useState(false);
+ const [limitedAccepted,setLimitedAccepted]=useState(false);
+ const [feeInput,setFeeInput]=useState(()=>validHistoricalFee(paymentConfig?.contractorFeePercent)?String(paymentConfig.contractorFeePercent):''),[feeAck,setFeeAck]=useState(false),[feeSaving,setFeeSaving]=useState(false);
  const [hidden,setHidden]=useState(()=>{try{return localStorage.getItem('home-hide-money')==='1';}catch{return false;}});
  const initially=available.find(p=>p.daysLogged>0)||available[0]||{start:today,end:today,id:today+'_'+today};
  const period=chosen||requested||initially;
@@ -90,11 +91,13 @@ export default function CheckPayV5(){
  const unresolvedSaved=unresolvedStatementFindings(statusRecord);
  const invoiceReady=statementInvoiceReady(statusRecord);
  const unresolvedCurrent=(view?.flagged||[]).filter(row=>!['figures_verified','possible_duplicate_accepted'].includes(confirmedDays[row.date]));
+ const limitedCoverage=!!view&&requiresLimitedCoverageAcceptance({summaryOnly:view.summaryOnly,hasDaily:view.hasDaily,incompleteDays:view.unknown.length,outsidePeriod:view.outsidePeriod});
+ const savedCoveragePending=requiresLimitedCoverageAcceptance(statusRecord?.statementFindings)&&statusRecord?.statementFindings?.limitedCoverageAccepted!==true;
  const requiredPeriod=period.start+' – '+period.end;
  useEffect(()=>{let active=true;getPremiumStatus().then(s=>{if(active)setPermission(s);}).catch(()=>{if(active)setPermissionError(true);});return()=>{active=false;};},[]);
  useEffect(()=>{track('check_pay_opened');},[]);
  const cash=value=>hidden?'••••':currency(value);
- const reset=()=>{if(busy)return;setStep('home');setAi(null);setScanFile(null);setError('');setConfirmedDays({});setVatChoice('');setVatEntry('');};
+ const reset=()=>{if(busy)return;setStep('home');setAi(null);setScanFile(null);setError('');setConfirmedDays({});setVatChoice('');setVatEntry('');setLimitedAccepted(false);};
  async function readFile(file){
    if(!file||busy)return;
    if(!navigator.onLine){setError('Reconnect to upload a statement. Your saved workdays are safe.');return;}
@@ -108,7 +111,7 @@ export default function CheckPayV5(){
        setChosen(summarizePeriod(logs,detected));
      }
      setAi(data);setScanSource('ai');setVatChoice(data.taxBasis||'unknown');setVatEntry('');
-     setConfirmedDays({});setStep('result');setOpenDays(false);setShowMore(false);
+     setConfirmedDays({});setLimitedAccepted(false);setStep('result');setOpenDays(false);setShowMore(false);
      track('statement_ai_completed');
    }catch(e){setError(describeStatementExtractionError(e));track('statement_ai_failed');}
    finally{setBusy(false);setStage('');}
@@ -119,12 +122,12 @@ export default function CheckPayV5(){
      setError('Enter the payout printed on your contractor statement.');return;
    }
    setAi({periodStart:period.start,periodEnd:period.end,currency:'GBP',contractorPayout:parsed,taxBasis:'unknown',daily:[],charges:[]});
-   setVatChoice('unknown');setScanSource('manual');setConfirmedDays({});setError('');setStep('result');
+   setVatChoice('unknown');setScanSource('manual');setConfirmedDays({});setLimitedAccepted(false);setError('');setStep('result');
  }
  function loadRecord(item){
    const range={start:item.start,end:item.end,id:item.id};
    setChosen(summarizePeriod(logs,range));setScanSource(item.record?.payoutComparison?.source||'saved');
-   setAi(savedStatementDraft(item.record));setVatChoice('');setVatEntry('');setConfirmedDays(mergeFindingDecisions(item.record));setStep(item.record?.payoutComparison?'saved':'result');setError('');
+   setAi(savedStatementDraft(item.record));setVatChoice('');setVatEntry('');setConfirmedDays(mergeFindingDecisions(item.record));setLimitedAccepted(item.record?.statementFindings?.limitedCoverageAccepted===true);setStep(item.record?.payoutComparison?'saved':'result');setError('');
  }
  async function saveCheck(){
    if(savingLock.current||!ai)return;
@@ -151,12 +154,12 @@ export default function CheckPayV5(){
      };
      const base={
        status:netKnown?'checked':'statement_received',
-       needsReview:!netKnown||unresolvedCurrent.length>0,
+       needsReview:!netKnown||unresolvedCurrent.length>0||(limitedCoverage&&!limitedAccepted),
        statementReceivedAt:new Date().toISOString(),
        reviewedStatement:approved,statementAmount:approved.payoutPence/100,
        statementWorkDetails:details,statementExtractionMode:ai.extractionMode||null,
        statementFindings:{
-         source:scanSource,summaryOnly:view.summaryOnly,hasDaily:view.hasDaily,
+         source:scanSource,summaryOnly:view.summaryOnly,hasDaily:view.hasDaily,outsidePeriod:view.outsidePeriod,limitedCoverageAccepted:limitedCoverage?limitedAccepted:true,
          flagged:view.flagged.map(d=>({date:d.date,reason:d.reason,loggedStops:d.loggedStops,statementStops:d.statementStops,loggedGross:d.loggedGross,statementGross:d.statementGross,acceptedReason:confirmedDays[d.date]||null})),
          incompleteDays:view.unknown.length,recordedAt:new Date().toISOString()
        }
@@ -237,7 +240,8 @@ export default function CheckPayV5(){
      <div className={'v5-difference '+(view?.canCompare&&view.difference!==0?'v5-warning-difference':'')}><dt>Potential difference</dt><dd>{view?.canCompare?cash(Math.abs(view.difference)):'Not comparable yet'}</dd></div>
     </dl>
     {view?.canCompare&&<p className="home-muted text-sm">{view.difference===0?'The before-VAT payout totals match.':view.difference<0?'The statement payout is lower than your expected amount.':'The statement payout is higher than your expected amount.'} A totals match does not prove each day or charge is correct.</p>}
-    {view?.summaryOnly||!view?.hasDaily?<p className="home-banner" role="status">Totals-only check. The scan did not provide enough reliable daily figures to confirm each workday.</p>:null}
+    {view?.hasDaily&&<p className="home-muted text-sm" role="status">{view.matched.length} workdays matched · {view.flagged.length} to review · {view.unknown.length} without enough detail</p>}
+    {limitedCoverage?<p className="home-banner" role="status">Limited check: some workdays could not be verified. You can save this payout now, but an invoice requires acknowledging that limitation.</p>:null}
    </section>
    {view?.flagged.length>0&&<section className="home-card v5-differences"><div className="v5-topline"><h2>Workdays to review</h2><span className="st-badge">{view.flagged.length}</span></div>
     <p className="home-muted text-sm">A small stop difference may be a duplicate, but AI cannot prove it. Review only the affected days. You can save now; preparing an invoice waits until you resolve them.</p>
@@ -261,8 +265,16 @@ export default function CheckPayV5(){
      {vatChoice==='included'&&<label className="home-field">VAT amount printed on the statement (£)<input inputMode="decimal" placeholder="Only enter an amount shown on the original" value={vatEntry} onChange={e=>setVatEntry(e.target.value)}/></label>}</>}
     {rowSummary.payout==null&&<p className="home-muted text-sm">Some historical pay settings are missing. You can save the statement now, then confirm those settings without re-uploading.</p>}
    </section>}
+   {issues.missingFee.length>0&&<details className="home-card v5-fee-repair" aria-label="Confirm historical pay deduction">
+    <summary>One missing detail · Confirm a contractor deduction for {issues.missingFee.length} saved {issues.missingFee.length===1?'day':'days'}</summary>
+    <p className="home-muted text-sm">Your original work and gross earnings stay unchanged. Confirm this percentage only if it applied then.</p>
+    <label className="home-field">Contractor fee (%)<input value={feeInput} placeholder="e.g. 6" inputMode="decimal" onChange={e=>{setFeeInput(e.target.value);setFeeAck(false);}}/></label>
+    <label className="v5-ack"><input type="checkbox" checked={feeAck} onChange={e=>setFeeAck(e.target.checked)}/> Yes, this percentage applied to these historic dates.</label>
+    <button type="button" className="home-primary w-full" disabled={feeSaving||!feeAck||!validHistoricalFee(feeInput)} onClick={recoverFee}>{feeSaving?'Saving…':'Confirm old deduction'}</button>
+   </details>}
    {step==='result'&&<section className="home-card v5-finish"><h2>Finish checking</h2>
-     <p className="home-muted text-sm">{canCompare?'Check the displayed payout and dates against your original statement. No individual charge checkboxes are required.':'Save the statement as received. This does not claim your earnings match.'}</p>
+     <p className="home-muted text-sm">{canCompare?'Check the payout and dates against your original statement. Individually matched charges need no extra taps.':'Save the statement as received. Finish any missing details later without another scan.'}</p>
+     {limitedCoverage&&canCompare&&<label className="v5-ack"><input type="checkbox" checked={limitedAccepted} onChange={e=>setLimitedAccepted(e.target.checked)}/> I understand that not every workday was verified. I accept a limited comparison for invoicing.</label>}
      <button type="button" className="home-primary w-full" disabled={busy||!ai||!sourceNet||!view?.periodOk||!view?.currencyOk||view.rawPayout==null} onClick={saveCheck}>{busy?'Saving…':canCompare?'Save pay check':'Save statement — check later'}</button>
      <details className="v5-manual"><summary>View extracted totals and charges</summary>
        <p className="home-muted text-sm">These are unverified AI figures from the contractor document. Never assume that a missing amount is £0.</p>
@@ -276,12 +288,13 @@ export default function CheckPayV5(){
      {unresolvedSaved.length>0&&<div className="home-banner" role="status"><strong>{unresolvedSaved.length} workday {unresolvedSaved.length===1?'difference':'differences'} to review</strong><p className="home-muted text-sm">Your statement is saved. Before preparing an invoice, mark each difference as accepted. You don't need to scan again.</p>
        <button className="home-primary w-full" type="button" onClick={()=>{setConfirmedDays(mergeFindingDecisions(statusRecord));setStep('result');setOpenDays(true);}}>Review differences <ArrowRight size={18}/></button>
      </div>}
+     {savedCheck&&savedCoveragePending&&unresolvedSaved.length===0&&<button className="home-primary w-full" type="button" onClick={()=>{setLimitedAccepted(false);setStep('result');}}>Review limited pay check <ArrowRight size={18}/></button>}
      {savedCheck&&previous.state==='difference'&&invoiceReady&&<button className="home-primary w-full" type="button" disabled={busy} onClick={acceptDifference}>{busy?'Saving…':'Accept difference & prepare invoice'} <ArrowRight size={18}/></button>}
      {savedCheck&&['matched','reconciled'].includes(previous.state)&&invoiceReady&&<button className="home-primary w-full" type="button" onClick={()=>nav('/app/invoice',{state:{fromPay:true,periodId:period.id}})}>Prepare invoice from statement <ArrowRight size={18}/></button>}
      {savedCheck&&<Link to="/app/records?tab=documents" className="home-secondary w-full">Save and finish (self-billed)</Link>}
      {!savedCheck&&unresolvedSaved.length===0&&<button className="home-secondary w-full" type="button" onClick={()=>setStep('result')}>Review missing details</button>}
    </section>}
-   {issues.missingFee.length>0&&<details className="home-card v5-fee-repair"><summary>{issues.missingFee.length} saved days need a historical contractor fee</summary><p className="home-muted text-sm">Confirm the old fee only if the percentage applied at the time. Existing stops, gross and parcel figures are preserved.</p><label className="home-field">Contractor fee (%)<input value={feeInput} placeholder="e.g. 6" inputMode="decimal" onChange={e=>setFeeInput(e.target.value)}/></label><label className="v5-ack"><input type="checkbox" checked={feeAck} onChange={e=>setFeeAck(e.target.checked)}/> I confirm the fee for these saved dates.</label><button type="button" className="home-secondary w-full" disabled={feeSaving||!feeAck||!validHistoricalFee(feeInput)} onClick={recoverFee}>Confirm historical fee</button></details>}
+
   </>}
   {busy&&<p className="home-banner v5-stage" role="status"><Loader2 size={18} className="v5-spinner" aria-hidden="true"/>{stage||'Saving your check…'}</p>}
   {error&&<p className="home-banner home-error" role="alert">{error}</p>}
