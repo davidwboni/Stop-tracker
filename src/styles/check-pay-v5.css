@@ -1,0 +1,62 @@
+/* V5: one primary action, one result, and optional details. Shared theme tokens
+   ensure dark/light both remain readable. No hard-coded white-background panels. */
+.v5-pay{max-width:860px;gap:16px;padding-bottom:calc(92px + env(safe-area-inset-bottom));}
+.v5-pay h1{font-size:clamp(27px,5vw,34px);}
+.v5-pay h2{font-size:19px;line-height:1.35;letter-spacing:-.015em;}
+.v5-pay p{line-height:1.58;}
+.v5-pay .home-card{display:grid;gap:14px;}
+.v5-header{align-items:flex-start;}
+.v5-header .home-muted{font-size:14px;max-width:34rem;}
+.v5-upload{padding:22px;gap:17px!important;}
+.v5-upload-heading{display:flex;align-items:center;gap:11px;}
+.v5-upload-heading svg{color:var(--home-purple);}
+.v5-upload-cta{width:100%;position:relative;cursor:pointer;min-height:60px;font-size:17px;overflow:hidden;}
+.v5-upload-cta input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:80px;}
+.v5-upload-cta:focus-within{outline:3px solid var(--home-purple);outline-offset:3px;}
+.v5-upload-cta.v5-inactive{opacity:.55;cursor:not-allowed;}
+.v5-upload-cta.v5-inactive input{cursor:not-allowed;}
+.v5-overview-total{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.v5-overview-total strong{font-size:clamp(22px,5vw,29px);font-variant-numeric:tabular-nums;overflow-wrap:anywhere;}
+.v5-topline{display:flex;gap:10px;align-items:center;justify-content:space-between;}
+.v5-history{gap:0!important;}
+.v5-history>button{display:flex;justify-content:space-between;align-items:center;gap:16px;text-align:left;width:100%;padding:14px 0;min-height:58px;border-top:1px solid var(--border);}
+.v5-history>button:first-of-type{margin-top:8px;}
+.v5-history>button small{display:block;color:var(--home-muted);font-size:12px;margin-top:4px;}
+.v5-manual{border-top:1px solid var(--border);padding-top:12px;}
+.v5-manual summary,.v5-fee-repair summary{cursor:pointer;min-height:48px;display:flex;align-items:center;font-weight:650;color:var(--foreground);}
+.v5-manual[open],.v5-fee-repair[open]{display:grid;gap:12px;}
+.v5-manual>*,.v5-fee-repair>*{min-width:0;}
+.v5-totals{display:grid;gap:0;}
+.v5-totals>div{display:flex;align-items:baseline;justify-content:space-between;gap:16px;border-bottom:1px solid var(--border);padding:12px 0;}
+.v5-totals>div:last-child{border:0;}
+.v5-totals dt{color:var(--home-muted);font-size:14px;}
+.v5-totals dd{font-weight:730;font-size:19px;overflow-wrap:anywhere;text-align:right;font-variant-numeric:tabular-nums;}
+.v5-difference dt{font-weight:700;color:var(--foreground);}
+.v5-difference dd{color:var(--home-money);font-size:clamp(20px,5vw,27px);}
+.v5-differences .v5-day{padding:16px 0;border-top:1px solid var(--border);display:grid;gap:7px;}
+.v5-day-numbers{display:grid;gap:4px;color:var(--home-muted);font-size:14px;line-height:1.5;}
+.v5-day-accept{display:grid;gap:4px;color:var(--home-muted);font-size:13px;margin-top:4px;}
+.v5-day-accept select{font-size:16px;min-height:46px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--foreground);padding:8px;max-width:100%;}
+.v5-ack{display:flex;align-items:flex-start;gap:10px;font-size:14px;line-height:1.5;}
+.v5-ack input{width:20px;height:20px;flex:none;accent-color:var(--home-purple);}
+.v5-stage{display:flex;gap:12px;align-items:center;font-weight:600;}
+.v5-spinner{animation:v5-spin 800ms linear infinite;flex:none;}
+@keyframes v5-spin{to{transform:rotate(360deg);}}
+.v5-disclaimer{padding:3px 4px 8px;}
+@media(min-width:768px){
+ .v5-pay{grid-template-columns:1fr 1fr;column-gap:18px;}
+ .v5-header,.v5-back,.v5-stage,.v5-disclaimer,.v5-pay>p[role=alert],.v5-result,.v5-finish,.v5-differences,.v5-one-question,.v5-fee-repair{grid-column:1/-1;}
+ .v5-pay .v5-upload{grid-column:1/2;}
+ .v5-pay .v5-overview{grid-column:2/3;}
+ .v5-pay .v5-history{grid-column:1/-1;}
+ .v5-pay .v5-one-question{max-width:650px;}
+}
+@media(max-width:450px){
+ .v5-pay{gap:13px;}
+ .v5-pay .home-card{padding:16px;}
+ .v5-pay .v5-upload{padding:18px;}
+ .v5-topline{align-items:flex-start;flex-wrap:wrap;}
+ .v5-totals dd{font-size:17px;}
+ .v5-pay .st-badge{font-size:11px;}
+}
+@media(prefers-reduced-motion:reduce){.v5-spinner{animation:none;}}
