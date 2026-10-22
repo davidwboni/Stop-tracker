@@ -148,6 +148,15 @@ describe('Check Pay entry',()=>{
    expect(screen.getByRole('button',{name:'Read statement with AI'})).toBeEnabled();
    expect(f.save).not.toHaveBeenCalled();
  });
+ it('warns that an AI summary-only retry did not read individual workdays',async()=>{
+   f.extract.mockResolvedValue({statementAmount:100,contractorPayout:94,currency:'GBP',periodStart:period.start,periodEnd:period.end,extractionMode:'summary_only',daily:[]});
+   choose();
+   await screen.findByText('2 free AI checks left');
+   fireEvent.change(screen.getByLabelText('Choose statement file'),{target:{files:[new File(['image'],'statement.png',{type:'image/png'})]}});
+   fireEvent.click(screen.getByRole('button',{name:'Read statement with AI'}));
+   expect(await screen.findByText(/AI could read the statement summary but not the individual workdays/)).toBeInTheDocument();
+   expect(f.save).not.toHaveBeenCalled();
+ });
  it('does not save on extraction or use gross earnings as payout',async()=>{f.extract.mockResolvedValue({statementAmount:100,contractorPayout:null,currency:'GBP'});choose();await screen.findByText('2 free AI checks left');fireEvent.change(screen.getByLabelText('Choose statement file'),{target:{files:[new File(['image'],'statement.png',{type:'image/png'})]}});fireEvent.click(screen.getByRole('button',{name:'Read statement with AI'}));await screen.findByText('Review statement');expect(screen.getByLabelText('Final contractor payout (£)')).toHaveValue('');expect(f.save).not.toHaveBeenCalled();});
 
  it('offers one clear action when the checked statement payout differs',async()=>{
