@@ -42,7 +42,7 @@ const WelcomeStep = ({ firstName, config, payPeriodAnchor, onStart, onImport }) 
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.45, duration: 0.3 }}
           >
-            <Check className="w-10 h-10 text-white" strokeWidth={3} />
+            <Check className="w-10 h-10 text-primary-foreground" strokeWidth={3} />
           </motion.span>
         </motion.div>
       </div>
