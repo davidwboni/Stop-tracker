@@ -27,14 +27,19 @@ export function statementChargeEvidence(statement,expenses=[],period){
      status=amount===billedTotal?'matches_recorded_charge':'different_from_recorded_charge';
      explanation=status==='matches_recorded_charge'?'Matches the contractor charges you separately recorded; confirm the original statement.':'Differs from contractor charges recorded for these dates; check for multiple or discounted transactions.';
    }else if(kind==='fuel'&&own.length){
-     const haveDiscount=own.every(e=>pence(e.fuelCardDiscount)!=null&&pence(e.fuelCardDiscount)<=pence(e.amount));
-     const expected=haveDiscount?own.reduce((sum,e)=>sum+pence(e.amount)-pence(e.fuelCardDiscount),0):null;
+     // Only compare contractor-card transactions. A personally paid fuel
+     // receipt can never prove the contractor's separate fuel deduction.
+     // Keep older receipts with an explicit card discount readable.
+     const cards=own.filter(e=>e.fuelPaidViaContractor===true ||
+       (e.fuelPaidViaContractor==null && e.fuelCardDiscount!=null));
+     const haveDiscount=cards.length>0&&cards.every(e=>pence(e.fuelCardDiscount)!=null&&pence(e.fuelCardDiscount)<=pence(e.amount));
+     const expected=haveDiscount?cards.reduce((sum,e)=>sum+pence(e.amount)-pence(e.fuelCardDiscount),0):null;
      if(expected!=null&&amount!=null){
        status=expected===amount?'fuel_discount_consistent':'fuel_discount_difference';
        explanation=status==='fuel_discount_consistent'?'Matches the recorded fuel-card discount; confirm what was actually billed.':'Differs after the fuel-card discounts you entered; check the transactions.';
      }else{
        status='fuel_discount_unknown';
-       explanation='Pump receipts can differ from the contractor fuel charge because of fuel-card discounts. No discount is assumed.';
+       explanation='Pump receipts or personally paid fuel cannot prove a contractor fuel-card charge. No discount is assumed.';
      }
    }
    return {id:index,label:String(charge.label||'Unlabelled charge'),amountPence:amount,kind,status,explanation,referenceCount:billed.length+own.length};

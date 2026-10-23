@@ -17,7 +17,7 @@ const receipts = () => import('../services/expenseReceipts');
 export default function HomeExpenseDialog({ open, onClose, save, isGuest, initialExpense = null, confirmExpected = false, initialSource = 'my_expense', eventSource = 'home' }) {
   const { user } = useAuth();
   const [id] = useState(() => initialExpense?.id || crypto.randomUUID());
-  const [initial] = useState(() => ({date:initialExpense?.date || isoDate(new Date()),amount:initialExpense ? String(initialExpense.amount) : '',source:initialExpense?.source || (confirmExpected ? initialSource : 'my_expense'),category:initialExpense?.category || 'Other',description:initialExpense?.description || '',notes:initialExpense?.notes || '',fuelCardDiscount:initialExpense?.fuelCardDiscount == null ? '' : String(initialExpense.fuelCardDiscount)}));
+  const [initial] = useState(() => ({date:initialExpense?.date || isoDate(new Date()),amount:initialExpense ? String(initialExpense.amount) : '',source:initialExpense?.source || (confirmExpected ? initialSource : 'my_expense'),category:initialExpense?.category || 'Other',description:initialExpense?.description || '',notes:initialExpense?.notes || '',fuelCardDiscount:initialExpense?.fuelCardDiscount == null ? '' : String(initialExpense.fuelCardDiscount),fuelPaidViaContractor:initialExpense?.fuelPaidViaContractor===true}));
   const [draft, setDraft] = useState(initial);
   const [mode, setMode] = useState(initialExpense || confirmExpected ? 'manual' : 'choice');
   const [changeDate, setChangeDate] = useState(false);
@@ -125,7 +125,7 @@ export default function HomeExpenseDialog({ open, onClose, save, isGuest, initia
       await save({...initialExpense,id,...base,amount:Number(draft.amount),
         category:fuelExpense&&draft.category==='Other'?'Fuel':draft.category,
         description:draft.description.trim(),notes:draft.notes.trim(),receipt,
-        fuelCardDiscount:null,...fuelEvidence});
+        fuelCardDiscount:null,fuelPaidViaContractor:fuelExpense&&draft.fuelPaidViaContractor===true,...fuelEvidence});
       // Signed-in replacements/deletions are retried by a server trigger. Guest files remain local.
       if(initialExpense?.receipt?.local && initialExpense.receipt.path!==receipt?.path) await (await receipts()).removeReceipt(user?.uid,initialExpense.receipt).catch(()=>{});
       track(review?'expense_ai_saved':'expense_manual_saved',{source:eventSource,mode:initialExpense?'edit':'new'});
@@ -182,6 +182,15 @@ export default function HomeExpenseDialog({ open, onClose, save, isGuest, initia
             {(mode==='manual'||review)&&<fieldset disabled={busy} className="ae-fields ae-simple-fields">
               <label className="home-field ae-amount">Amount (£)<input inputMode="decimal" autoComplete="off" value={draft.amount} onChange={e=>change('amount',e.target.value)} placeholder="0.00" required/></label>
               <label className="home-field">What was it for? <span className="home-muted text-xs">(optional)</span><input maxLength={200} value={draft.description} onChange={e=>change('description',e.target.value)} placeholder="e.g. Fuel, repair, parking"/></label>
+              {fuelExpense&&<div className="ae-fuel-method">
+                <label className="home-field">How was this fuel paid?
+                  <select value={draft.fuelPaidViaContractor?'contractor':'personal'} onChange={e=>change('fuelPaidViaContractor',e.target.value==='contractor')}>
+                    <option value="personal">I paid personally</option>
+                    <option value="contractor">Fuel card · Deducted by contractor</option>
+                  </select>
+                </label>
+                {draft.fuelPaidViaContractor&&<p className="home-muted text-xs" role="status">We'll keep the pump receipt as evidence, not deduct it again as a personal expense. The actual fuel-card charge will be checked against your contractor statement.</p>}
+              </div>}
               {fuelExpense&&<details className="ae-fuel-discount" open={draft.fuelCardDiscount!==''||undefined}>
                 <summary>Fuel-card discount (optional)</summary>
                 <p className="home-muted text-xs">The receipt may show the pump price, but your contractor may bill less. Only enter a discount shown in your records. We won't guess.</p>

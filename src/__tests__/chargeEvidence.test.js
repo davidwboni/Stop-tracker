@@ -14,6 +14,19 @@ describe('fuel-card and contractor charge evidence',()=>{
   expect(result[0].status).toBe('fuel_discount_consistent');
   expect(result[0].amountPence).toBe(7400);
  });
+ it('does not mistake fuel I paid for personally as evidence for the contractor fuel-card charge',()=>{
+  const checked=statementChargeEvidence({charges:[{label:'Fuel Usage',amount:74}]},[
+   {date:'2026-09-17',source:'my_expense',category:'Fuel',amount:80,fuelCardDiscount:6,fuelPaidViaContractor:false}
+  ],period);
+  expect(checked[0].status).toBe('fuel_discount_unknown');
+ });
+ it('compares only fuel-card tagged receipts, even with other personal fuel costs in the same period',()=>{
+  const result=statementChargeEvidence({charges:[{label:'Fuel Usage',amount:74}]},[
+   {date:'2026-09-17',source:'my_expense',category:'Fuel',amount:80,fuelCardDiscount:6,fuelPaidViaContractor:true},
+   {date:'2026-09-18',source:'my_expense',category:'Fuel',amount:25,fuelPaidViaContractor:false}
+  ],period);
+  expect(result[0].status).toBe('fuel_discount_consistent');
+ });
  it('compares separately logged contractor lease and insurance charges where evidence exists',()=>{
   const result=statementChargeEvidence({charges:[{label:'Lease',amount:150},{label:'Insurance',amount:55}]},[
    {date:'2026-09-17',source:'contractor_charge',category:'Lease',amount:150},

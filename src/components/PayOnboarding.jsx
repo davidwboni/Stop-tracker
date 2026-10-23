@@ -8,7 +8,7 @@ import { describePayStructure } from "../features/payperiod/payStructure";
 
 // Completion beat shown after the user confirms their pay setup: a spring-in
 // check-mark, then a staggered welcome + pay summary + "Start tracking".
-const WelcomeStep = ({ firstName, config, payPeriodAnchor, onStart }) => {
+const WelcomeStep = ({ firstName, config, payPeriodAnchor, onStart, onImport }) => {
   const formattedPayPeriodAnchor = new Date(`${payPeriodAnchor}T12:00:00`).toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
@@ -42,7 +42,7 @@ const WelcomeStep = ({ firstName, config, payPeriodAnchor, onStart }) => {
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.45, duration: 0.3 }}
           >
-            <Check className="w-10 h-10 text-white" strokeWidth={3} />
+            <Check className="w-10 h-10 text-primary-foreground" strokeWidth={3} />
           </motion.span>
         </motion.div>
       </div>
@@ -99,6 +99,10 @@ const WelcomeStep = ({ firstName, config, payPeriodAnchor, onStart }) => {
         Start tracking
         <ArrowRight className="w-5 h-5 ml-2" />
       </motion.button>
+      {onImport&&<button type="button" className="w-full min-h-[48px] rounded-[14px] border border-border bg-card px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary" onClick={onImport}>
+        Have previous work? Import my CSV (optional)
+      </button>}
+      {onImport&&<p className="text-muted-foreground text-xs">Your own dated work log can be imported without replacing anything already saved. Contractor statements are checked separately in Pay.</p>}
     </motion.div>
   );
 };
@@ -106,7 +110,7 @@ const WelcomeStep = ({ firstName, config, payPeriodAnchor, onStart }) => {
 // First-run screen for a brand-new user before they reach the app. Reuses the
 // AI describe/upload panel; on confirm it shows the welcome beat, then hands the
 // config up to completeOnboarding. "Set up later" completes with no config.
-const PayOnboarding = ({ onComplete, onStart }) => {
+const PayOnboarding = ({ onComplete, onStart, onImport }) => {
   const { user } = useAuth();
   const firstName = user?.displayName?.split(" ")[0] || "there";
   const [periodError,setPeriodError]=useState('');
@@ -117,7 +121,7 @@ const PayOnboarding = ({ onComplete, onStart }) => {
   return (
     <div className="min-h-[100dvh] w-full overflow-x-hidden bg-background text-foreground flex flex-col items-center justify-center px-4 py-10 pt-safe">
       {confirmed ? (
-        <WelcomeStep firstName={firstName} config={confirmed} payPeriodAnchor={payPeriodAnchor} setPayPeriodAnchor={setPayPeriodAnchor} onStart={onStart} />
+        <WelcomeStep firstName={firstName} config={confirmed} payPeriodAnchor={payPeriodAnchor} setPayPeriodAnchor={setPayPeriodAnchor} onStart={onStart} onImport={onImport} />
       ) : (
         <motion.div
           initial={{ opacity: 0, y: 16 }}

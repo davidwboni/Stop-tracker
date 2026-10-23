@@ -4,7 +4,13 @@ export const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(value || '') && Num
 export function validateExpense(e) {
   const discount=e.fuelCardDiscount;
   const validDiscount=discount==null || (typeof discount==='number'&&Number.isFinite(discount)&&discount>=0&&Number.isSafeInteger(pennies(discount))&&discount<=e.amount);
-  return !!e.id && validDate(e.date) && Number.isFinite(e.amount) && e.amount > 0 && Number.isSafeInteger(pennies(e.amount)) && !!SOURCES[e.source] && validDiscount;
+  // A receipt paid on the contractor's fuel card is evidence of fuel usage,
+  // NOT an additional personal outlay; avoid deducting it twice from take-home.
+  const validFuelMethod=e.fuelPaidViaContractor==null ||
+    (typeof e.fuelPaidViaContractor==='boolean' &&
+    (!e.fuelPaidViaContractor || (e.source==='my_expense' &&
+      (e.category==='Fuel'||/\b(fuel|diesel|petrol|fuel card)\b/i.test(e.description||'')))));
+  return !!e.id && validDate(e.date) && Number.isFinite(e.amount) && e.amount > 0 && Number.isSafeInteger(pennies(e.amount)) && !!SOURCES[e.source] && validDiscount && validFuelMethod;
 }
 export function splitExpenseRecords(rows) {
   if (!Array.isArray(rows)) throw new Error('Invalid expense records');
@@ -16,7 +22,10 @@ export function splitExpenseRecords(rows) {
 }
 export function expenseSummary(expenses, period) {
   const records = expenses.filter(e => e.date >= period.start && e.date <= period.end).sort((a,b) => b.date.localeCompare(a.date) || String(a.id).localeCompare(String(b.id)));
-  const sum = source => records.filter(e => !source || e.source === source).reduce((s,e) => s + pennies(e.amount),0)/100;
+  const sum = source => records.filter(e => (!source || e.source === source) &&
+    // Do not double count a contractor-billed fuel-card receipt as cash paid.
+    !(e.source==='my_expense' && e.fuelPaidViaContractor===true)
+  ).reduce((s,e) => s + pennies(e.amount),0)/100;
   return { records, total:sum(), contractor:sum('contractor_charge'), own:sum('my_expense') };
 }
 export function recurringOccurrences(rules, expenses, period) {

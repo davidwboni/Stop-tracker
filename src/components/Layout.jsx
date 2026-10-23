@@ -4,7 +4,7 @@ import '../styles/product.css';
 import React, { useEffect } from 'react';
 import ErrorBoundary from './ErrorBoundary';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import SyncStatus from './SyncStatus';
 import AppNavigation from './AppNavigation';
@@ -17,6 +17,7 @@ const Layout = () => {
   const reducedMotion = useReducedMotion();
   const { needsOnboarding, completeOnboarding, finishOnboarding } = useData();
   const location = useLocation();
+  const navigate = useNavigate();
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
     const main = document.querySelector('main');
@@ -24,7 +25,7 @@ const Layout = () => {
   }, [location.pathname,reducedMotion]);
   // First-run gate: brand-new users set up their pay before entering the app.
   if (needsOnboarding) {
-    return <PayOnboarding onComplete={completeOnboarding} onStart={finishOnboarding} />;
+    return <PayOnboarding onComplete={completeOnboarding} onStart={finishOnboarding} onImport={()=>{finishOnboarding();navigate('/app/records?import=1');}} />;
   }
 
   return (

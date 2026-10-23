@@ -80,7 +80,7 @@ export default function InvoicePage(){
         </div>}
      {sendError&&<p role="alert" className="home-banner home-error">{sendError}</p>}
      <Link className="home-primary w-full" to="/app/records?tab=documents">View saved invoice</Link>
-     <button className="home-text-button" onClick={()=>{if(window.confirm('Prepare another invoice for the same four-week period? Check you are not billing twice.'))setCreateDuplicate(true);}}>Create another invoice anyway</button>
+     <button className="home-text-button" onClick={()=>{if(window.confirm('Prepare another invoice for these same contractor statement dates? Check you are not billing twice.'))setCreateDuplicate(true);}}>Create another invoice anyway</button>
    </section>:
    prepare?<InvoiceCreate key={p.id} prefill={prefill}/>:
    <>
