@@ -28,7 +28,7 @@ export default function EntriesPage({privacyHidden}){
  const [selectedId,setSelectedId]=useState(null);
  const [error,setError]=useState('');
  const [busy,setBusy]=useState(false);
- const [importOpen,setImportOpen]=useState(false);
+ const [importOpen,setImportOpen]=useState(()=>new URLSearchParams(loc.search).get('import')==='1');
  const [page,setPage]=useState(0);
  const [localHidden]=useState(moneyPreference);
  const hidden=privacyHidden??localHidden;
