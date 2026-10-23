@@ -24,7 +24,7 @@ export function expenseSummary(expenses, period) {
   const records = expenses.filter(e => e.date >= period.start && e.date <= period.end).sort((a,b) => b.date.localeCompare(a.date) || String(a.id).localeCompare(String(b.id)));
   const sum = source => records.filter(e => (!source || e.source === source) &&
     // Do not double count a contractor-billed fuel-card receipt as cash paid.
-    !(source==='my_expense' && e.fuelPaidViaContractor===true)
+    !(e.source==='my_expense' && e.fuelPaidViaContractor===true)
   ).reduce((s,e) => s + pennies(e.amount),0)/100;
   return { records, total:sum(), contractor:sum('contractor_charge'), own:sum('my_expense') };
 }
