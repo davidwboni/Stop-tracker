@@ -36,6 +36,8 @@ export default function ExpensesOverview({privacyHidden}){
   const choices=periods.some(p=>p.start===period.start&&p.end===period.end)?periods:[period,...periods];
   const summary=expenseSummary(costs.expenses,period);
   const rows=summary.records.filter(e=>e.source==='my_expense');
+  const personallyPaid=rows.filter(e=>e.fuelPaidViaContractor!==true).length;
+  const fuelCardReceipts=rows.length-personallyPaid;
   const legacyCharges=summary.records.filter(e=>e.source==='contractor_charge');
   const upcoming=recurringOccurrences(costs.rules||[],costs.expenses,period);
   const cash=value=>hidden?'••••':money(value);
@@ -62,7 +64,7 @@ export default function ExpensesOverview({privacyHidden}){
     <section className="home-card simple-expenses-total" aria-busy={costs.loading}>
       <p className="home-muted text-sm">Your recorded expenses</p>
       <strong className="expense-total">{costs.loading?'…':costs.error?'Unavailable':cash(summary.own)}</strong>
-      {!costs.loading&&!costs.error&&<p className="home-muted text-xs">{rows.length} {rows.length===1?'record':'records'} (fuel-card receipts are evidence, not personal costs)</p>}
+      {!costs.loading&&!costs.error&&<p className="home-muted text-xs">{personallyPaid} {personallyPaid===1?'expense':'expenses'} recorded in this period{fuelCardReceipts>0?` · ${fuelCardReceipts} fuel-card ${fuelCardReceipts===1?'receipt':'receipts'} not counted as personal spending`:''}</p>}
     </section>
     {costs.error&&<p role="alert" className="home-banner">{costs.error} <button className="home-text-button underline" onClick={costs.retry}>Retry</button></p>}
     {(costs.loading||rows.length>0)&&<section className="simple-expenses-history" aria-label="Your expenses">
