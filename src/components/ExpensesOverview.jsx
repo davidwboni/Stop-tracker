@@ -45,7 +45,7 @@ export default function ExpensesOverview({privacyHidden}){
   const add=()=>{setEditor({});track('expense_opened',{source:'records'})};
   function rowButton(e){return <button key={e.id} className="expense-row" onClick={()=>{setSelected(e);track('expense_record_opened',{source:'records'});}}>
     <Receipt size={21} aria-hidden="true"/>
-    <span className="expense-row-copy"><strong>{e.description||e.category||'Expense'}</strong><small>{fmt(e.date)}{e.recurringRuleId?' · Recurring':''}</small>{e.receipt&&<small>Receipt attached</small>}</span>
+    <span className="expense-row-copy"><strong>{e.description||e.category||'Expense'}</strong><small>{fmt(e.date)}{e.recurringRuleId?' · Recurring':''}</small>{e.fuelPaidViaContractor&&<small>Fuel card · Contractor billed · Receipt evidence</small>}{e.receipt&&<small>Receipt attached</small>}</span>
     <strong className="expense-row-amount">{cash(e.amount)}</strong><ChevronRight size={18} aria-hidden="true"/>
    </button>}
   return <div className="home-screen expense-page simple-expenses">
@@ -62,7 +62,7 @@ export default function ExpensesOverview({privacyHidden}){
     <section className="home-card simple-expenses-total" aria-busy={costs.loading}>
       <p className="home-muted text-sm">Your recorded expenses</p>
       <strong className="expense-total">{costs.loading?'…':costs.error?'Unavailable':cash(summary.own)}</strong>
-      {!costs.loading&&!costs.error&&<p className="home-muted text-xs">{rows.length} {rows.length===1?'expense':'expenses'} recorded in this period</p>}
+      {!costs.loading&&!costs.error&&<p className="home-muted text-xs">{rows.length} {rows.length===1?'record':'records'} (fuel-card receipts are evidence, not personal costs)</p>}
     </section>
     {costs.error&&<p role="alert" className="home-banner">{costs.error} <button className="home-text-button underline" onClick={costs.retry}>Retry</button></p>}
     {(costs.loading||rows.length>0)&&<section className="simple-expenses-history" aria-label="Your expenses">
@@ -91,7 +91,7 @@ function ExpenseDetails({expense,costs,hidden,onClose,onEdit}){
   const [frequency,setFrequency]=useState('four_weekly');
   const [nextDate,setNextDate]=useState('');
   async function perform(action){setBusy(true);setError('');try{await action();onClose();}catch(_){setError('Could not save this change. Your record is still available; please retry.');}finally{setBusy(false);}}
-  return <Dialog open onClose={()=>!busy&&onClose()} className="relative z-[90]"><div className="fixed inset-0 bg-black/70"/><div className="home-dialog-position"><Dialog.Panel className="home-dialog home-screen space-y-4"><div className="home-row"><Dialog.Title className="text-xl font-bold">{expense.description||expense.category}</Dialog.Title><button className="home-icon" aria-label="Close expense details" disabled={busy} onClick={onClose}><X/></button></div><p className="home-muted">{SOURCES[expense.source]} · {fmt(expense.date)}</p><p className="text-3xl font-bold">{hidden?'••••':money(expense.amount)}</p><p className="home-muted text-sm">Recorded in your ledger. This does not confirm payment or reconciliation.</p>
+  return <Dialog open onClose={()=>!busy&&onClose()} className="relative z-[90]"><div className="fixed inset-0 bg-black/70"/><div className="home-dialog-position"><Dialog.Panel className="home-dialog home-screen space-y-4"><div className="home-row"><Dialog.Title className="text-xl font-bold">{expense.description||expense.category}</Dialog.Title><button className="home-icon" aria-label="Close expense details" disabled={busy} onClick={onClose}><X/></button></div><p className="home-muted">{SOURCES[expense.source]} · {fmt(expense.date)}</p><p className="text-3xl font-bold">{hidden?'••••':money(expense.amount)}</p><p className="home-muted text-sm">{expense.fuelPaidViaContractor?'Fuel-card receipt only: the pump amount is not included in personal spending. Confirm the contractor\'s actual deduction in Pay.':'Recorded in your ledger. This does not confirm payment or reconciliation.'}</p>
     {expense.notes&&<p className="whitespace-pre-wrap">{expense.notes}</p>}<ExpenseReceiptPreview receipt={expense.receipt}/>{mode==='view'&&<><button className="home-primary w-full" onClick={onEdit}>Edit expense</button>{!expense.recurringRuleId&&<button className="home-secondary w-full" onClick={()=>setMode('recurring')}>Save as recurring cost</button>}{expense.recurringRuleId&&<button className="home-secondary w-full" onClick={()=>setMode('stop')}>Stop future recurring costs</button>}<button className="home-secondary w-full" onClick={()=>setMode('delete')}>Delete expense</button></>}
     {mode==='stop'&&<><p role="alert">Stop expecting future costs? Existing expense records will remain.</p><button className="home-primary w-full" disabled={busy} onClick={()=>perform(()=>costs.stopRecurring(expense.recurringRuleId))}>{busy?'Saving…':'Confirm stop'}</button></>}
     {mode==='delete'&&<><p role="alert">Delete this recorded expense? Any checked period will need rechecking.{expense.recurringRuleId?' Its recurring schedule will remain.':''}</p><button className="home-primary w-full" disabled={busy} onClick={()=>perform(()=>costs.remove(expense))}>{busy?'Deleting…':'Confirm deletion'}</button></>}
