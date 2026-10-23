@@ -45,6 +45,16 @@ describe('Add Expense',()=>{
   await waitFor(()=>expect(fixture.save).toHaveBeenCalled());
   expect(fixture.save.mock.calls[0][0]).toMatchObject({amount:80,category:'Fuel',fuelCardDiscount:6,source:'my_expense'});
  });
+ it('saves discounted contractor-card fuel as an evidence receipt rather than an extra personal expense',async()=>{
+   mount();fireEvent.click(screen.getByRole('button',{name:/Enter manually/}));
+   fireEvent.change(screen.getByLabelText(/What was it for/),{target:{value:'Diesel on DPD fuel card'}});
+   fireEvent.change(screen.getByLabelText('Amount (£)'),{target:{value:'80.00'}});
+   fireEvent.change(screen.getByLabelText('How was this fuel paid?'),{target:{value:'contractor'}});
+   expect(screen.getByText(/not deduct it again as a personal expense/)).toBeInTheDocument();
+   fireEvent.click(screen.getByRole('button',{name:'Save expense'}));
+   await waitFor(()=>expect(fixture.save).toHaveBeenCalledTimes(1));
+   expect(fixture.save.mock.calls[0][0]).toMatchObject({source:'my_expense',category:'Fuel',amount:80,fuelPaidViaContractor:true});
+ });
  it('does not save an ungrounded fuel-card discount larger than the receipt',async()=>{
   mount();fireEvent.click(screen.getByRole('button',{name:/Enter manually/}));
   fireEvent.change(screen.getByLabelText(/What was it for/),{target:{value:'Fuel'}});
