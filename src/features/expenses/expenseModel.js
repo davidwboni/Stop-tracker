@@ -9,7 +9,7 @@ export function validateExpense(e) {
   const validFuelMethod=e.fuelPaidViaContractor==null ||
     (typeof e.fuelPaidViaContractor==='boolean' &&
     (!e.fuelPaidViaContractor || (e.source==='my_expense' &&
-      (e.category==='Fuel'||/\\b(fuel|diesel|petrol|fuel card)\\b/i.test(e.description||'')))));
+      (e.category==='Fuel'||/\b(fuel|diesel|petrol|fuel card)\b/i.test(e.description||'')))));
   return !!e.id && validDate(e.date) && Number.isFinite(e.amount) && e.amount > 0 && Number.isSafeInteger(pennies(e.amount)) && !!SOURCES[e.source] && validDiscount && validFuelMethod;
 }
 export function splitExpenseRecords(rows) {
