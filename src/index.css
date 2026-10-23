@@ -42,8 +42,9 @@
     --card: #111827;
     --card-foreground: #FFFFFF;
 
-    --primary: #7567FF;
-    --primary-foreground: #FFFFFF;
+    /* Contrast-tested violet on dark surfaces and dark text on filled CTA */
+    --primary: #9B8DFF;
+    --primary-foreground: #080C14;
 
     --secondary: #8B5CF6;
     --secondary-foreground: #FFFFFF;
@@ -51,8 +52,8 @@
     --muted: #172033;
     --muted-foreground: #8E9AB2;
 
-    --accent: #7567FF;
-    --accent-foreground: #FFFFFF;
+    --accent: #9B8DFF;
+    --accent-foreground: #080C14;
 
     --destructive: #FF453A;
     --destructive-foreground: #FFFFFF;
