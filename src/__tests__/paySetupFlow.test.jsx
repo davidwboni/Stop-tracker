@@ -49,6 +49,20 @@ describe('Pay setup',()=>{
 });
 
 describe('Onboarding persistence',()=>{
+ it('offers an optional import of own historical CSV after pay setup, never before confirmation',async()=>{
+  const PayOnboarding=(await import('../components/PayOnboarding')).default;
+  const importOld=vi.fn(),start=vi.fn();
+  render(<PayOnboarding onComplete={vi.fn().mockResolvedValue({...cfg,versionId:'stored'})} onStart={start} onImport={importOld}/>);
+  expect(screen.queryByRole('button',{name:/Import my CSV/})).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Set up manually · Free'}));
+  fireEvent.change(screen.getByLabelText('Rate per stop (£)'),{target:{value:'2.08'}});
+  fireEvent.click(screen.getByRole('button',{name:'Confirm pay structure'}));
+  await screen.findByRole('button',{name:/Import my CSV/});
+  fireEvent.click(screen.getByRole('button',{name:/Import my CSV/}));
+  expect(importOld).toHaveBeenCalledOnce();
+  expect(start).not.toHaveBeenCalled();
+ });
+
  it('shows the completion screen only after the reviewed settings persist',async()=>{
   const PayOnboarding=(await import('../components/PayOnboarding')).default;
   let resolve; const persist=vi.fn(()=>new Promise(r=>{resolve=r;}));
