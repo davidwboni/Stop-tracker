@@ -2,7 +2,7 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { expenseSummary, recurringOccurrences, splitExpenseRecords } from '../features/expenses/expenseModel';
+import { expenseSummary, recurringOccurrences, splitExpenseRecords, validateExpense } from '../features/expenses/expenseModel';
 import ExpensesOverview from '../components/ExpensesOverview';
 const fixture=vi.hoisted(()=>({costs:{}}));
 vi.mock('../contexts/AuthContext',()=>({useAuth:()=>({user:{uid:'test',displayName:'David',isGuest:true}})}));
@@ -24,6 +24,15 @@ describe('Expense accounting',()=>{
   const split=splitExpenseRecords([...expenses,rule]);
   expect(expenseSummary(split.expenses,period)).toMatchObject({total:920.6,contractor:875.4,own:45.2});
   expect(recurringOccurrences(split.rules,split.expenses,period)).toHaveLength(1);
+ });
+ it('keeps contractor-billed fuel card receipts as evidence without reducing personal take-home twice',()=>{
+   const pump={id:'card-fuel',date:'2026-09-17',source:'my_expense',category:'Fuel',description:'Diesel',amount:80,fuelCardDiscount:6,fuelPaidViaContractor:true};
+   expect(validateExpense(pump)).toBe(true);
+   const totals=expenseSummary([...expenses,pump],period);
+   expect(totals).toMatchObject({own:45.2,contractor:875.4,total:920.6});
+   expect(totals.records).toContainEqual(pump);
+   expect(validateExpense({...pump,category:'Insurance',description:'Insurance'})).toBe(false);
+   expect(validateExpense({...pump,fuelPaidViaContractor:'true'})).toBe(false);
  });
  it('matches a recorded occurrence without creating another expected copy',()=>{
   const [occurrence]=recurringOccurrences([rule],expenses,period);
