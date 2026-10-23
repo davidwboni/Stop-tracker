@@ -39,7 +39,7 @@ export function statementChargeEvidence(statement,expenses=[],period){
        explanation=status==='fuel_discount_consistent'?'Matches the recorded fuel-card discount; confirm what was actually billed.':'Differs after the fuel-card discounts you entered; check the transactions.';
      }else{
        status='fuel_discount_unknown';
-       explanation='Pump receipts or personally paid fuel cannot prove a contractor fuel-card charge. The card discount is not assumed.';
+       explanation='Pump receipts or personally paid fuel cannot prove a contractor fuel-card charge. No discount is assumed.';
      }
    }
    return {id:index,label:String(charge.label||'Unlabelled charge'),amountPence:amount,kind,status,explanation,referenceCount:billed.length+own.length};
