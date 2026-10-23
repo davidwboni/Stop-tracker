@@ -26,7 +26,7 @@ describe('V5 brand contrast on mobile and desktop themes',()=>{
    expect(contrast(color(light,'muted-foreground'),color(light,'card'))).toBeGreaterThanOrEqual(4.5);
  });
  it('keeps the established solid purple home CTA readable',()=>{
-   const fill=(home.match(/\\.home-primary[^}]+background:(#[0-9a-f]{6})/i)||[])[1];
+   const fill=(home.match(/\.home-primary[^}]+background:(#[0-9a-f]{6})/i)||[])[1];
    expect(fill).toBeTruthy();
    expect(contrast(fill,'#ffffff')).toBeGreaterThanOrEqual(4.5);
  });
