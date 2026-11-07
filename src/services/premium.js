@@ -1,6 +1,6 @@
 import { httpsCallable } from "firebase/functions";
 import { functions, auth } from "./firebase";
-import { prepareStatementImage } from "../features/statements/prepareImage";
+import { prepareStatementImage, pdfStatementRenderScale } from "../features/statements/prepareImage";
 
 export const getPremiumStatus = async () => {
   const callable = httpsCallable(functions, "getPremiumStatus", {timeout:25000});
@@ -41,7 +41,8 @@ const renderPdfToImages = async (file) => {
 
   for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
     const page = await pdf.getPage(pageNumber);
-    const viewport = page.getViewport({ scale: 1.2 });
+    const baseViewport=page.getViewport({scale:1});
+    const viewport=page.getViewport({scale:pdfStatementRenderScale(baseViewport.width,baseViewport.height)});
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d", { alpha: false });
     if (!context) throw new Error("This browser could not prepare the PDF for reading.");
@@ -54,7 +55,7 @@ const renderPdfToImages = async (file) => {
     await page.render({ canvasContext: context, viewport }).promise;
 
     const blob = await new Promise((resolve) =>
-      canvas.toBlob(resolve, "image/jpeg", 0.8)
+      canvas.toBlob(resolve, "image/jpeg", 0.92)
     );
     page.cleanup();
     canvas.width = 1;
