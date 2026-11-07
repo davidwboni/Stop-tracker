@@ -7,6 +7,8 @@ import HeaderControls from './HeaderControls';
 import {isoDate,listPeriods,summarizePeriod} from '../features/payperiod/periods';
 import {moneyRevision,moneySummary,payoutComparison,validRange} from '../features/money/moneyModel';
 import {buildStatementAutoCheck} from '../features/statements/autoCheck';
+import {inferStatementPeriod} from '../features/statements/periodEvidence';
+import {briefPayFindings} from '../features/statements/findingsSummary';
 import {statementChargeEvidence} from '../features/statements/chargeEvidence';
 import {auditStatementArithmetic} from '../features/statements/statementAudit';
 import {unresolvedStatementFindings,statementInvoiceReady,mergeFindingDecisions,requiresLimitedCoverageAcceptance} from '../features/statements/findingGate';
@@ -66,6 +68,7 @@ export default function CheckPayV5(){
  const requested=available.find(p=>p.id===location.state?.periodId);
  const [chosen,setChosen]=useState(null),[step,setStep]=useState('home');
  const [ai,setAi]=useState(null),[scanSource,setScanSource]=useState('ai'),[scanFile,setScanFile]=useState(null);
+ const [periodEvidence,setPeriodEvidence]=useState(null),[confirmedStatementPeriod,setConfirmedStatementPeriod]=useState(null);
  const [manualPayout,setManualPayout]=useState(''),[vatChoice,setVatChoice]=useState(''),[vatEntry,setVatEntry]=useState('');
  const [error,setError]=useState(''),[stage,setStage]=useState(''),[busy,setBusy]=useState(false);
  const [permission,setPermission]=useState(null),[permissionError,setPermissionError]=useState(false);
@@ -83,14 +86,18 @@ export default function CheckPayV5(){
  const previous=payoutComparison(statusRecord,period,rowSummary,revision,!!loadError||!!costs.error||loading||costs.loading);
  const view=useMemo(()=>{
    if(!ai)return null;
-   const enriched={...ai,taxBasis:vatChoice||ai.taxBasis,vatAmount:vatEntry.trim()&&/^\d+(\.\d{1,2})?$/.test(vatEntry)?Number(vatEntry):ai.vatAmount};
+   const corrected=confirmedStatementPeriod?.id===period.id?{periodStart:period.start,periodEnd:period.end}:{};
+   const enriched={...ai,...corrected,taxBasis:vatChoice||ai.taxBasis,vatAmount:vatEntry.trim()&&/^\d+(\.\d{1,2})?$/.test(vatEntry)?Number(vatEntry):ai.vatAmount};
    return buildStatementAutoCheck(enriched,period,rowSummary.rows,rowSummary.days,rowSummary.payout);
- },[ai,period.start,period.end,rowSummary,vatChoice,vatEntry]);
+ },[ai,period.start,period.end,rowSummary,vatChoice,vatEntry,confirmedStatementPeriod]);
  const issues=historicalFeeIssue(logs,period);
  const chargeEvidence=useMemo(()=>ai?statementChargeEvidence(ai,costs.expenses||[],period):[],[ai,costs.expenses,period.start,period.end]);
- const sourceNet=ai?{...ai,taxBasis:vatChoice||ai.taxBasis,vatAmount:vatEntry.trim()&&/^\d+(\.\d{1,2})?$/.test(vatEntry)?Number(vatEntry):ai.vatAmount}:null;
+ const sourceNet=ai?{...ai,...(confirmedStatementPeriod?.id===period.id?{periodStart:period.start,periodEnd:period.end}:{}),taxBasis:vatChoice||ai.taxBasis,vatAmount:vatEntry.trim()&&/^\d+(\.\d{1,2})?$/.test(vatEntry)?Number(vatEntry):ai.vatAmount}:null;
  const audit=useMemo(()=>auditStatementArithmetic(sourceNet),[ai,vatChoice,vatEntry]);
- const canCompare=!!view?.canCompare&&audit.status!=='mismatch'&&!loading&&!costs.loading&&!loadError&&!costs.error;
+ const scopeNeedsConfirmation=!!ai&&(!!periodEvidence?.needsConfirmation&&confirmedStatementPeriod?.id!==period.id||!view?.periodOk);
+ const canCompare=!!view?.canCompare&&!scopeNeedsConfirmation&&audit.status!=='mismatch'&&!loading&&!costs.loading&&!loadError&&!costs.error;
+ const findings=briefPayFindings({check:view,confirmedScope:!scopeNeedsConfirmation&&!!view?.periodOk,auditStatus:audit.status,rows:rowSummary.rows});
+ const showComparableWork=!!view?.periodOk&&!scopeNeedsConfirmation;
  const scanEnabled=!!permission&&(permission.isPro||permission.betaAccess||permission.statementAiUses<3);
  const savedCheck=['matched','difference','reconciled'].includes(previous.state);
  const unresolvedSaved=unresolvedStatementFindings(statusRecord);
@@ -102,10 +109,10 @@ export default function CheckPayV5(){
  useEffect(()=>{let active=true;getPremiumStatus().then(s=>{if(active)setPermission(s);}).catch(()=>{if(active)setPermissionError(true);});return()=>{active=false;};},[]);
  useEffect(()=>{track('check_pay_opened');},[]);
  const cash=value=>hidden?'••••':currency(value);
- const reset=()=>{if(busy)return;setStep('home');setAi(null);setScanFile(null);setError('');setConfirmedDays({});setVatChoice('');setVatEntry('');setLimitedAccepted(false);};
+ const reset=()=>{if(busy)return;setStep('home');setAi(null);setScanFile(null);setError('');setConfirmedDays({});setVatChoice('');setVatEntry('');setLimitedAccepted(false);setPeriodEvidence(null);setConfirmedStatementPeriod(null);};
  // Re-tapping the persistent Pay tab returns to the beginning of the flow.
  // It does not delete the server-side statement, comparisons or work history.
- useEffect(()=>{if(location.state?.payHome&&!busy){setStep('home');setAi(null);setScanFile(null);setError('');setLimitedAccepted(false);setConfirmedDays({});}},[location.key]);
+ useEffect(()=>{if(location.state?.payHome&&!busy){setStep('home');setAi(null);setScanFile(null);setError('');setLimitedAccepted(false);setConfirmedDays({});setPeriodEvidence(null);setConfirmedStatementPeriod(null);}},[location.key]);
  async function readFile(file){
    if(!file||busy)return;
    if(!navigator.onLine){setError('Reconnect to upload a statement. Your saved workdays are safe.');return;}
@@ -114,9 +121,11 @@ export default function CheckPayV5(){
    track('statement_ai_started');
    try{
      const data=await extractStatement(file,()=>setStage('Comparing the statement with your saved days…'));
-     const detected=periodFromStatement(data);
-     if(detected){
-       setChosen(summarizePeriod(logs,detected));
+     const evidence=inferStatementPeriod(data,available);
+     setPeriodEvidence(evidence);
+     setConfirmedStatementPeriod(null);
+     if(evidence.suggested){
+       setChosen(summarizePeriod(logs,evidence.suggested));
      }
      setAi(data);setScanSource('ai');setVatChoice(data.taxBasis||'unknown');setVatEntry('');
      setConfirmedDays({});setLimitedAccepted(false);setStep('result');setOpenDays(false);setShowMore(false);
@@ -130,15 +139,16 @@ export default function CheckPayV5(){
      setError('Enter the payout printed on your contractor statement.');return;
    }
    setAi({periodStart:period.start,periodEnd:period.end,currency:'GBP',contractorPayout:parsed,taxBasis:'unknown',daily:[],charges:[]});
-   setVatChoice('unknown');setScanSource('manual');setConfirmedDays({});setLimitedAccepted(false);setError('');setStep('result');
+   setVatChoice('unknown');setScanSource('manual');setConfirmedDays({});setLimitedAccepted(false);setPeriodEvidence(null);setConfirmedStatementPeriod(null);setError('');setStep('result');
  }
  function loadRecord(item){
    const range={start:item.start,end:item.end,id:item.id};
    setChosen(summarizePeriod(logs,range));setScanSource(item.record?.payoutComparison?.source||'saved');
-   setAi(savedStatementDraft(item.record));setVatChoice('');setVatEntry('');setConfirmedDays(mergeFindingDecisions(item.record));setLimitedAccepted(item.record?.statementFindings?.limitedCoverageAccepted===true);setStep(item.record?.payoutComparison?'saved':'result');setError('');
+   setAi(savedStatementDraft(item.record));setPeriodEvidence(null);setConfirmedStatementPeriod(null);setVatChoice('');setVatEntry('');setConfirmedDays(mergeFindingDecisions(item.record));setLimitedAccepted(item.record?.statementFindings?.limitedCoverageAccepted===true);setStep(item.record?.payoutComparison?'saved':'result');setError('');
  }
  async function saveCheck(){
    if(savingLock.current||!ai)return;
+   if(scopeNeedsConfirmation||!view?.periodOk){setError('Confirm the correct statement dates before saving or comparing this pay check.');return;}
    const draft=createStatementReview(sourceNet);
    const captureOk=captureIssues(draft,period).length===0;
    if(!captureOk){setError('Check the statement dates, GBP currency and final payout. You can correct them using the original statement.');return;}
@@ -171,6 +181,7 @@ export default function CheckPayV5(){
        statementWorkDetails:details,statementExtractionMode:ai.extractionMode||null,
        statementFindings:{
          source:scanSource,summaryOnly:view.summaryOnly,hasDaily:view.hasDaily,outsidePeriod:view.outsidePeriod,limitedCoverageAccepted:limitedCoverage?limitedAccepted:true,
+         periodEvidence:confirmedStatementPeriod?{originalStart:ai.periodStart||null,originalEnd:ai.periodEnd||null,confirmedStart:period.start,confirmedEnd:period.end,source:'driver_confirmed_after_daily_evidence'}:null,
          flagged:view.flagged.map(d=>({date:d.date,reason:d.reason,loggedStops:d.loggedStops,statementStops:d.statementStops,loggedGross:d.loggedGross,statementGross:d.statementGross,acceptedReason:confirmedDays[d.date]||null})),
          incompleteDays:view.unknown.length,earningsDifferences:view.earningsVariations.length,
          arithmeticStatus:audit.status,arithmeticMismatchKeys:audit.mismatches.map(c=>c.key),
