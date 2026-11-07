@@ -247,6 +247,30 @@ describe('V5 one-upload pay journey',()=>{
   });
   expect(stub.data.logs).toEqual([...logs,...later]);
  });
+ it('lets a saved wrong-date statement be re-scoped from archived rows without running AI again',async()=>{
+  const wrong='2026-09-14_2026-11-10';
+  const dated=Object.fromEntries(Array.from({length:28},(_,i)=>{
+    const date=new Date(Date.UTC(2026,8,14+i)).toISOString().slice(0,10);
+    return [date,{stops:i===0?120:i===1?130:0,amount:i===0?100:i===1?200:0}];
+  }));
+  const original={status:'statement_received',reviewedStatement:{
+    start:'2026-09-14',end:'2026-11-10',currency:'GBP',taxBasis:'excluded',
+    payoutPence:28000,grossPence:30000,feePence:0,chargesPence:2000,reviewed:false
+  },statementWorkDetails:{daily:dated,stops:'250',gross:'300'},statementExtractionMode:null};
+  stub.data.periodRecords={[wrong]:original};
+  open();
+  fireEvent.click(screen.getByRole('button',{name:/10 Nov 2026/}));
+  expect(screen.getByRole('region',{name:'Confirm statement period'})).toBeInTheDocument();
+  expect(screen.getByRole('region',{name:'Pay check summary'})).toHaveTextContent('Confirm dates first');
+  expect(stub.extract).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button',{name:/Use 14 Sept 2026 – 11 Oct 2026 for this check/}));
+  expect(screen.getByRole('button',{name:'Save pay check'})).toBeEnabled();
+  fireEvent.click(screen.getByRole('button',{name:'Save pay check'}));
+  await waitFor(()=>expect(stub.save).toHaveBeenCalledOnce());
+  expect(stub.save.mock.calls[0][0]).toBe(period.id);
+  expect(stub.data.periodRecords[wrong]).toBe(original);
+  expect(stub.extract).not.toHaveBeenCalled();
+ });
  it('never silently accepts an unusually long statement with no daily evidence',async()=>{
   stub.extract.mockResolvedValue(statement({periodEnd:'2026-11-10',daily:[],extractionMode:'summary_only'}));
   open();await upload();
