@@ -18,7 +18,12 @@ export function inferStatementPeriod(statement,periodOptions=[]){
  // relevant evidence for period boundaries, not logged work requirements.
  const suspicious=!!(dense&&(!raw||raw.start>first||raw.end<last||
    (lengthDays(raw.start,raw.end)>35&&raw.end>last&&lengthDays(last,raw.end)>5)));
- if(!suspicious) return {raw,suggested:raw,needsConfirmation:false,reason:'header',firstDay:first||null,lastDay:last||null};
+ if(!suspicious){
+   // Custom multi-week periods are allowed, but OCR spans longer than six
+   // weeks require confirmation rather than silently including extra shifts.
+   const wide=!!(raw&&lengthDays(raw.start,raw.end)>42);
+   return {raw,suggested:raw,needsConfirmation:wide,reason:wide?'unusually_long_header':'header',firstDay:first||null,lastDay:last||null};
+ }
  const suitable=(periodOptions||[]).filter(p=>{
    if(!validDate(p?.start)||!validDate(p?.end)||p.start>p.end||lengthDays(p.start,p.end)>35)return false;
    const inside=dates.filter(d=>d>=p.start&&d<=p.end).length;
