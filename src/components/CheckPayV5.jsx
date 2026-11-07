@@ -271,7 +271,19 @@ export default function CheckPayV5(){
        <Link className="home-text-button" to="/app/check-pay/advanced" state={{periodId:period.id}}>Correct statement figures manually <ArrowRight size={16}/></Link>
       </details>
      </section>}
-   {view?.earningsVariations.length>0&&<details className="home-card v5-earnings-note" aria-label="Daily earnings details">
+   {step==='saved'&&<section className="home-card v5-finish">
+     <h2>{savedCheck?'Pay check saved':'Statement saved · Needs review'}</h2>
+     <p className="home-muted">{savedCheck?'Your statement was compared with the saved work available for this period. The actual payment is not independently confirmed.':'Your statement is saved. The app did not falsely mark VAT, missing rates or unknown daily figures as verified.'}</p>
+     {unresolvedSaved.length>0&&<div className="home-banner" role="status"><strong>{unresolvedSaved.length} workday {unresolvedSaved.length===1?'difference':'differences'} to review</strong><p className="home-muted text-sm">Your statement is saved. Only genuine stop or date mismatches need decisions, not each daily earnings variation. You don't need to scan again.</p>
+       <button className="home-primary w-full" type="button" onClick={()=>{setConfirmedDays(mergeFindingDecisions(statusRecord));setStep('result');setOpenDays(true);}}>Review differences <ArrowRight size={18}/></button>
+     </div>}
+     {statusRecord?.payoutComparison&&savedCoveragePending&&unresolvedSaved.length===0&&<button className="home-primary w-full" type="button" onClick={()=>{setLimitedAccepted(false);setStep('result');}}>Review limited pay check <ArrowRight size={18}/></button>}
+     {savedCheck&&previous.state==='difference'&&invoiceReady&&<button className="home-primary w-full" type="button" disabled={busy} onClick={acceptDifference}>{busy?'Saving…':'Accept difference & prepare invoice'} <ArrowRight size={18}/></button>}
+     {savedCheck&&['matched','reconciled'].includes(previous.state)&&invoiceReady&&<button className="home-primary w-full" type="button" onClick={()=>nav('/app/invoice',{state:{fromPay:true,periodId:period.id}})}>Prepare invoice from statement <ArrowRight size={18}/></button>}
+     {savedCheck&&<Link to="/app/records?tab=documents" className="home-secondary w-full">Save and finish (self-billed)</Link>}
+     {!savedCheck&&unresolvedSaved.length===0&&<button className="home-secondary w-full" type="button" onClick={()=>setStep('result')}>Review missing details</button>}
+   </section>}
+    {view?.earningsVariations.length>0&&<details className="home-card v5-earnings-note" aria-label="Daily earnings details">
       <summary>{view.earningsVariations.length} days · Stops match, pay figures differ</summary>
       <p className="home-muted text-sm">Daily totals may include parcels, extras or different VAT treatment. These are not confirmed underpayments; no individual decisions needed.</p>
       <div className="v5-earnings-list">{view.earningsVariations.map(row=><div key={row.date} className="v5-earnings-row"><strong>{showDate(row.date)}</strong><span>{cash(row.loggedGross)} logged / {cash(row.statementGross)} statement</span></div>)}</div>
@@ -320,18 +332,7 @@ export default function CheckPayV5(){
     <label className="v5-ack"><input type="checkbox" checked={feeAck} onChange={e=>setFeeAck(e.target.checked)}/> Yes, this percentage applied to these historic dates.</label>
     <button type="button" className="home-primary w-full" disabled={feeSaving||!feeAck||!validHistoricalFee(feeInput)} onClick={recoverFee}>{feeSaving?'Saving…':'Confirm old deduction'}</button>
    </details>}
-   {step==='saved'&&<section className="home-card v5-finish">
-     <h2>{savedCheck?'Pay check saved':'Statement saved · Needs review'}</h2>
-     <p className="home-muted">{savedCheck?'Your statement was compared with the saved work available for this period. The actual payment is not independently confirmed.':'Your statement is saved. The app did not falsely mark VAT, missing rates or unknown daily figures as verified.'}</p>
-     {unresolvedSaved.length>0&&<div className="home-banner" role="status"><strong>{unresolvedSaved.length} workday {unresolvedSaved.length===1?'difference':'differences'} to review</strong><p className="home-muted text-sm">Your statement is saved. Only genuine stop or date mismatches need decisions, not each daily earnings variation. You don't need to scan again.</p>
-       <button className="home-primary w-full" type="button" onClick={()=>{setConfirmedDays(mergeFindingDecisions(statusRecord));setStep('result');setOpenDays(true);}}>Review differences <ArrowRight size={18}/></button>
-     </div>}
-     {statusRecord?.payoutComparison&&savedCoveragePending&&unresolvedSaved.length===0&&<button className="home-primary w-full" type="button" onClick={()=>{setLimitedAccepted(false);setStep('result');}}>Review limited pay check <ArrowRight size={18}/></button>}
-     {savedCheck&&previous.state==='difference'&&invoiceReady&&<button className="home-primary w-full" type="button" disabled={busy} onClick={acceptDifference}>{busy?'Saving…':'Accept difference & prepare invoice'} <ArrowRight size={18}/></button>}
-     {savedCheck&&['matched','reconciled'].includes(previous.state)&&invoiceReady&&<button className="home-primary w-full" type="button" onClick={()=>nav('/app/invoice',{state:{fromPay:true,periodId:period.id}})}>Prepare invoice from statement <ArrowRight size={18}/></button>}
-     {savedCheck&&<Link to="/app/records?tab=documents" className="home-secondary w-full">Save and finish (self-billed)</Link>}
-     {!savedCheck&&unresolvedSaved.length===0&&<button className="home-secondary w-full" type="button" onClick={()=>setStep('result')}>Review missing details</button>}
-   </section>}
+   
 
   </>}
   {busy&&<p className="home-banner v5-stage" role="status"><Loader2 size={18} className="v5-spinner" aria-hidden="true"/>{stage||'Saving your check…'}</p>}
