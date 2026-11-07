@@ -16,3 +16,35 @@ test('preserves explicit printed VAT and before-VAT payout separately without gu
  assert.equal(unknown.vatAmount,null);
  assert.equal(unknown.beforeVatPayout,null);
 });
+
+test('extracts generic extra payments including post-period payment dates without exposing payee details',()=>{
+ const source={
+   periodStart:'2026-09-14',periodEnd:'2026-10-11',
+   deliverySubtotal:1200.35,extraPaymentsTotal:70.20,
+   extraPayments:[
+     {date:'2026-09-17',reason:'Route cover',amount:30,person:'PRIVATE_NAME',bankAccount:'PRIVATE_BANK'},
+     {date:'2026-10-16',reason:'Fuel Supplement',amount:40.20,person:'PRIVATE_NAME'}
+   ],
+   note:'PRIVATE_NOTE'
+ };
+ const result=normalizeStatement(source);
+ assert.equal(result.deliverySubtotal,1200.35);
+ assert.equal(result.extraPaymentsTotal,70.20);
+ assert.deepEqual(result.extraPayments,[
+   {date:'2026-09-17',category:'route_cover',amount:30},
+   {date:'2026-10-16',category:'fuel_supplement',amount:40.20}
+ ]);
+ assert.equal(JSON.stringify(result).includes('PRIVATE_'),false);
+});
+test('does not convert absent extra payments into zero and rejects malformed entries',()=>{
+ const result=normalizeStatement({extraPaymentsTotal:'70.20',extraPayments:[
+   {date:'2026-09-17',category:'Other Driver',amount:'30'},
+   {date:'2026-09-17',category:'Other Driver',amount:30},
+   {date:'2026-02-30',category:'collection',amount:20}
+ ]});
+ assert.equal(result.extraPaymentsTotal,null);
+ assert.deepEqual(result.extraPayments,[
+   {date:'2026-09-17',category:'other',amount:30},
+   {date:null,category:'collection',amount:20}
+ ]);
+});
