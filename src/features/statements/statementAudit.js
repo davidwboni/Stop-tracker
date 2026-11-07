@@ -3,7 +3,7 @@
 // The source document and raw AI response are not stored here.
 const pennies=x=>typeof x==='number'&&Number.isFinite(x)&&
   Number.isSafeInteger(Math.round(x*100))?Math.round(x*100):null;
-function auditStatementArithmetic(s){
+export function auditStatementArithmetic(s){
  const checks=[];
  function check(key,label,printed,calculated){
    if(printed===null||calculated.some(v=>v===null))return;
@@ -27,4 +27,3 @@ function auditStatementArithmetic(s){
  }
  return {status,checks,mismatches,dailyCoverage};
 }
-module.exports={auditStatementArithmetic};
