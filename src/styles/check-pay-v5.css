@@ -82,3 +82,33 @@
 .v5-earnings-row{border-top:1px solid var(--border);padding:11px 0;display:flex;gap:10px;align-items:baseline;justify-content:space-between;flex-wrap:wrap;}
 .v5-earnings-row span{color:var(--home-muted);font-variant-numeric:tabular-nums;font-size:13px;}
 @media(max-width:450px){.v5-earnings-row{display:grid;gap:3px;}}
+
+/* V5 compact summary: decisions first, optional evidence second. */
+.v5-pay .v5-result{gap:10px;}
+.v5-result .v5-totals{gap:0;}
+.v5-result .v5-totals>div{padding:8px 0;gap:14px;}
+.v5-result .v5-totals dd{font-size:clamp(16px,4.3vw,21px);}
+.v5-result .v5-difference{border:0;padding-bottom:0;}
+.v5-result .v5-difference dd{color:var(--foreground);font-size:clamp(16px,4.3vw,22px);}
+.v5-result .v5-warning-difference dd{color:var(--home-money);}
+.v5-result-hint{margin:0;font-size:14px;line-height:1.45;color:var(--home-muted);}
+.v5-result-hint strong{color:var(--foreground);}
+.v5-pay details.v5-differences,.v5-pay details.v5-diagnostics,.v5-pay details.v5-earnings-note,.v5-pay details.v5-charge-evidence{gap:12px;}
+.v5-pay details.v5-differences>summary,.v5-pay details.v5-diagnostics>summary,.v5-pay details.v5-earnings-note>summary,.v5-pay details.v5-charge-evidence>summary{min-height:48px;cursor:pointer;display:list-item;font-size:15px;font-weight:690;line-height:1.5;color:var(--foreground);padding:10px 0;overflow-wrap:anywhere;}
+.v5-pay details>summary:focus-visible{outline:3px solid var(--home-purple);outline-offset:3px;border-radius:8px;}
+.v5-pay .v5-earnings-note>p,.v5-pay .v5-differences>p,.v5-pay .v5-diagnostics>p{font-size:13px;line-height:1.45;}
+.v5-pay .v5-finish{gap:10px;}
+.v5-pay .v5-finish>.home-primary{min-height:56px;}
+.v5-pay .v5-disclaimer{color:var(--home-muted);font-size:12px;margin:0;padding:0 4px 12px;}
+.v5-pay .v5-disclaimer>summary{cursor:pointer;min-height:40px;display:list-item;font-size:12px;}
+.v5-pay .v5-disclaimer>p{margin-top:4px;}
+@media(max-width:450px){
+ .v5-pay .v5-result .v5-totals>div{padding:8px 0;}
+ .v5-pay .v5-result{gap:9px;}
+ .v5-pay .v5-finish{gap:9px;}
+}
+
+@media(min-width:768px){
+ .v5-pay>.v5-diagnostics,.v5-pay>.v5-charge-evidence{grid-column:1/-1;}
+ .v5-pay>.v5-finish{grid-column:1/-1;}
+}

@@ -244,76 +244,33 @@ export default function CheckPayV5(){
   </>}
   {(step==='result'||step==='saved')&&<>
    <button className="home-text-button v5-back" onClick={reset} disabled={busy}>← Back to Pay</button>
-   <section className="home-card v5-result">
-    <div className="v5-topline"><span className="st-badge">{step==='saved'?'Saved to your account':'AI figures · Review before saving'}</span>{view?.hasDaily&&<span className="st-badge">Daily check</span>}</div>
-    <h2>{!ai?'No saved statement details':!view?.periodOk?'Check statement dates':view.flagged.length?view.flagged.length+' workday'+(view.flagged.length===1?' needs':'s need')+' attention':view.hasDaily?'Available daily figures checked':'Pay totals found'}</h2>
-    <p className="home-muted">{showDate(period.start)} – {showDate(period.end)} · {rowSummary.rows.length} logged workdays</p>
+   <section className="home-card v5-result" aria-label="Pay check summary">
+    <div className="v5-topline"><span className="st-badge">{step==='saved'?'Saved':'AI findings · Not yet confirmed'}</span><span className="home-muted text-xs">{rowSummary.rows.length} workdays logged</span></div>
+    <h2>{!ai?'No statement read':!view?.periodOk||!view?.currencyOk?'Check statement details':audit.status==='mismatch'?'Statement totals need checking':view.flagged.length?view.flagged.length+' stop/date '+(view.flagged.length===1?'difference':'differences')+' to review':view.hasDaily?'Stop counts checked':'Statement summary read'}</h2>
+    <p className="home-muted text-sm">{showDate(period.start)} – {showDate(period.end)}</p>
     <dl className="v5-totals">
-     <div><dt>Contractor statement</dt><dd>{cash(view?.rawPayout)}</dd></div>
+     <div><dt>Contractor statement {sourceNet?.taxBasis==='included'?'(incl. VAT)':''}</dt><dd>{cash(view?.rawPayout)}</dd></div>
+     {view?.payoutBeforeVat!=null&&view.rawPayout!==view.payoutBeforeVat&&<div><dt>Statement before VAT</dt><dd>{cash(view.payoutBeforeVat)}</dd></div>}
      <div><dt>Your expected payout</dt><dd>{cash(rowSummary.payout)}</dd></div>
-     {view?.payoutBeforeVat!=null&&view.rawPayout!==view.payoutBeforeVat&&<div><dt>Statement, before VAT</dt><dd>{cash(view.payoutBeforeVat)}</dd></div>}
      <div className={'v5-difference '+(canCompare&&view.difference!==0?'v5-warning-difference':'')}><dt>Potential difference</dt><dd>{canCompare?cash(Math.abs(view.difference)):'Not comparable yet'}</dd></div>
     </dl>
-    {canCompare&&<p className="home-muted text-sm">{view.difference===0?'The before-VAT payout totals match.':view.difference<0?'The statement payout is lower than your expected amount.':'The statement payout is higher than your expected amount.'} A totals match does not prove each day or charge is correct.</p>}
-    {audit.status==='balanced'&&<p className="home-muted text-sm" role="status">Statement subtotals add up. We checked the printed earnings, deductions and VAT where available.</p>}
-     {audit.status==='mismatch'&&<p className="home-banner" role="status">Some AI-read totals do not add up: {audit.mismatches.map(c=>c.label.toLowerCase()).join('; ')}. Save this statement for review; it won't be marked as verified or ready to invoice.</p>}
-     {audit.dailyCoverage===false&&<p className="home-banner" role="status">The extracted daily stop counts do not add up to the statement's printed total. These day-by-day findings need checking before they can be relied on.</p>}
-     {typeof ai?.extraPaymentsTotal==='number'&&<p className="home-muted text-sm">Extra payments included in the statement: {cash(Math.round(ai.extraPaymentsTotal*100))}{ai.extraPayments?.length?' · '+ai.extraPayments.length+' items read':''}. Payment dates may fall after the work period.</p>}
-     {view?.hasDaily&&<p className="home-muted text-sm" role="status">{view.matched.length} days with matching stop counts · {view.flagged.length} day{view.flagged.length===1?'':'s'} need{view.flagged.length===1?'s':''} action · {view.unknown.length} without enough stop detail</p>}
-    {limitedCoverage?<p className="home-banner" role="status">Limited check: {view?.earningsVariations?.length?view.earningsVariations.length+' days have different all-in earnings figures; these are not confirmed underpayments. ':'Some workday details could not be verified. '}You can save the payout now. One acknowledgement of the limitation is needed before invoicing.</p>:null}
+    {canCompare&&<p className="home-muted text-xs">{view.difference===0?'Totals match on a before-VAT basis.':view.difference<0?'The statement is below your estimate.':'The statement is above your estimate.'} This is not proof of an underpayment.</p>}
+    {!canCompare&&<p className="home-muted text-sm" role="status">{audit.status==='mismatch'?'Some AI-read totals do not add up. Save the statement now, then check the source figures.':view?.vatSource==='unknown'?'The VAT basis needs confirming before comparing.':rowSummary.payout==null?'Some saved pay settings need reviewing before comparing.':'This check is incomplete. Save the statement and review it later.'}</p>}
+    {view?.flagged.length>0&&<p className="v5-result-hint"><strong>{view.flagged.length} stop/date {view.flagged.length===1?'issue':'issues'}</strong> · review only those days.</p>}
+    {view?.earningsVariations.length>0&&<p className="home-muted text-xs">{view.earningsVariations.length} same-stop days have different earnings totals. Not confirmed underpayments.</p>}
    </section>
-   {view?.earningsVariations.length>0&&<section className="home-card v5-earnings-note" aria-label="Daily amounts not directly comparable">
-     <div className="v5-topline"><h2>Stops match · Daily earnings differ</h2><span className="st-badge">{view.earningsVariations.length}</span></div>
-     <p className="home-muted text-sm">These days have the same number of stops in both records. The contractor's daily total may include excess parcels, top-ups or extra work; VAT treatment can also differ. <strong>These are not confirmed missing stops or underpayments.</strong></p>
-     <p className="home-muted text-sm">Without an itemised breakdown, AI cannot prove why the amounts differ. The differences remain visible in your saved check, but you don't need to review each day separately.</p>
-     <details className="v5-earnings-details"><summary>View {view.earningsVariations.length} daily amount differences</summary>
-       <div className="v5-earnings-list">{view.earningsVariations.map(row=><div key={row.date} className="v5-earnings-row"><strong>{showDate(row.date)}</strong><span>{cash(row.loggedGross)} logged / {cash(row.statementGross)} statement</span></div>)}</div>
-     </details>
-   </section>}
-   {view?.flagged.length>0&&<section className="home-card v5-differences"><div className="v5-topline"><h2>Workdays to review</h2><span className="st-badge">{view.flagged.length}</span></div>
-    <p className="home-muted text-sm">A small stop difference may be a duplicate, but AI cannot prove it. Review only the affected days. You can save now; preparing an invoice waits until you resolve them.</p>
-    {(openDays?view.flagged:view.flagged.slice(0,4)).map(row=><div className="v5-day" key={row.date}>
-      <strong>{showDate(row.date)}</strong>
-      <p className="home-muted text-sm">{row.reason||'Your stops or earnings differ from the statement.'}</p>
-      <div className="v5-day-numbers"><span>Stops: {row.loggedStops??'—'} yours / {row.statementStops??'—'} statement</span><span>Gross: {cash(row.loggedGross)} / {cash(row.statementGross)}</span></div>
-      <label className="v5-day-accept">Mark as<select value={confirmedDays[row.date]||''} onChange={e=>setConfirmedDays(v=>({...v,[row.date]:e.target.value}))}><option value="">Needs review</option><option value="possible_duplicate_accepted">Possible duplicate — accepted</option><option value="figures_verified">Checked and accepted</option><option value="dispute">Query with contractor</option></select></label>
-     </div>)}
-    {view.flagged.length>4&&<button type="button" className="home-secondary w-full" onClick={()=>setOpenDays(v=>!v)}>{openDays?'Show fewer':`See all ${view.flagged.length} workdays`}</button>}
-   </section>}
-   {view?.unknown.length>0&&<p className="home-banner">{view.unknown.length} workdays have insufficient figures for a full comparison. They are not marked as matching.</p>}
-   {chargeEvidence.length>0&&<details className="home-card v5-charge-evidence"><summary>Contractor charges & fuel — {chargeEvidence.length} read</summary><p className="home-muted text-sm">AI checked these charges only where independent records exist. Fuel-card discounts are never assumed.</p>
-    {chargeEvidence.map(row=><div className="v5-charge-row" key={row.id}><div><strong>{row.label}</strong><p className="home-muted text-xs">{row.explanation}</p></div><span>{cash(row.amountPence)}</span></div>)}
-   </details>}
-   {ai&&step==='result'&&(!view?.canCompare||!view?.periodOk)&&<section className="home-card v5-one-question">
-    <h2>One detail needs checking</h2>
-    {!view?.periodOk&&<p className="home-muted">The statement dates don't match the selected range. Choose the matching period:</p>}
-    <label className="home-field">Work period<select value={period.id} onChange={e=>{const p=available.find(a=>a.id===e.target.value);if(p)setChosen(p);}}>{[period,...available.filter(p=>p.id!==period.id)].map(p=><option key={p.id} value={p.id}>{p.start} – {p.end}</option>)}</select></label>
-    {view?.vatSource==='unknown'&&<><label className="home-field">Does the statement payout include VAT?<select value={vatChoice||'unknown'} onChange={e=>setVatChoice(e.target.value)}><option value="unknown">Not sure / show me later</option><option value="excluded">No — this is before VAT</option><option value="included">Yes — it includes VAT</option><option value="not_applicable">No VAT applies</option></select></label>
-     {vatChoice==='included'&&<label className="home-field">VAT amount printed on the statement (£)<input inputMode="decimal" placeholder="Only enter an amount shown on the original" value={vatEntry} onChange={e=>setVatEntry(e.target.value)}/></label>}</>}
-    {rowSummary.payout==null&&<p className="home-muted text-sm">Some historical pay settings are missing. You can save the statement now, then confirm those settings without re-uploading.</p>}
-   </section>}
-   {issues.missingGross.length>0&&<section className="home-card v5-missing-work" role="region" aria-label="Review missing work earnings">
-     <h2>{issues.missingGross.length} saved {issues.missingGross.length===1?'day needs':'days need'} earnings reviewed</h2>
-     <p className="home-muted text-sm">Your recorded stops are safe, but those historical gross amounts are missing. Open just the affected days; no new statement scan is needed.</p>
-     <Link className="home-secondary w-full" to="/app/records?payReview=1" state={{periodId:period.id}}>Review saved workdays <ArrowRight size={16}/></Link>
-   </section>}
-   {issues.missingFee.length>0&&<details className="home-card v5-fee-repair" aria-label="Confirm historical pay deduction">
-    <summary>One missing detail · Confirm a contractor deduction for {issues.missingFee.length} saved {issues.missingFee.length===1?'day':'days'}</summary>
-    <p className="home-muted text-sm">Your original work and gross earnings stay unchanged. Confirm this percentage only if it applied then.</p>
-    <label className="home-field">Contractor fee (%)<input value={feeInput} placeholder="e.g. 6" inputMode="decimal" onChange={e=>{setFeeInput(e.target.value);setFeeAck(false);}}/></label>
-    <label className="v5-ack"><input type="checkbox" checked={feeAck} onChange={e=>setFeeAck(e.target.checked)}/> Yes, this percentage applied to these historic dates.</label>
-    <button type="button" className="home-primary w-full" disabled={feeSaving||!feeAck||!validHistoricalFee(feeInput)} onClick={recoverFee}>{feeSaving?'Saving…':'Confirm old deduction'}</button>
-   </details>}
-   {step==='result'&&<section className="home-card v5-finish"><h2>Finish checking</h2>
-     <p className="home-muted text-sm">{canCompare?'Check the payout and dates against your original statement. Individually matched charges need no extra taps.':'Save the statement as received. Finish any missing details later without another scan.'}</p>
-     {limitedCoverage&&canCompare&&<label className="v5-ack"><input type="checkbox" checked={limitedAccepted} onChange={e=>setLimitedAccepted(e.target.checked)}/> I understand that {view.earningsVariations.length?view.earningsVariations.length+' days have all-in earnings amounts that were not fully reconciled, and ':''}not every workday detail was verified. I accept this limited comparison for invoicing.</label>}
-     <button type="button" className="home-primary w-full" disabled={busy||!ai||!sourceNet||!view?.periodOk||!view?.currencyOk||view.rawPayout==null} onClick={saveCheck}>{busy?'Saving…':canCompare?'Save pay check':'Save statement — check later'}</button>
-     <details className="v5-manual"><summary>View extracted totals and charges</summary>
-       <p className="home-muted text-sm">These are unverified AI figures from the contractor document. Never assume that a missing amount is £0.</p>
+   {step==='result'&&<section className="home-card v5-finish" aria-label="Save or continue pay check">
+      <button type="button" className="home-primary w-full" disabled={busy||!ai||!sourceNet||!view?.periodOk||!view?.currencyOk||view.rawPayout==null} onClick={saveCheck}>{busy?'Saving…':canCompare?'Save pay check':'Save statement — check later'}</button>
+      {!canCompare&&<p className="home-muted text-xs">Saves the statement without claiming it matches your work. No new scan needed later.</p>}
+      {limitedCoverage&&canCompare&&<details className="v5-manual"><summary>Before invoicing · Unverified daily details</summary>
+       <label className="v5-ack"><input type="checkbox" checked={limitedAccepted} onChange={e=>setLimitedAccepted(e.target.checked)}/> Some workday figures could not be verified. I accept this limited comparison for invoicing.</label>
+      </details>}
+      <details className="v5-manual"><summary>View statement totals and charges</summary>
+       <p className="home-muted text-xs">AI-read values are unconfirmed until you check the source statement.</p>
        <dl className="v5-totals"><div><dt>Gross work earnings</dt><dd>{currency(typeof ai.statementAmount==='number'?Math.round(ai.statementAmount*100):null)}</dd></div><div><dt>Contractor fee</dt><dd>{currency(typeof ai.contractorFee==='number'?Math.round(ai.contractorFee*100):null)}</dd></div><div><dt>Other charges</dt><dd>{currency(typeof ai.contractorCharges==='number'?Math.round(ai.contractorCharges*100):null)}</dd></div>{(ai.charges||[]).slice(0,15).map((c,i)=><div key={i}><dt>{c.label||'Charge'}</dt><dd>{typeof c.amount==='number'?currency(Math.round(c.amount*100)):'Not read'}</dd></div>)}</dl>
        <Link className="home-text-button" to="/app/check-pay/advanced" state={{periodId:period.id}}>Correct statement figures manually <ArrowRight size={16}/></Link>
-     </details>
-   </section>}
+      </details>
+     </section>}
    {step==='saved'&&<section className="home-card v5-finish">
      <h2>{savedCheck?'Pay check saved':'Statement saved · Needs review'}</h2>
      <p className="home-muted">{savedCheck?'Your statement was compared with the saved work available for this period. The actual payment is not independently confirmed.':'Your statement is saved. The app did not falsely mark VAT, missing rates or unknown daily figures as verified.'}</p>
@@ -326,10 +283,60 @@ export default function CheckPayV5(){
      {savedCheck&&<Link to="/app/records?tab=documents" className="home-secondary w-full">Save and finish (self-billed)</Link>}
      {!savedCheck&&unresolvedSaved.length===0&&<button className="home-secondary w-full" type="button" onClick={()=>setStep('result')}>Review missing details</button>}
    </section>}
+    {view?.earningsVariations.length>0&&<details className="home-card v5-earnings-note" aria-label="Daily earnings details">
+      <summary>{view.earningsVariations.length} days · Stops match, pay figures differ</summary>
+      <p className="home-muted text-sm">Daily totals may include parcels, extras or different VAT treatment. These are not confirmed underpayments; no individual decisions needed.</p>
+      <div className="v5-earnings-list">{view.earningsVariations.map(row=><div key={row.date} className="v5-earnings-row"><strong>{showDate(row.date)}</strong><span>{cash(row.loggedGross)} logged / {cash(row.statementGross)} statement</span></div>)}</div>
+     </details>}
+     {view?.flagged.length>0&&<details className="home-card v5-differences" open={openDays} onToggle={e=>setOpenDays(e.currentTarget.open)}>
+      <summary>Review {view.flagged.length} stop/date {view.flagged.length===1?'difference':'differences'}</summary>
+      <p className="home-muted text-xs">Only these days have different stops, missing work or duplicate statement rows. AI cannot prove if a one-stop difference is a duplicate.</p>
+      {(showMore?view.flagged:view.flagged.slice(0,3)).map(row=><div className="v5-day" key={row.date}>
+       <strong>{showDate(row.date)}</strong>
+       <p className="home-muted text-sm">{row.reason||'Review this workday.'}</p>
+       <div className="v5-day-numbers"><span>Stops: {row.loggedStops??'—'} yours / {row.statementStops??'—'} statement</span></div>
+       <label className="v5-day-accept">Your decision<select value={confirmedDays[row.date]||''} onChange={e=>setConfirmedDays(v=>({...v,[row.date]:e.target.value}))}><option value="">Needs review</option><option value="possible_duplicate_accepted">Possible duplicate — accepted</option><option value="figures_verified">Checked and accepted</option><option value="dispute">Query with contractor</option></select></label>
+      </div>)}
+      {view.flagged.length>3&&<button type="button" className="home-secondary w-full" onClick={()=>setShowMore(v=>!v)}>{showMore?'Show fewer':`See all ${view.flagged.length} workdays`}</button>}
+     </details>}
+     {(audit.status==='mismatch'||audit.dailyCoverage===false||view?.unknown.length>0||view?.outsidePeriod>0||view?.ignoredZeroDays>0||typeof ai?.extraPaymentsTotal==='number')&&<details className="home-card v5-diagnostics">
+      <summary>How was this checked?</summary>
+      {audit.status==='mismatch'&&<p className="home-muted text-sm">Some printed totals or extracted values don't add up; the payout difference cannot be verified yet.</p>}
+      {audit.dailyCoverage===false&&<p className="home-muted text-sm">The daily stop counts read do not match the statement's printed total.</p>}
+      {view?.unknown.length>0&&<p className="home-muted text-sm">{view.unknown.length} day(s) lack comparable stop figures, so were not treated as matches.</p>}
+      {view?.outsidePeriod>0&&<p className="home-muted text-sm">{view.outsidePeriod} statement date(s) fell outside this pay period.</p>}
+      {view?.ignoredZeroDays>0&&<p className="home-muted text-sm">{view.ignoredZeroDays} zero-pay calendar day(s) with no logged work were not flagged as missing shifts.</p>}
+      {typeof ai?.extraPaymentsTotal==='number'&&<p className="home-muted text-sm">Extra payments shown: {cash(Math.round(ai.extraPaymentsTotal*100))}; their dates may fall outside the work period.</p>}
+      {view?.vatSource==='printed_vat'&&<p className="home-muted text-sm">The before-VAT payout uses the exact VAT amount read from the statement, subject to your review.</p>}
+     </details>}
+     {chargeEvidence.length>0&&<details className="home-card v5-charge-evidence"><summary>Contractor charges & fuel · {chargeEvidence.length} items</summary><p className="home-muted text-sm">Charges are checked only against independent records. Fuel-card discounts are not assumed.</p>
+      {chargeEvidence.map(row=><div className="v5-charge-row" key={row.id}><div><strong>{row.label}</strong><p className="home-muted text-xs">{row.explanation}</p></div><span>{cash(row.amountPence)}</span></div>)}
+     </details>}
+     {ai&&step==='result'&&(!view?.canCompare||!view?.periodOk)&&<section className="home-card v5-one-question">
+    <h2>One detail needs checking</h2>
+    {!view?.periodOk&&<p className="home-muted">The statement dates don't match the selected range. Choose the matching period:</p>}
+    <label className="home-field">Work period<select value={period.id} onChange={e=>{const p=available.find(a=>a.id===e.target.value);if(p)setChosen(p);}}>{[period,...available.filter(p=>p.id!==period.id)].map(p=><option key={p.id} value={p.id}>{p.start} – {p.end}</option>)}</select></label>
+    {view?.vatSource==='unknown'&&<><label className="home-field">Does the statement payout include VAT?<select value={vatChoice||'unknown'} onChange={e=>setVatChoice(e.target.value)}><option value="unknown">Not sure / show me later</option><option value="excluded">No — this is before VAT</option><option value="included">Yes — it includes VAT</option><option value="not_applicable">No VAT applies</option></select></label>
+     {vatChoice==='included'&&<label className="home-field">VAT amount printed on the statement (£)<input inputMode="decimal" placeholder="Only enter an amount shown on the original" value={vatEntry} onChange={e=>setVatEntry(e.target.value)}/></label>}</>}
+    {rowSummary.payout==null&&<p className="home-muted text-sm">Some historical pay settings are missing. You can save the statement now, then confirm those settings without re-uploading.</p>}
+   </section>}
+    {issues.missingGross.length>0&&<section className="home-card v5-missing-work" role="region" aria-label="Review missing work earnings">
+     <h2>{issues.missingGross.length} saved {issues.missingGross.length===1?'day needs':'days need'} earnings reviewed</h2>
+     <p className="home-muted text-sm">Your recorded stops are safe, but those historical gross amounts are missing. Open just the affected days; no new statement scan is needed.</p>
+     <Link className="home-secondary w-full" to="/app/records?payReview=1" state={{periodId:period.id}}>Review saved workdays <ArrowRight size={16}/></Link>
+   </section>}
+   {issues.missingFee.length>0&&<details className="home-card v5-fee-repair" aria-label="Confirm historical pay deduction">
+    <summary>One missing detail · Confirm a contractor deduction for {issues.missingFee.length} saved {issues.missingFee.length===1?'day':'days'}</summary>
+    <p className="home-muted text-sm">Your original work and gross earnings stay unchanged. Confirm this percentage only if it applied then.</p>
+    <label className="home-field">Contractor fee (%)<input value={feeInput} placeholder="e.g. 6" inputMode="decimal" onChange={e=>{setFeeInput(e.target.value);setFeeAck(false);}}/></label>
+    <label className="v5-ack"><input type="checkbox" checked={feeAck} onChange={e=>setFeeAck(e.target.checked)}/> Yes, this percentage applied to these historic dates.</label>
+    <button type="button" className="home-primary w-full" disabled={feeSaving||!feeAck||!validHistoricalFee(feeInput)} onClick={recoverFee}>{feeSaving?'Saving…':'Confirm old deduction'}</button>
+   </details>}
+   
 
   </>}
   {busy&&<p className="home-banner v5-stage" role="status"><Loader2 size={18} className="v5-spinner" aria-hidden="true"/>{stage||'Saving your check…'}</p>}
   {error&&<p className="home-banner home-error" role="alert">{error}</p>}
-  <p className="home-muted text-xs v5-disclaimer">Stop Tracker checks your records independently. AI findings require review; matching amounts don't prove payment was received. Invoices are only marked sent when you confirm sending them.</p>
+  <details className="v5-disclaimer"><summary>About this check</summary><p className="home-muted text-xs">AI can make mistakes. A matching total doesn't prove payment was received; invoices are marked sent only when you confirm sending them.</p></details>
  </div>;
 }
