@@ -45,6 +45,7 @@ export function buildStatementAutoCheck(statement,period,rows=[],days=[],expecte
   }
   const hasDaily=Array.isArray(statement?.daily)&&statement.daily.length>0;
   const dayRows=[];
+  let ignoredZeroDays=0;
   if(hasDaily&&currencyOk&&periodOk){
     const dates=new Set([...entries.keys(),...statementRows.keys()]);
     for(const date of [...dates].sort()){
@@ -54,7 +55,15 @@ export function buildStatementAutoCheck(statement,period,rows=[],days=[],expecte
       // should not have to log a zero-work day to make the statement match.
       // Ignore only a single row with *explicit* zero stops AND zero pay;
       // missing pay or any positive amount still needs investigation.
-      if(!own&&listed.length===1&&safeStops(item.stops)===0&&safePence(item.amount)===0)continue;
+      // Statements often list Sundays and non-working days as £0.00 with
+      // blank stop counts (not numeric 0). An unlogged day with an explicit
+      // £0 total and no positive stop count is not evidence of unpaid work.
+      // Do NOT treat it as a matched workday either; keep an audit count.
+      if(!own&&listed.length===1&&safePence(item.amount)===0&&
+        (item.stops==null||item.stops===''||safeStops(item.stops)===0)){
+        ignoredZeroDays++;
+        continue;
+      }
       const theirsStops=listed.length===1?safeStops(item.stops):null;
       const theirsGross=listed.length===1?safePence(item.amount):null;
       const oursGross=own?.hasGross?own.grossPence:null;
@@ -89,6 +98,6 @@ export function buildStatementAutoCheck(statement,period,rows=[],days=[],expecte
   return {currencyOk,periodOk,rawPayout,vat,printedNet,payoutBeforeVat,vatSource,
     expectedPence:Number.isSafeInteger(expectedPence)?expectedPence:null,
     difference:canCompare?payoutBeforeVat-expectedPence:null,canCompare,hasDaily,
-    flagged,matched,unknown,earningsVariations,dayRows,outsidePeriod,
+    flagged,matched,unknown,earningsVariations,dayRows,outsidePeriod,ignoredZeroDays,
     summaryOnly:statement?.extractionMode==='summary_only'};
 }
