@@ -244,23 +244,20 @@ export default function CheckPayV5(){
   </>}
   {(step==='result'||step==='saved')&&<>
    <button className="home-text-button v5-back" onClick={reset} disabled={busy}>← Back to Pay</button>
-   <section className="home-card v5-result">
-    <div className="v5-topline"><span className="st-badge">{step==='saved'?'Saved to your account':'AI figures · Review before saving'}</span>{view?.hasDaily&&<span className="st-badge">Daily check</span>}</div>
-    <h2>{!ai?'No saved statement details':!view?.periodOk?'Check statement dates':view.flagged.length?view.flagged.length+' workday'+(view.flagged.length===1?' needs':'s need')+' attention':view.hasDaily?'Available daily figures checked':'Pay totals found'}</h2>
-    <p className="home-muted">{showDate(period.start)} – {showDate(period.end)} · {rowSummary.rows.length} logged workdays</p>
+   <section className="home-card v5-result" aria-label="Pay check summary">
+    <div className="v5-topline"><span className="st-badge">{step==='saved'?'Saved':'AI findings · Not yet confirmed'}</span><span className="home-muted text-xs">{rowSummary.rows.length} workdays logged</span></div>
+    <h2>{!ai?'No statement read':!view?.periodOk||!view?.currencyOk?'Check statement details':audit.status==='mismatch'?'Statement totals need checking':view.flagged.length?view.flagged.length+' stop/date '+(view.flagged.length===1?'difference':'differences')+' to review':view.hasDaily?'Stop counts checked':'Statement summary read'}</h2>
+    <p className="home-muted text-sm">{showDate(period.start)} – {showDate(period.end)}</p>
     <dl className="v5-totals">
-     <div><dt>Contractor statement</dt><dd>{cash(view?.rawPayout)}</dd></div>
+     <div><dt>Contractor statement {sourceNet?.taxBasis==='included'?'(incl. VAT)':''}</dt><dd>{cash(view?.rawPayout)}</dd></div>
+     {view?.payoutBeforeVat!=null&&view.rawPayout!==view.payoutBeforeVat&&<div><dt>Statement before VAT</dt><dd>{cash(view.payoutBeforeVat)}</dd></div>}
      <div><dt>Your expected payout</dt><dd>{cash(rowSummary.payout)}</dd></div>
-     {view?.payoutBeforeVat!=null&&view.rawPayout!==view.payoutBeforeVat&&<div><dt>Statement, before VAT</dt><dd>{cash(view.payoutBeforeVat)}</dd></div>}
      <div className={'v5-difference '+(canCompare&&view.difference!==0?'v5-warning-difference':'')}><dt>Potential difference</dt><dd>{canCompare?cash(Math.abs(view.difference)):'Not comparable yet'}</dd></div>
     </dl>
-    {canCompare&&<p className="home-muted text-sm">{view.difference===0?'The before-VAT payout totals match.':view.difference<0?'The statement payout is lower than your expected amount.':'The statement payout is higher than your expected amount.'} A totals match does not prove each day or charge is correct.</p>}
-    {audit.status==='balanced'&&<p className="home-muted text-sm" role="status">Statement subtotals add up. We checked the printed earnings, deductions and VAT where available.</p>}
-     {audit.status==='mismatch'&&<p className="home-banner" role="status">Some AI-read totals do not add up: {audit.mismatches.map(c=>c.label.toLowerCase()).join('; ')}. Save this statement for review; it won't be marked as verified or ready to invoice.</p>}
-     {audit.dailyCoverage===false&&<p className="home-banner" role="status">The extracted daily stop counts do not add up to the statement's printed total. These day-by-day findings need checking before they can be relied on.</p>}
-     {typeof ai?.extraPaymentsTotal==='number'&&<p className="home-muted text-sm">Extra payments included in the statement: {cash(Math.round(ai.extraPaymentsTotal*100))}{ai.extraPayments?.length?' · '+ai.extraPayments.length+' items read':''}. Payment dates may fall after the work period.</p>}
-     {view?.hasDaily&&<p className="home-muted text-sm" role="status">{view.matched.length} days with matching stop counts · {view.flagged.length} day{view.flagged.length===1?'':'s'} need{view.flagged.length===1?'s':''} action · {view.unknown.length} without enough stop detail</p>}
-    {limitedCoverage?<p className="home-banner" role="status">Limited check: {view?.earningsVariations?.length?view.earningsVariations.length+' days have different all-in earnings figures; these are not confirmed underpayments. ':'Some workday details could not be verified. '}You can save the payout now. One acknowledgement of the limitation is needed before invoicing.</p>:null}
+    {canCompare&&<p className="home-muted text-xs">{view.difference===0?'Totals match on a before-VAT basis.':view.difference<0?'The statement is below your estimate.':'The statement is above your estimate.'} This is not proof of an underpayment.</p>}
+    {!canCompare&&<p className="home-muted text-sm" role="status">{audit.status==='mismatch'?'Some AI-read totals do not add up. Save the statement now, then check the source figures.':view?.vatSource==='unknown'?'The VAT basis needs confirming before comparing.':rowSummary.payout==null?'Some saved pay settings need reviewing before comparing.':'This check is incomplete. Save the statement and review it later.'}</p>}
+    {view?.flagged.length>0&&<p className="v5-result-hint"><strong>{view.flagged.length} stop/date {view.flagged.length===1?'issue':'issues'}</strong> · review only those days.</p>}
+    {view?.earningsVariations.length>0&&<p className="home-muted text-xs">{view.earningsVariations.length} same-stop days have different earnings totals. Not confirmed underpayments.</p>}
    </section>
    {view?.earningsVariations.length>0&&<section className="home-card v5-earnings-note" aria-label="Daily amounts not directly comparable">
      <div className="v5-topline"><h2>Stops match · Daily earnings differ</h2><span className="st-badge">{view.earningsVariations.length}</span></div>
