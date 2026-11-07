@@ -287,7 +287,20 @@ export default function CheckPayV5(){
     {view?.vatSource==='unknown'&&<><label className="home-field">Does the statement payout include VAT?<select value={vatChoice||'unknown'} onChange={e=>setVatChoice(e.target.value)}><option value="unknown">Not sure / show me later</option><option value="excluded">No — this is before VAT</option><option value="included">Yes — it includes VAT</option><option value="not_applicable">No VAT applies</option></select></label>
      {vatChoice==='included'&&<label className="home-field">VAT amount printed on the statement (£)<input inputMode="decimal" placeholder="Only enter an amount shown on the original" value={vatEntry} onChange={e=>setVatEntry(e.target.value)}/></label>}</>}
     {rowSummary.payout==null&&<p className="home-muted text-sm">Some historical pay settings are missing. You can save the statement now, then confirm those settings without re-uploading.</p>}
-   </section>}
+   </section>
+    {step==='result'&&<section className="home-card v5-finish" aria-label="Save or continue pay check">
+      <button type="button" className="home-primary w-full" disabled={busy||!ai||!sourceNet||!view?.periodOk||!view?.currencyOk||view.rawPayout==null} onClick={saveCheck}>{busy?'Saving…':canCompare?'Save pay check':'Save statement — check later'}</button>
+      {!canCompare&&<p className="home-muted text-xs">Saves the statement without claiming it matches your work. No new scan needed later.</p>}
+      {limitedCoverage&&canCompare&&<details className="v5-manual"><summary>Before invoicing · Unverified daily details</summary>
+       <label className="v5-ack"><input type="checkbox" checked={limitedAccepted} onChange={e=>setLimitedAccepted(e.target.checked)}/> Some workday figures could not be verified. I accept this limited comparison for invoicing.</label>
+      </details>}
+      <details className="v5-manual"><summary>View statement totals and charges</summary>
+       <p className="home-muted text-xs">AI-read values are unconfirmed until you check the source statement.</p>
+       <dl className="v5-totals"><div><dt>Gross work earnings</dt><dd>{currency(typeof ai.statementAmount==='number'?Math.round(ai.statementAmount*100):null)}</dd></div><div><dt>Contractor fee</dt><dd>{currency(typeof ai.contractorFee==='number'?Math.round(ai.contractorFee*100):null)}</dd></div><div><dt>Other charges</dt><dd>{currency(typeof ai.contractorCharges==='number'?Math.round(ai.contractorCharges*100):null)}</dd></div>{(ai.charges||[]).slice(0,15).map((c,i)=><div key={i}><dt>{c.label||'Charge'}</dt><dd>{typeof c.amount==='number'?currency(Math.round(c.amount*100)):'Not read'}</dd></div>)}</dl>
+       <Link className="home-text-button" to="/app/check-pay/advanced" state={{periodId:period.id}}>Correct statement figures manually <ArrowRight size={16}/></Link>
+      </details>
+     </section>}
+     }
    {issues.missingGross.length>0&&<section className="home-card v5-missing-work" role="region" aria-label="Review missing work earnings">
      <h2>{issues.missingGross.length} saved {issues.missingGross.length===1?'day needs':'days need'} earnings reviewed</h2>
      <p className="home-muted text-sm">Your recorded stops are safe, but those historical gross amounts are missing. Open just the affected days; no new statement scan is needed.</p>
@@ -300,16 +313,6 @@ export default function CheckPayV5(){
     <label className="v5-ack"><input type="checkbox" checked={feeAck} onChange={e=>setFeeAck(e.target.checked)}/> Yes, this percentage applied to these historic dates.</label>
     <button type="button" className="home-primary w-full" disabled={feeSaving||!feeAck||!validHistoricalFee(feeInput)} onClick={recoverFee}>{feeSaving?'Saving…':'Confirm old deduction'}</button>
    </details>}
-   {step==='result'&&<section className="home-card v5-finish"><h2>Finish checking</h2>
-     <p className="home-muted text-sm">{canCompare?'Check the payout and dates against your original statement. Individually matched charges need no extra taps.':'Save the statement as received. Finish any missing details later without another scan.'}</p>
-     {limitedCoverage&&canCompare&&<label className="v5-ack"><input type="checkbox" checked={limitedAccepted} onChange={e=>setLimitedAccepted(e.target.checked)}/> I understand that {view.earningsVariations.length?view.earningsVariations.length+' days have all-in earnings amounts that were not fully reconciled, and ':''}not every workday detail was verified. I accept this limited comparison for invoicing.</label>}
-     <button type="button" className="home-primary w-full" disabled={busy||!ai||!sourceNet||!view?.periodOk||!view?.currencyOk||view.rawPayout==null} onClick={saveCheck}>{busy?'Saving…':canCompare?'Save pay check':'Save statement — check later'}</button>
-     <details className="v5-manual"><summary>View extracted totals and charges</summary>
-       <p className="home-muted text-sm">These are unverified AI figures from the contractor document. Never assume that a missing amount is £0.</p>
-       <dl className="v5-totals"><div><dt>Gross work earnings</dt><dd>{currency(typeof ai.statementAmount==='number'?Math.round(ai.statementAmount*100):null)}</dd></div><div><dt>Contractor fee</dt><dd>{currency(typeof ai.contractorFee==='number'?Math.round(ai.contractorFee*100):null)}</dd></div><div><dt>Other charges</dt><dd>{currency(typeof ai.contractorCharges==='number'?Math.round(ai.contractorCharges*100):null)}</dd></div>{(ai.charges||[]).slice(0,15).map((c,i)=><div key={i}><dt>{c.label||'Charge'}</dt><dd>{typeof c.amount==='number'?currency(Math.round(c.amount*100)):'Not read'}</dd></div>)}</dl>
-       <Link className="home-text-button" to="/app/check-pay/advanced" state={{periodId:period.id}}>Correct statement figures manually <ArrowRight size={16}/></Link>
-     </details>
-   </section>}
    {step==='saved'&&<section className="home-card v5-finish">
      <h2>{savedCheck?'Pay check saved':'Statement saved · Needs review'}</h2>
      <p className="home-muted">{savedCheck?'Your statement was compared with the saved work available for this period. The actual payment is not independently confirmed.':'Your statement is saved. The app did not falsely mark VAT, missing rates or unknown daily figures as verified.'}</p>
@@ -326,6 +329,6 @@ export default function CheckPayV5(){
   </>}
   {busy&&<p className="home-banner v5-stage" role="status"><Loader2 size={18} className="v5-spinner" aria-hidden="true"/>{stage||'Saving your check…'}</p>}
   {error&&<p className="home-banner home-error" role="alert">{error}</p>}
-  <p className="home-muted text-xs v5-disclaimer">Stop Tracker checks your records independently. AI findings require review; matching amounts don't prove payment was received. Invoices are only marked sent when you confirm sending them.</p>
+  <details className="v5-disclaimer"><summary>About this check</summary><p className="home-muted text-xs">AI can make mistakes. A matching total doesn't prove payment was received; invoices are marked sent only when you confirm sending them.</p></details>
  </div>;
 }
