@@ -256,28 +256,18 @@ export default function CheckPayV5(){
     </dl>
     {canCompare&&<p className="home-muted text-xs">{view.difference===0?'Totals match on a before-VAT basis.':view.difference<0?'The statement is below your estimate.':'The statement is above your estimate.'} This is not proof of an underpayment.</p>}
     {!canCompare&&<p className="home-muted text-sm" role="status">{audit.status==='mismatch'?'Some AI-read totals do not add up. Save the statement now, then check the source figures.':view?.vatSource==='unknown'?'The VAT basis needs confirming before comparing.':rowSummary.payout==null?'Some saved pay settings need reviewing before comparing.':'This check is incomplete. Save the statement and review it later.'}</p>}
-    {view?.flagged.length>0&&<p className="v5-result-hint"><strong>{view.flagged.length} stop/date {view.flagged.length===1?'issue':'issues'}</strong> · review only those days.</p>}
-    {view?.earningsVariations.length>0&&<p className="home-muted text-xs">{view.earningsVariations.length} same-stop days have different earnings totals. Not confirmed underpayments.</p>}
-   </section>
-   {view?.earningsVariations.length>0&&<section className="home-card v5-earnings-note" aria-label="Daily amounts not directly comparable">
-     <div className="v5-topline"><h2>Stops match · Daily earnings differ</h2><span className="st-badge">{view.earningsVariations.length}</span></div>
-     <p className="home-muted text-sm">These days have the same number of stops in both records. The contractor's daily total may include excess parcels, top-ups or extra work; VAT treatment can also differ. <strong>These are not confirmed missing stops or underpayments.</strong></p>
-     <p className="home-muted text-sm">Without an itemised breakdown, AI cannot prove why the amounts differ. The differences remain visible in your saved check, but you don't need to review each day separately.</p>
-     <details className="v5-earnings-details"><summary>View {view.earningsVariations.length} daily amount differences</summary>
-       <div className="v5-earnings-list">{view.earningsVariations.map(row=><div key={row.date} className="v5-earnings-row"><strong>{showDate(row.date)}</strong><span>{cash(row.loggedGross)} logged / {cash(row.statementGross)} statement</span></div>)}</div>
-     </details>
-   </section>}
-   {view?.flagged.length>0&&<section className="home-card v5-differences"><div className="v5-topline"><h2>Workdays to review</h2><span className="st-badge">{view.flagged.length}</span></div>
-    <p className="home-muted text-sm">A small stop difference may be a duplicate, but AI cannot prove it. Review only the affected days. You can save now; preparing an invoice waits until you resolve them.</p>
-    {(openDays?view.flagged:view.flagged.slice(0,4)).map(row=><div className="v5-day" key={row.date}>
-      <strong>{showDate(row.date)}</strong>
-      <p className="home-muted text-sm">{row.reason||'Your stops or earnings differ from the statement.'}</p>
-      <div className="v5-day-numbers"><span>Stops: {row.loggedStops??'—'} yours / {row.statementStops??'—'} statement</span><span>Gross: {cash(row.loggedGross)} / {cash(row.statementGross)}</span></div>
-      <label className="v5-day-accept">Mark as<select value={confirmedDays[row.date]||''} onChange={e=>setConfirmedDays(v=>({...v,[row.date]:e.target.value}))}><option value="">Needs review</option><option value="possible_duplicate_accepted">Possible duplicate — accepted</option><option value="figures_verified">Checked and accepted</option><option value="dispute">Query with contractor</option></select></label>
-     </div>)}
-    {view.flagged.length>4&&<button type="button" className="home-secondary w-full" onClick={()=>setOpenDays(v=>!v)}>{openDays?'Show fewer':`See all ${view.flagged.length} workdays`}</button>}
-   </section>}
-   {view?.unknown.length>0&&<p className="home-banner">{view.unknown.length} workdays have insufficient figures for a full comparison. They are not marked as matching.</p>}
+    {view?.flagged.length>0&&<details className="home-card v5-differences" open={openDays} onToggle={e=>setOpenDays(e.currentTarget.open)}>
+      <summary>Review {view.flagged.length} stop/date {view.flagged.length===1?'difference':'differences'}</summary>
+      <p className="home-muted text-xs">Only these days have different stops, missing work or duplicate statement rows. AI cannot prove if a one-stop difference is a duplicate.</p>
+      {(showMore?view.flagged:view.flagged.slice(0,3)).map(row=><div className="v5-day" key={row.date}>
+       <strong>{showDate(row.date)}</strong>
+       <p className="home-muted text-sm">{row.reason||'Review this workday.'}</p>
+       <div className="v5-day-numbers"><span>Stops: {row.loggedStops??'—'} yours / {row.statementStops??'—'} statement</span></div>
+       <label className="v5-day-accept">Your decision<select value={confirmedDays[row.date]||''} onChange={e=>setConfirmedDays(v=>({...v,[row.date]:e.target.value}))}><option value="">Needs review</option><option value="possible_duplicate_accepted">Possible duplicate — accepted</option><option value="figures_verified">Checked and accepted</option><option value="dispute">Query with contractor</option></select></label>
+      </div>)}
+      {view.flagged.length>3&&<button type="button" className="home-secondary w-full" onClick={()=>setShowMore(v=>!v)}>{showMore?'Show fewer':`See all ${view.flagged.length} workdays`}</button>}
+     </details>}
+     {view?.unknown.length>0&&<p className="home-banner">{view.unknown.length} workdays have insufficient figures for a full comparison. They are not marked as matching.</p>}
    {chargeEvidence.length>0&&<details className="home-card v5-charge-evidence"><summary>Contractor charges & fuel — {chargeEvidence.length} read</summary><p className="home-muted text-sm">AI checked these charges only where independent records exist. Fuel-card discounts are never assumed.</p>
     {chargeEvidence.map(row=><div className="v5-charge-row" key={row.id}><div><strong>{row.label}</strong><p className="home-muted text-xs">{row.explanation}</p></div><span>{cash(row.amountPence)}</span></div>)}
    </details>}
