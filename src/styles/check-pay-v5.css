@@ -107,3 +107,8 @@
  .v5-pay .v5-result{gap:9px;}
  .v5-pay .v5-finish{gap:9px;}
 }
+
+@media(min-width:768px){
+ .v5-pay>.v5-diagnostics,.v5-pay>.v5-charge-evidence{grid-column:1/-1;}
+ .v5-pay>.v5-finish{grid-column:1/-1;}
+}
