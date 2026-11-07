@@ -40,6 +40,29 @@ describe('AI-first comparison',()=>{
   expect(result.payoutBeforeVat).toBe(368469);
   expect(result.canCompare).toBe(true); // period payout still uses like-for-like pre-VAT total
  });
+ it('does not flag statement-only Sundays with £0 and blank stops as unpaid work',()=>{
+  const report={...statement,daily:[
+   {date:'2026-09-14',stops:104,amount:207.62},
+   {date:'2026-09-20',stops:null,amount:0},
+   {date:'2026-09-27',stops:0,amount:0},
+   {date:'2026-10-04',stops:'',amount:0}
+  ]};
+  const result=buildStatementAutoCheck(report,period,[rows[0]],[days[0]],368469);
+  expect(result.flagged).toHaveLength(0);
+  expect(result.matched).toHaveLength(1);
+  expect(result.ignoredZeroDays).toBe(3);
+  expect(result.dayRows).toHaveLength(1);
+ });
+ it('still flags statement-only dates with paid work or positive stop counts',()=>{
+  const report={...statement,daily:[
+   {date:'2026-09-20',stops:null,amount:100},
+   {date:'2026-09-27',stops:1,amount:0}
+  ]};
+  const result=buildStatementAutoCheck(report,period,[],[],null);
+  expect(result.flagged).toHaveLength(2);
+  expect(result.ignoredZeroDays).toBe(0);
+  expect(result.flagged.every(d=>d.reason==='Not logged in Stop Tracker')).toBe(true);
+ });
  it('flags real missing stops but groups only same-stop daily earnings variances',()=>{
   const testStatement={...statement,daily:[
    {date:'2026-09-14',stops:104,amount:207.62},
