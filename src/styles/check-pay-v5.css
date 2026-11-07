@@ -112,3 +112,23 @@
  .v5-pay>.v5-diagnostics,.v5-pay>.v5-charge-evidence{grid-column:1/-1;}
  .v5-pay>.v5-finish{grid-column:1/-1;}
 }
+
+/* Never let an OCR date guess inflate the comparison or split sterling
+   amounts into stray digits on narrow Android screens. */
+.v5-period-confirm{gap:11px!important}
+.v5-period-confirm .home-field{min-width:0}
+.v5-period-confirm select{width:100%;font-size:16px;max-width:100%}
+.v5-period-confirm .home-primary{min-height:52px;display:flex;align-items:center;justify-content:center;gap:9px;line-height:1.35;text-align:center}
+.v5-period-confirmed{margin:0}
+.v5-result .v5-totals>div{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,max-content);column-gap:12px;align-items:center;min-width:0}
+.v5-result .v5-totals dt{min-width:0;word-break:normal}
+.v5-result .v5-totals dd{min-width:0;white-space:nowrap;overflow-wrap:normal;word-break:normal}
+.v5-result .v5-difference dd{white-space:normal;text-align:right;overflow-wrap:normal}
+.v5-quick-summary{border-top:1px solid var(--border);padding-top:12px;display:grid;gap:7px}
+.v5-quick-summary h3{font-size:15px;line-height:1.4;font-weight:720;color:var(--foreground);margin:0}
+.v5-quick-summary p{font-size:13px;line-height:1.48;color:var(--home-muted);margin:0}
+@media(max-width:380px){
+ .v5-result .v5-totals>div{column-gap:8px}
+ .v5-result .v5-totals dd{font-size:16px}
+ .v5-result .v5-totals dt{font-size:13px}
+}
