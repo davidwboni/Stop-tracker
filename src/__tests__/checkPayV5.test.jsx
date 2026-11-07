@@ -46,6 +46,39 @@ describe('V5 one-upload pay journey',()=>{
   expect(screen.queryByText('Create invoice')).not.toBeInTheDocument();
   await screen.findByText(/AI included during testing/);
  });
+ it('confirms balanced statement arithmetic with extra payments without asking for item-by-item approval',async()=>{
+   stub.extract.mockResolvedValue(statement({
+     deliverySubtotal:270,extraPaymentsTotal:30,statementAmount:300,
+     contractorFee:0,contractorCharges:20,beforeVatPayout:280,
+     extraPayments:[{date:'2026-10-16',category:'fuel_supplement',amount:30}]
+   }));
+   open();await upload();
+   expect(screen.getByText(/Statement subtotals add up/)).toBeInTheDocument();
+   expect(screen.getByText(/Extra payments included in the statement/)).toBeInTheDocument();
+   expect(screen.getByRole('button',{name:'Save pay check'})).toBeEnabled();
+   fireEvent.click(screen.getByRole('button',{name:'Save pay check'}));
+   await waitFor(()=>expect(stub.save).toHaveBeenCalledOnce());
+   const saved=stub.save.mock.calls[0][1];
+   expect(saved.statementFindings.arithmeticStatus).toBe('balanced');
+   expect(saved.statementWorkDetails).toMatchObject({deliverySubtotal:270,extraPaymentsTotal:30,extraPayments:[{date:'2026-10-16',category:'fuel_supplement',amount:30}]});
+ });
+ it('does not compare or generate an invoice when AI-extracted pay totals fail arithmetic checks',async()=>{
+   stub.extract.mockResolvedValue(statement({
+     deliverySubtotal:250,extraPaymentsTotal:30,statementAmount:300,
+     contractorFee:0,contractorCharges:20,beforeVatPayout:280
+   }));
+   open();await upload();
+   expect(screen.getByText(/Some AI-read totals do not add up/)).toBeInTheDocument();
+   expect(screen.getByRole('button',{name:'Save statement — check later'})).toBeEnabled();
+   expect(screen.getByText('Not comparable yet')).toBeInTheDocument();
+   fireEvent.click(screen.getByRole('button',{name:'Save statement — check later'}));
+   await waitFor(()=>expect(stub.save).toHaveBeenCalledOnce());
+   expect(stub.save.mock.calls[0][1]).toMatchObject({
+     status:'statement_received',needsReview:true,payoutComparison:null,
+     statementFindings:{arithmeticStatus:'mismatch',arithmeticMismatchKeys:['gross']}
+   });
+   expect(screen.queryByRole('button',{name:'Prepare invoice from statement'})).not.toBeInTheDocument();
+ });
  it('reads a statement and automatically reports differences with the corresponding saved day',async()=>{
   open();await upload();
   expect(stub.extract).toHaveBeenCalledOnce();
