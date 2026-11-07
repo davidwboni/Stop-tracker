@@ -123,4 +123,19 @@ describe('AI-first comparison',()=>{
   expect(c.matched).toHaveLength(1);
   expect(c.flagged).toHaveLength(0);
  });
+ it('automatically identifies the one unlogged paid day in a 24-day statement, ignoring four zero-delivery dates',()=>{
+  const off=new Set(['2026-09-20','2026-09-27','2026-10-04','2026-10-11']);
+  const omitted='2026-10-02';
+  const all=Array.from({length:28},(_,i)=>new Date(Date.UTC(2026,8,14+i)).toISOString().slice(0,10));
+  const daily=all.map((date,i)=>({date,stops:off.has(date)?0:100+i,amount:off.has(date)?0:200+i}));
+  const saved=daily.filter(x=>x.stops>0&&x.date!==omitted).map(x=>({date:x.date,stops:x.stops}));
+  const own=saved.map(x=>({gross:null,unavailable:true}));
+  const result=buildStatementAutoCheck({...statement,daily},period,saved,own,null);
+  expect(saved).toHaveLength(23);
+  expect(result.matched).toHaveLength(23);
+  expect(result.flagged).toHaveLength(1);
+  expect(result.flagged[0]).toMatchObject({date:omitted,reason:'Not logged in Stop Tracker'});
+  expect(result.dayRows).toHaveLength(24);
+  expect(result.dayRows.some(x=>off.has(x.date))).toBe(false);
+ });
 });
