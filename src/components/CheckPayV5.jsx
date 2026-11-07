@@ -7,6 +7,8 @@ import HeaderControls from './HeaderControls';
 import {isoDate,listPeriods,summarizePeriod} from '../features/payperiod/periods';
 import {moneyRevision,moneySummary,payoutComparison,validRange} from '../features/money/moneyModel';
 import {buildStatementAutoCheck} from '../features/statements/autoCheck';
+import {inferStatementPeriod} from '../features/statements/periodEvidence';
+import {briefPayFindings} from '../features/statements/findingsSummary';
 import {statementChargeEvidence} from '../features/statements/chargeEvidence';
 import {auditStatementArithmetic} from '../features/statements/statementAudit';
 import {unresolvedStatementFindings,statementInvoiceReady,mergeFindingDecisions,requiresLimitedCoverageAcceptance} from '../features/statements/findingGate';
@@ -66,6 +68,7 @@ export default function CheckPayV5(){
  const requested=available.find(p=>p.id===location.state?.periodId);
  const [chosen,setChosen]=useState(null),[step,setStep]=useState('home');
  const [ai,setAi]=useState(null),[scanSource,setScanSource]=useState('ai'),[scanFile,setScanFile]=useState(null);
+ const [periodEvidence,setPeriodEvidence]=useState(null),[confirmedStatementPeriod,setConfirmedStatementPeriod]=useState(null);
  const [manualPayout,setManualPayout]=useState(''),[vatChoice,setVatChoice]=useState(''),[vatEntry,setVatEntry]=useState('');
  const [error,setError]=useState(''),[stage,setStage]=useState(''),[busy,setBusy]=useState(false);
  const [permission,setPermission]=useState(null),[permissionError,setPermissionError]=useState(false);
@@ -83,14 +86,18 @@ export default function CheckPayV5(){
  const previous=payoutComparison(statusRecord,period,rowSummary,revision,!!loadError||!!costs.error||loading||costs.loading);
  const view=useMemo(()=>{
    if(!ai)return null;
-   const enriched={...ai,taxBasis:vatChoice||ai.taxBasis,vatAmount:vatEntry.trim()&&/^\d+(\.\d{1,2})?$/.test(vatEntry)?Number(vatEntry):ai.vatAmount};
+   const corrected=confirmedStatementPeriod?.id===period.id?{periodStart:period.start,periodEnd:period.end}:{};
+   const enriched={...ai,...corrected,taxBasis:vatChoice||ai.taxBasis,vatAmount:vatEntry.trim()&&/^\d+(\.\d{1,2})?$/.test(vatEntry)?Number(vatEntry):ai.vatAmount};
    return buildStatementAutoCheck(enriched,period,rowSummary.rows,rowSummary.days,rowSummary.payout);
- },[ai,period.start,period.end,rowSummary,vatChoice,vatEntry]);
+ },[ai,period.start,period.end,rowSummary,vatChoice,vatEntry,confirmedStatementPeriod]);
  const issues=historicalFeeIssue(logs,period);
  const chargeEvidence=useMemo(()=>ai?statementChargeEvidence(ai,costs.expenses||[],period):[],[ai,costs.expenses,period.start,period.end]);
- const sourceNet=ai?{...ai,taxBasis:vatChoice||ai.taxBasis,vatAmount:vatEntry.trim()&&/^\d+(\.\d{1,2})?$/.test(vatEntry)?Number(vatEntry):ai.vatAmount}:null;
+ const sourceNet=ai?{...ai,...(confirmedStatementPeriod?.id===period.id?{periodStart:period.start,periodEnd:period.end}:{}),taxBasis:vatChoice||ai.taxBasis,vatAmount:vatEntry.trim()&&/^\d+(\.\d{1,2})?$/.test(vatEntry)?Number(vatEntry):ai.vatAmount}:null;
  const audit=useMemo(()=>auditStatementArithmetic(sourceNet),[ai,vatChoice,vatEntry]);
- const canCompare=!!view?.canCompare&&audit.status!=='mismatch'&&!loading&&!costs.loading&&!loadError&&!costs.error;
+ const scopeNeedsConfirmation=!!ai&&(!!periodEvidence?.needsConfirmation&&confirmedStatementPeriod?.id!==period.id||!view?.periodOk);
+ const canCompare=!!view?.canCompare&&!scopeNeedsConfirmation&&audit.status!=='mismatch'&&!loading&&!costs.loading&&!loadError&&!costs.error;
+ const findings=briefPayFindings({check:view,confirmedScope:!scopeNeedsConfirmation&&!!view?.periodOk,auditStatus:audit.status,rows:rowSummary.rows});
+ const showComparableWork=!!view?.periodOk&&!scopeNeedsConfirmation;
  const scanEnabled=!!permission&&(permission.isPro||permission.betaAccess||permission.statementAiUses<3);
  const savedCheck=['matched','difference','reconciled'].includes(previous.state);
  const unresolvedSaved=unresolvedStatementFindings(statusRecord);
@@ -102,10 +109,10 @@ export default function CheckPayV5(){
  useEffect(()=>{let active=true;getPremiumStatus().then(s=>{if(active)setPermission(s);}).catch(()=>{if(active)setPermissionError(true);});return()=>{active=false;};},[]);
  useEffect(()=>{track('check_pay_opened');},[]);
  const cash=value=>hidden?'••••':currency(value);
- const reset=()=>{if(busy)return;setStep('home');setAi(null);setScanFile(null);setError('');setConfirmedDays({});setVatChoice('');setVatEntry('');setLimitedAccepted(false);};
+ const reset=()=>{if(busy)return;setStep('home');setAi(null);setScanFile(null);setError('');setConfirmedDays({});setVatChoice('');setVatEntry('');setLimitedAccepted(false);setPeriodEvidence(null);setConfirmedStatementPeriod(null);};
  // Re-tapping the persistent Pay tab returns to the beginning of the flow.
  // It does not delete the server-side statement, comparisons or work history.
- useEffect(()=>{if(location.state?.payHome&&!busy){setStep('home');setAi(null);setScanFile(null);setError('');setLimitedAccepted(false);setConfirmedDays({});}},[location.key]);
+ useEffect(()=>{if(location.state?.payHome&&!busy){setStep('home');setAi(null);setScanFile(null);setError('');setLimitedAccepted(false);setConfirmedDays({});setPeriodEvidence(null);setConfirmedStatementPeriod(null);}},[location.key]);
  async function readFile(file){
    if(!file||busy)return;
    if(!navigator.onLine){setError('Reconnect to upload a statement. Your saved workdays are safe.');return;}
@@ -114,9 +121,11 @@ export default function CheckPayV5(){
    track('statement_ai_started');
    try{
      const data=await extractStatement(file,()=>setStage('Comparing the statement with your saved days…'));
-     const detected=periodFromStatement(data);
-     if(detected){
-       setChosen(summarizePeriod(logs,detected));
+     const evidence=inferStatementPeriod(data,available);
+     setPeriodEvidence(evidence);
+     setConfirmedStatementPeriod(null);
+     if(evidence.suggested){
+       setChosen(summarizePeriod(logs,evidence.suggested));
      }
      setAi(data);setScanSource('ai');setVatChoice(data.taxBasis||'unknown');setVatEntry('');
      setConfirmedDays({});setLimitedAccepted(false);setStep('result');setOpenDays(false);setShowMore(false);
@@ -130,15 +139,16 @@ export default function CheckPayV5(){
      setError('Enter the payout printed on your contractor statement.');return;
    }
    setAi({periodStart:period.start,periodEnd:period.end,currency:'GBP',contractorPayout:parsed,taxBasis:'unknown',daily:[],charges:[]});
-   setVatChoice('unknown');setScanSource('manual');setConfirmedDays({});setLimitedAccepted(false);setError('');setStep('result');
+   setVatChoice('unknown');setScanSource('manual');setConfirmedDays({});setLimitedAccepted(false);setPeriodEvidence(null);setConfirmedStatementPeriod(null);setError('');setStep('result');
  }
  function loadRecord(item){
    const range={start:item.start,end:item.end,id:item.id};
    setChosen(summarizePeriod(logs,range));setScanSource(item.record?.payoutComparison?.source||'saved');
-   setAi(savedStatementDraft(item.record));setVatChoice('');setVatEntry('');setConfirmedDays(mergeFindingDecisions(item.record));setLimitedAccepted(item.record?.statementFindings?.limitedCoverageAccepted===true);setStep(item.record?.payoutComparison?'saved':'result');setError('');
+   setAi(savedStatementDraft(item.record));setPeriodEvidence(null);setConfirmedStatementPeriod(null);setVatChoice('');setVatEntry('');setConfirmedDays(mergeFindingDecisions(item.record));setLimitedAccepted(item.record?.statementFindings?.limitedCoverageAccepted===true);setStep(item.record?.payoutComparison?'saved':'result');setError('');
  }
  async function saveCheck(){
    if(savingLock.current||!ai)return;
+   if(scopeNeedsConfirmation||!view?.periodOk){setError('Confirm the correct statement dates before saving or comparing this pay check.');return;}
    const draft=createStatementReview(sourceNet);
    const captureOk=captureIssues(draft,period).length===0;
    if(!captureOk){setError('Check the statement dates, GBP currency and final payout. You can correct them using the original statement.');return;}
@@ -171,6 +181,7 @@ export default function CheckPayV5(){
        statementWorkDetails:details,statementExtractionMode:ai.extractionMode||null,
        statementFindings:{
          source:scanSource,summaryOnly:view.summaryOnly,hasDaily:view.hasDaily,outsidePeriod:view.outsidePeriod,limitedCoverageAccepted:limitedCoverage?limitedAccepted:true,
+         periodEvidence:confirmedStatementPeriod?{originalStart:ai.periodStart||null,originalEnd:ai.periodEnd||null,confirmedStart:period.start,confirmedEnd:period.end,source:'driver_confirmed_after_daily_evidence'}:null,
          flagged:view.flagged.map(d=>({date:d.date,reason:d.reason,loggedStops:d.loggedStops,statementStops:d.statementStops,loggedGross:d.loggedGross,statementGross:d.statementGross,acceptedReason:confirmedDays[d.date]||null})),
          incompleteDays:view.unknown.length,earningsDifferences:view.earningsVariations.length,
          arithmeticStatus:audit.status,arithmeticMismatchKeys:audit.mismatches.map(c=>c.key),
@@ -244,24 +255,37 @@ export default function CheckPayV5(){
   </>}
   {(step==='result'||step==='saved')&&<>
    <button className="home-text-button v5-back" onClick={reset} disabled={busy}>← Back to Pay</button>
+   {step==='result'&&scopeNeedsConfirmation&&<section className="home-card v5-period-confirm" aria-label="Confirm statement period" role="region">
+     <h2>Confirm the statement dates</h2>
+     <p className="home-muted text-sm">AI read {periodEvidence?.raw?showDate(periodEvidence.raw.start)+' – '+showDate(periodEvidence.raw.end):'no reliable dates'} from the statement header{periodEvidence?.firstDay&&periodEvidence?.lastDay?', but its delivery rows run from '+showDate(periodEvidence.firstDay)+' to '+showDate(periodEvidence.lastDay):'.'}. These dates need checking before Stop Tracker can compare your work.</p>
+     <label className="home-field">Period shown on your statement
+       <select value={period.id} aria-label="Period shown on statement" onChange={e=>{const p=[period,...available].find(a=>a.id===e.target.value);if(p){setChosen(summarizePeriod(logs,p));setConfirmedStatementPeriod(null);}}}>
+         {[period,...available.filter(p=>p.id!==period.id)].map(p=><option key={p.id} value={p.id}>{showDate(p.start)} – {showDate(p.end)}</option>)}
+       </select>
+     </label>
+     <p className="home-muted text-xs">Suggested from saved pay periods and the dated statement rows. Check the dates against the original statement.</p>
+     <button className="home-primary w-full" type="button" onClick={()=>{setConfirmedStatementPeriod({start:period.start,end:period.end,id:period.id});setError('');}}>Use {showDate(period.start)} – {showDate(period.end)} for this check <ArrowRight size={17}/></button>
+   </section>}
+   {step==='result'&&confirmedStatementPeriod?.id===period.id&&<p className="home-muted text-xs v5-period-confirmed" role="status">Statement dates confirmed for {showDate(period.start)} – {showDate(period.end)}. Only workdays in this range are included.</p>}
    <section className="home-card v5-result" aria-label="Pay check summary">
-    <div className="v5-topline"><span className="st-badge">{step==='saved'?'Saved':'AI findings · Not yet confirmed'}</span><span className="home-muted text-xs">{rowSummary.rows.length} workdays logged</span></div>
-    <h2>{!ai?'No statement read':!view?.periodOk||!view?.currencyOk?'Check statement details':audit.status==='mismatch'?'Statement totals need checking':view.flagged.length?view.flagged.length+' stop/date '+(view.flagged.length===1?'difference':'differences')+' to review':view.hasDaily?'Stop counts checked':'Statement summary read'}</h2>
+    <div className="v5-topline"><span className="st-badge">{step==='saved'?'Saved':'AI findings · Not yet confirmed'}</span><span className="home-muted text-xs">{showComparableWork?rowSummary.rows.length+' workdays logged':'Date range needs checking'}</span></div>
+    <h2>{!ai?'No statement read':scopeNeedsConfirmation?'Confirm statement dates':!view?.currencyOk?'Check statement details':audit.status==='mismatch'?'Statement totals need checking':view.flagged.length?view.flagged.length+' stop/date '+(view.flagged.length===1?'difference':'differences')+' to review':view.hasDaily?'Stop counts checked':'Statement summary read'}</h2>
     <p className="home-muted text-sm">{showDate(period.start)} – {showDate(period.end)}</p>
     <dl className="v5-totals">
      <div><dt>Contractor statement {sourceNet?.taxBasis==='included'?'(incl. VAT)':''}</dt><dd>{cash(view?.rawPayout)}</dd></div>
      {view?.payoutBeforeVat!=null&&view.rawPayout!==view.payoutBeforeVat&&<div><dt>Statement before VAT</dt><dd>{cash(view.payoutBeforeVat)}</dd></div>}
-     <div><dt>Your expected payout</dt><dd>{cash(rowSummary.payout)}</dd></div>
+     <div><dt>Your expected payout</dt><dd>{showComparableWork?cash(rowSummary.payout):'Confirm dates first'}</dd></div>
      <div className={'v5-difference '+(canCompare&&view.difference!==0?'v5-warning-difference':'')}><dt>Potential difference</dt><dd>{canCompare?cash(Math.abs(view.difference)):'Not comparable yet'}</dd></div>
     </dl>
     {canCompare&&<p className="home-muted text-xs">{view.difference===0?'Totals match on a before-VAT basis.':view.difference<0?'The statement is below your estimate.':'The statement is above your estimate.'} This is not proof of an underpayment.</p>}
     {!canCompare&&<p className="home-muted text-sm" role="status">{audit.status==='mismatch'?'Some AI-read totals do not add up. Save the statement now, then check the source figures.':view?.vatSource==='unknown'?'The VAT basis needs confirming before comparing.':rowSummary.payout==null?'Some saved pay settings need reviewing before comparing.':'This check is incomplete. Save the statement and review it later.'}</p>}
-    {view?.flagged.length>0&&<p className="v5-result-hint"><strong>{view.flagged.length} stop/date {view.flagged.length===1?'issue':'issues'}</strong> · review only those days.</p>}
-    {view?.earningsVariations.length>0&&<p className="home-muted text-xs">{view.earningsVariations.length} same-stop days have different earnings totals. Not confirmed underpayments.</p>}
+    <div className="v5-quick-summary" aria-label="What AI found"><h3>Quick summary</h3>{findings.map((line,i)=><p key={i}>{line}</p>)}</div>
+    {showComparableWork&&view?.flagged.length>0&&<p className="v5-result-hint"><strong>{view.flagged.length} stop/date {view.flagged.length===1?'issue':'issues'}</strong> · review only those days.</p>}
+    {showComparableWork&&view?.earningsVariations.length>0&&<p className="home-muted text-xs">{view.earningsVariations.length} same-stop days have different earnings totals. Not confirmed underpayments.</p>}
    </section>
    {step==='result'&&<section className="home-card v5-finish" aria-label="Save or continue pay check">
-      <button type="button" className="home-primary w-full" disabled={busy||!ai||!sourceNet||!view?.periodOk||!view?.currencyOk||view.rawPayout==null} onClick={saveCheck}>{busy?'Saving…':canCompare?'Save pay check':'Save statement — check later'}</button>
-      {!canCompare&&<p className="home-muted text-xs">Saves the statement without claiming it matches your work. No new scan needed later.</p>}
+      <button type="button" className="home-primary w-full" disabled={busy||!ai||!sourceNet||scopeNeedsConfirmation||!view?.periodOk||!view?.currencyOk||view.rawPayout==null} onClick={saveCheck}>{busy?'Saving…':canCompare?'Save pay check':'Save statement — check later'}</button>
+      {!canCompare&&<p className="home-muted text-xs">{scopeNeedsConfirmation?'Confirm the statement date range above before saving the check.':'Saves the statement without claiming it matches your work. No new scan needed later.'}</p>}
       {limitedCoverage&&canCompare&&<details className="v5-manual"><summary>Before invoicing · Unverified daily details</summary>
        <label className="v5-ack"><input type="checkbox" checked={limitedAccepted} onChange={e=>setLimitedAccepted(e.target.checked)}/> Some workday figures could not be verified. I accept this limited comparison for invoicing.</label>
       </details>}
@@ -312,10 +336,8 @@ export default function CheckPayV5(){
      {chargeEvidence.length>0&&<details className="home-card v5-charge-evidence"><summary>Contractor charges & fuel · {chargeEvidence.length} items</summary><p className="home-muted text-sm">Charges are checked only against independent records. Fuel-card discounts are not assumed.</p>
       {chargeEvidence.map(row=><div className="v5-charge-row" key={row.id}><div><strong>{row.label}</strong><p className="home-muted text-xs">{row.explanation}</p></div><span>{cash(row.amountPence)}</span></div>)}
      </details>}
-     {ai&&step==='result'&&(!view?.canCompare||!view?.periodOk)&&<section className="home-card v5-one-question">
+     {ai&&step==='result'&&!scopeNeedsConfirmation&&(!view?.canCompare)&&<section className="home-card v5-one-question">
     <h2>One detail needs checking</h2>
-    {!view?.periodOk&&<p className="home-muted">The statement dates don't match the selected range. Choose the matching period:</p>}
-    <label className="home-field">Work period<select value={period.id} onChange={e=>{const p=available.find(a=>a.id===e.target.value);if(p)setChosen(p);}}>{[period,...available.filter(p=>p.id!==period.id)].map(p=><option key={p.id} value={p.id}>{p.start} – {p.end}</option>)}</select></label>
     {view?.vatSource==='unknown'&&<><label className="home-field">Does the statement payout include VAT?<select value={vatChoice||'unknown'} onChange={e=>setVatChoice(e.target.value)}><option value="unknown">Not sure / show me later</option><option value="excluded">No — this is before VAT</option><option value="included">Yes — it includes VAT</option><option value="not_applicable">No VAT applies</option></select></label>
      {vatChoice==='included'&&<label className="home-field">VAT amount printed on the statement (£)<input inputMode="decimal" placeholder="Only enter an amount shown on the original" value={vatEntry} onChange={e=>setVatEntry(e.target.value)}/></label>}</>}
     {rowSummary.payout==null&&<p className="home-muted text-sm">Some historical pay settings are missing. You can save the statement now, then confirm those settings without re-uploading.</p>}

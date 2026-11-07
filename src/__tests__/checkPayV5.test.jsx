@@ -1,6 +1,6 @@
 import React from 'react';
 import {beforeEach,describe,it,expect,vi} from 'vitest';
-import {render,screen,fireEvent,waitFor} from '@testing-library/react';
+import {render,screen,fireEvent,waitFor,within} from '@testing-library/react';
 import {MemoryRouter,Routes,Route} from 'react-router-dom';
 import {webcrypto} from 'node:crypto';
 import CheckPayV5,{periodFromStatement} from '../components/CheckPayV5';
@@ -207,6 +207,54 @@ describe('V5 one-upload pay journey',()=>{
   await waitFor(()=>expect(stub.save).toHaveBeenCalled());
   expect(stub.save.mock.calls[0][0]).toBe('2026-09-14_2026-10-04');
   expect(stub.data.logs).toEqual(logs);
+ });
+
+ it('prevents a misread Nov 10 end date from comparing September pay with 41 logged days',async()=>{
+  const later=Array.from({length:18},(_,i)=>({
+   id:'later-'+i,
+   date:new Date(Date.UTC(2026,9,12+i)).toISOString().slice(0,10),
+   stops:100,totalParcels:110,total:100,payStructureSnapshot:{contractorFeePercent:0}
+  }));
+  stub.data.logs=[...logs,...later];
+  const dated=Array.from({length:28},(_,i)=>({
+    date:new Date(Date.UTC(2026,8,14+i)).toISOString().slice(0,10),
+    stops:i===0?120:i===1?130:100,
+    amount:i===0?100:i===1?200:0
+  }));
+  stub.extract.mockResolvedValue(statement({periodEnd:'2026-11-10',daily:dated}));
+  open();await upload();
+  const confirm=screen.getByRole('region',{name:'Confirm statement period'});
+  expect(within(confirm).getByText(/AI read 14 Sept 2026 – 10 Nov 2026/)).toBeInTheDocument();
+  expect(within(confirm).getByRole('combobox',{name:'Period shown on statement'})).toHaveValue(period.id);
+  const summary=screen.getByRole('region',{name:'Pay check summary'});
+  expect(within(summary).getByText('Confirm dates first')).toBeInTheDocument();
+  expect(within(summary).queryByText('£2,100.00')).not.toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'Save statement — check later'})).toBeDisabled();
+  expect(within(summary).getByText('Quick summary')).toBeInTheDocument();
+  expect(within(summary).getByText(/dates need confirming before any workdays/)).toBeInTheDocument();
+  fireEvent.click(within(confirm).getByRole('button',{name:/Use 14 Sept 2026 – 11 Oct 2026 for this check/}));
+  await waitFor(()=>expect(within(summary).getAllByText('£300.00').length).toBeGreaterThan(0));
+  expect(within(summary).queryByText('£2,100.00')).not.toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'Save pay check'})).toBeEnabled();
+  fireEvent.click(screen.getByRole('button',{name:'Save pay check'}));
+  await waitFor(()=>expect(stub.save).toHaveBeenCalledOnce());
+  expect(stub.save.mock.calls[0][0]).toBe(period.id);
+  const record=stub.save.mock.calls[0][1];
+  expect(record.payoutComparison.expectedPence).toBe(30000);
+  expect(record.statementFindings.periodEvidence).toMatchObject({
+    originalStart:'2026-09-14',originalEnd:'2026-11-10',
+    confirmedStart:'2026-09-14',confirmedEnd:'2026-10-11'
+  });
+  expect(stub.data.logs).toEqual([...logs,...later]);
+ });
+ it('never silently accepts an unusually long statement with no daily evidence',async()=>{
+  stub.extract.mockResolvedValue(statement({periodEnd:'2026-11-10',daily:[],extractionMode:'summary_only'}));
+  open();await upload();
+  expect(screen.getByRole('heading',{name:'Confirm the statement dates'})).toBeInTheDocument();
+  const summary=screen.getByRole('region',{name:'Pay check summary'});
+  expect(within(summary).getByText('Confirm dates first')).toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'Save statement — check later'})).toBeDisabled();
+  expect(stub.save).not.toHaveBeenCalled();
  });
  it('saves a VAT-inclusive figure as unchecked when net VAT is unknown',async()=>{
   stub.extract.mockResolvedValue(statement({taxBasis:'included',contractorPayout:360,vatAmount:null,beforeVatPayout:null}));
