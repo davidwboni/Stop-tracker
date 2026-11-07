@@ -8,6 +8,7 @@ import {isoDate,listPeriods,summarizePeriod} from '../features/payperiod/periods
 import {moneyRevision,moneySummary,payoutComparison,validRange} from '../features/money/moneyModel';
 import {buildStatementAutoCheck} from '../features/statements/autoCheck';
 import {statementChargeEvidence} from '../features/statements/chargeEvidence';
+import {auditStatementArithmetic} from '../features/statements/statementAudit';
 import {unresolvedStatementFindings,statementInvoiceReady,mergeFindingDecisions,requiresLimitedCoverageAcceptance} from '../features/statements/findingGate';
 import {createStatementReview,confirmedReview,captureIssues} from '../features/statements/reviewModel';
 import {historicalFeeIssue,applyConfirmedHistoricalFee,validHistoricalFee} from '../features/money/historicalFeeRepair';
@@ -43,6 +44,9 @@ function savedStatementDraft(record){
    contractorFee:r.feePence==null?null:r.feePence/100,
    contractorCharges:r.chargesPence==null?null:r.chargesPence/100,
    charges:(r.charges||[]).map(c=>({label:c.label,amount:c.amountPence/100})),
+   deliverySubtotal:record.statementWorkDetails?.deliverySubtotal??null,
+   extraPaymentsTotal:record.statementWorkDetails?.extraPaymentsTotal??null,
+   extraPayments:Array.isArray(record.statementWorkDetails?.extraPayments)?record.statementWorkDetails.extraPayments:[],
    daily:Object.entries(record.statementWorkDetails?.daily||{}).map(([date,x])=>({date,stops:x.stops===''?null:Number(x.stops),amount:x.amount===''?null:Number(x.amount)})),
    extractionMode:record.statementExtractionMode||null
  };
@@ -85,13 +89,14 @@ export default function CheckPayV5(){
  const issues=historicalFeeIssue(logs,period);
  const chargeEvidence=useMemo(()=>ai?statementChargeEvidence(ai,costs.expenses||[],period):[],[ai,costs.expenses,period.start,period.end]);
  const sourceNet=ai?{...ai,taxBasis:vatChoice||ai.taxBasis,vatAmount:vatEntry.trim()&&/^\d+(\.\d{1,2})?$/.test(vatEntry)?Number(vatEntry):ai.vatAmount}:null;
- const canCompare=!!view?.canCompare&&!loading&&!costs.loading&&!loadError&&!costs.error;
+ const audit=useMemo(()=>auditStatementArithmetic(sourceNet),[ai,vatChoice,vatEntry]);
+ const canCompare=!!view?.canCompare&&audit.status!=='mismatch'&&!loading&&!costs.loading&&!loadError&&!costs.error;
  const scanEnabled=!!permission&&(permission.isPro||permission.betaAccess||permission.statementAiUses<3);
  const savedCheck=['matched','difference','reconciled'].includes(previous.state);
  const unresolvedSaved=unresolvedStatementFindings(statusRecord);
  const invoiceReady=statementInvoiceReady(statusRecord);
  const unresolvedCurrent=(view?.flagged||[]).filter(row=>!['figures_verified','possible_duplicate_accepted'].includes(confirmedDays[row.date]));
- const limitedCoverage=!!view&&requiresLimitedCoverageAcceptance({summaryOnly:view.summaryOnly,hasDaily:view.hasDaily,incompleteDays:view.unknown.length,outsidePeriod:view.outsidePeriod,earningsDifferences:view.earningsVariations.length});
+ const limitedCoverage=!!view&&(requiresLimitedCoverageAcceptance({summaryOnly:view.summaryOnly,hasDaily:view.hasDaily,incompleteDays:view.unknown.length,outsidePeriod:view.outsidePeriod,earningsDifferences:view.earningsVariations.length})||audit.dailyCoverage===false);
  const savedCoveragePending=requiresLimitedCoverageAcceptance(statusRecord?.statementFindings)&&statusRecord?.statementFindings?.limitedCoverageAccepted!==true;
  const requiredPeriod=period.start+' – '+period.end;
  useEffect(()=>{let active=true;getPremiumStatus().then(s=>{if(active)setPermission(s);}).catch(()=>{if(active)setPermissionError(true);});return()=>{active=false;};},[]);
@@ -152,7 +157,10 @@ export default function CheckPayV5(){
      const details={
        stops:ai.statementStops==null?'':String(ai.statementStops),
        gross:amount(ai.statementAmount),
-       extras:'',charges:amount(ai.contractorCharges),vat:amount(ai.vatAmount),
+       deliverySubtotal:ai.deliverySubtotal??null,
+       extraPaymentsTotal:ai.extraPaymentsTotal??null,
+       extraPayments:Array.isArray(ai.extraPayments)?ai.extraPayments:[],
+       extras:amount(ai.extraPaymentsTotal),charges:amount(ai.contractorCharges),vat:amount(ai.vatAmount),
        daily:Object.fromEntries((ai.daily||[]).filter(x=>x?.date&&x.date>=period.start&&x.date<=period.end).map(x=>[x.date,{stops:x.stops==null?'':String(x.stops),amount:x.amount==null?'':String(x.amount)}]))
      };
      const base={
@@ -164,7 +172,9 @@ export default function CheckPayV5(){
        statementFindings:{
          source:scanSource,summaryOnly:view.summaryOnly,hasDaily:view.hasDaily,outsidePeriod:view.outsidePeriod,limitedCoverageAccepted:limitedCoverage?limitedAccepted:true,
          flagged:view.flagged.map(d=>({date:d.date,reason:d.reason,loggedStops:d.loggedStops,statementStops:d.statementStops,loggedGross:d.loggedGross,statementGross:d.statementGross,acceptedReason:confirmedDays[d.date]||null})),
-         incompleteDays:view.unknown.length,earningsDifferences:view.earningsVariations.length,recordedAt:new Date().toISOString()
+         incompleteDays:view.unknown.length,earningsDifferences:view.earningsVariations.length,
+         arithmeticStatus:audit.status,arithmeticMismatchKeys:audit.mismatches.map(c=>c.key),
+         dailyCoverageMismatch:audit.dailyCoverage===false,recordedAt:new Date().toISOString()
        }
      };
      if(netKnown){
@@ -242,10 +252,14 @@ export default function CheckPayV5(){
      <div><dt>Contractor statement</dt><dd>{cash(view?.rawPayout)}</dd></div>
      <div><dt>Your expected payout</dt><dd>{cash(rowSummary.payout)}</dd></div>
      {view?.payoutBeforeVat!=null&&view.rawPayout!==view.payoutBeforeVat&&<div><dt>Statement, before VAT</dt><dd>{cash(view.payoutBeforeVat)}</dd></div>}
-     <div className={'v5-difference '+(view?.canCompare&&view.difference!==0?'v5-warning-difference':'')}><dt>Potential difference</dt><dd>{view?.canCompare?cash(Math.abs(view.difference)):'Not comparable yet'}</dd></div>
+     <div className={'v5-difference '+(canCompare&&view.difference!==0?'v5-warning-difference':'')}><dt>Potential difference</dt><dd>{canCompare?cash(Math.abs(view.difference)):'Not comparable yet'}</dd></div>
     </dl>
-    {view?.canCompare&&<p className="home-muted text-sm">{view.difference===0?'The before-VAT payout totals match.':view.difference<0?'The statement payout is lower than your expected amount.':'The statement payout is higher than your expected amount.'} A totals match does not prove each day or charge is correct.</p>}
-    {view?.hasDaily&&<p className="home-muted text-sm" role="status">{view.matched.length} days with matching stop counts · {view.flagged.length} day{view.flagged.length===1?'':'s'} need{view.flagged.length===1?'s':''} action · {view.unknown.length} without enough stop detail</p>}
+    {canCompare&&<p className="home-muted text-sm">{view.difference===0?'The before-VAT payout totals match.':view.difference<0?'The statement payout is lower than your expected amount.':'The statement payout is higher than your expected amount.'} A totals match does not prove each day or charge is correct.</p>}
+    {audit.status==='balanced'&&<p className="home-muted text-sm" role="status">Statement subtotals add up. We checked the printed earnings, deductions and VAT where available.</p>}
+     {audit.status==='mismatch'&&<p className="home-banner" role="status">Some AI-read totals do not add up: {audit.mismatches.map(c=>c.label.toLowerCase()).join('; ')}. Save this statement for review; it won't be marked as verified or ready to invoice.</p>}
+     {audit.dailyCoverage===false&&<p className="home-banner" role="status">The extracted daily stop counts do not add up to the statement's printed total. These day-by-day findings need checking before they can be relied on.</p>}
+     {typeof ai?.extraPaymentsTotal==='number'&&<p className="home-muted text-sm">Extra payments included in the statement: {cash(Math.round(ai.extraPaymentsTotal*100))}{ai.extraPayments?.length?' · '+ai.extraPayments.length+' items read':''}. Payment dates may fall after the work period.</p>}
+     {view?.hasDaily&&<p className="home-muted text-sm" role="status">{view.matched.length} days with matching stop counts · {view.flagged.length} day{view.flagged.length===1?'':'s'} need{view.flagged.length===1?'s':''} action · {view.unknown.length} without enough stop detail</p>}
     {limitedCoverage?<p className="home-banner" role="status">Limited check: {view?.earningsVariations?.length?view.earningsVariations.length+' days have different all-in earnings figures; these are not confirmed underpayments. ':'Some workday details could not be verified. '}You can save the payout now. One acknowledgement of the limitation is needed before invoicing.</p>:null}
    </section>
    {view?.earningsVariations.length>0&&<section className="home-card v5-earnings-note" aria-label="Daily amounts not directly comparable">
