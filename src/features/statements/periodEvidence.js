@@ -16,7 +16,7 @@ export function inferStatementPeriod(statement,periodOptions=[]){
  const dense=dates.length>=5&&first&&last&&lengthDays(first,last)<=35;
  // Four-week statements commonly list zero-payment off-days; these are
  // relevant evidence for period boundaries, not logged work requirements.
- const suspicious=!!(dense&&raw&&(raw.start>first||raw.end<last||
+ const suspicious=!!(dense&&(!raw||raw.start>first||raw.end<last||
    (lengthDays(raw.start,raw.end)>35&&raw.end>last&&lengthDays(last,raw.end)>5)));
  if(!suspicious) return {raw,suggested:raw,needsConfirmation:false,reason:'header',firstDay:first||null,lastDay:last||null};
  const suitable=(periodOptions||[]).filter(p=>{
