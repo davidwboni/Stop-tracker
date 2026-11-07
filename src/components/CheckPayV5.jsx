@@ -256,7 +256,27 @@ export default function CheckPayV5(){
     </dl>
     {canCompare&&<p className="home-muted text-xs">{view.difference===0?'Totals match on a before-VAT basis.':view.difference<0?'The statement is below your estimate.':'The statement is above your estimate.'} This is not proof of an underpayment.</p>}
     {!canCompare&&<p className="home-muted text-sm" role="status">{audit.status==='mismatch'?'Some AI-read totals do not add up. Save the statement now, then check the source figures.':view?.vatSource==='unknown'?'The VAT basis needs confirming before comparing.':rowSummary.payout==null?'Some saved pay settings need reviewing before comparing.':'This check is incomplete. Save the statement and review it later.'}</p>}
-    {view?.flagged.length>0&&<details className="home-card v5-differences" open={openDays} onToggle={e=>setOpenDays(e.currentTarget.open)}>
+    {view?.flagged.length>0&&<p className="v5-result-hint"><strong>{view.flagged.length} stop/date {view.flagged.length===1?'issue':'issues'}</strong> · review only those days.</p>}
+    {view?.earningsVariations.length>0&&<p className="home-muted text-xs">{view.earningsVariations.length} same-stop days have different earnings totals. Not confirmed underpayments.</p>}
+   </section>
+   {step==='result'&&<section className="home-card v5-finish" aria-label="Save or continue pay check">
+      <button type="button" className="home-primary w-full" disabled={busy||!ai||!sourceNet||!view?.periodOk||!view?.currencyOk||view.rawPayout==null} onClick={saveCheck}>{busy?'Saving…':canCompare?'Save pay check':'Save statement — check later'}</button>
+      {!canCompare&&<p className="home-muted text-xs">Saves the statement without claiming it matches your work. No new scan needed later.</p>}
+      {limitedCoverage&&canCompare&&<details className="v5-manual"><summary>Before invoicing · Unverified daily details</summary>
+       <label className="v5-ack"><input type="checkbox" checked={limitedAccepted} onChange={e=>setLimitedAccepted(e.target.checked)}/> Some workday figures could not be verified. I accept this limited comparison for invoicing.</label>
+      </details>}
+      <details className="v5-manual"><summary>View statement totals and charges</summary>
+       <p className="home-muted text-xs">AI-read values are unconfirmed until you check the source statement.</p>
+       <dl className="v5-totals"><div><dt>Gross work earnings</dt><dd>{currency(typeof ai.statementAmount==='number'?Math.round(ai.statementAmount*100):null)}</dd></div><div><dt>Contractor fee</dt><dd>{currency(typeof ai.contractorFee==='number'?Math.round(ai.contractorFee*100):null)}</dd></div><div><dt>Other charges</dt><dd>{currency(typeof ai.contractorCharges==='number'?Math.round(ai.contractorCharges*100):null)}</dd></div>{(ai.charges||[]).slice(0,15).map((c,i)=><div key={i}><dt>{c.label||'Charge'}</dt><dd>{typeof c.amount==='number'?currency(Math.round(c.amount*100)):'Not read'}</dd></div>)}</dl>
+       <Link className="home-text-button" to="/app/check-pay/advanced" state={{periodId:period.id}}>Correct statement figures manually <ArrowRight size={16}/></Link>
+      </details>
+     </section>}
+   {view?.earningsVariations.length>0&&<details className="home-card v5-earnings-note" aria-label="Daily earnings details">
+      <summary>{view.earningsVariations.length} days · Stops match, pay figures differ</summary>
+      <p className="home-muted text-sm">Daily totals may include parcels, extras or different VAT treatment. These are not confirmed underpayments; no individual decisions needed.</p>
+      <div className="v5-earnings-list">{view.earningsVariations.map(row=><div key={row.date} className="v5-earnings-row"><strong>{showDate(row.date)}</strong><span>{cash(row.loggedGross)} logged / {cash(row.statementGross)} statement</span></div>)}</div>
+     </details>}
+     {view?.flagged.length>0&&<details className="home-card v5-differences" open={openDays} onToggle={e=>setOpenDays(e.currentTarget.open)}>
       <summary>Review {view.flagged.length} stop/date {view.flagged.length===1?'difference':'differences'}</summary>
       <p className="home-muted text-xs">Only these days have different stops, missing work or duplicate statement rows. AI cannot prove if a one-stop difference is a duplicate.</p>
       {(showMore?view.flagged:view.flagged.slice(0,3)).map(row=><div className="v5-day" key={row.date}>
@@ -287,21 +307,8 @@ export default function CheckPayV5(){
     {view?.vatSource==='unknown'&&<><label className="home-field">Does the statement payout include VAT?<select value={vatChoice||'unknown'} onChange={e=>setVatChoice(e.target.value)}><option value="unknown">Not sure / show me later</option><option value="excluded">No — this is before VAT</option><option value="included">Yes — it includes VAT</option><option value="not_applicable">No VAT applies</option></select></label>
      {vatChoice==='included'&&<label className="home-field">VAT amount printed on the statement (£)<input inputMode="decimal" placeholder="Only enter an amount shown on the original" value={vatEntry} onChange={e=>setVatEntry(e.target.value)}/></label>}</>}
     {rowSummary.payout==null&&<p className="home-muted text-sm">Some historical pay settings are missing. You can save the statement now, then confirm those settings without re-uploading.</p>}
-   </section>
-    {step==='result'&&<section className="home-card v5-finish" aria-label="Save or continue pay check">
-      <button type="button" className="home-primary w-full" disabled={busy||!ai||!sourceNet||!view?.periodOk||!view?.currencyOk||view.rawPayout==null} onClick={saveCheck}>{busy?'Saving…':canCompare?'Save pay check':'Save statement — check later'}</button>
-      {!canCompare&&<p className="home-muted text-xs">Saves the statement without claiming it matches your work. No new scan needed later.</p>}
-      {limitedCoverage&&canCompare&&<details className="v5-manual"><summary>Before invoicing · Unverified daily details</summary>
-       <label className="v5-ack"><input type="checkbox" checked={limitedAccepted} onChange={e=>setLimitedAccepted(e.target.checked)}/> Some workday figures could not be verified. I accept this limited comparison for invoicing.</label>
-      </details>}
-      <details className="v5-manual"><summary>View statement totals and charges</summary>
-       <p className="home-muted text-xs">AI-read values are unconfirmed until you check the source statement.</p>
-       <dl className="v5-totals"><div><dt>Gross work earnings</dt><dd>{currency(typeof ai.statementAmount==='number'?Math.round(ai.statementAmount*100):null)}</dd></div><div><dt>Contractor fee</dt><dd>{currency(typeof ai.contractorFee==='number'?Math.round(ai.contractorFee*100):null)}</dd></div><div><dt>Other charges</dt><dd>{currency(typeof ai.contractorCharges==='number'?Math.round(ai.contractorCharges*100):null)}</dd></div>{(ai.charges||[]).slice(0,15).map((c,i)=><div key={i}><dt>{c.label||'Charge'}</dt><dd>{typeof c.amount==='number'?currency(Math.round(c.amount*100)):'Not read'}</dd></div>)}</dl>
-       <Link className="home-text-button" to="/app/check-pay/advanced" state={{periodId:period.id}}>Correct statement figures manually <ArrowRight size={16}/></Link>
-      </details>
-     </section>}
-     }
-   {issues.missingGross.length>0&&<section className="home-card v5-missing-work" role="region" aria-label="Review missing work earnings">
+   </section>}
+    {issues.missingGross.length>0&&<section className="home-card v5-missing-work" role="region" aria-label="Review missing work earnings">
      <h2>{issues.missingGross.length} saved {issues.missingGross.length===1?'day needs':'days need'} earnings reviewed</h2>
      <p className="home-muted text-sm">Your recorded stops are safe, but those historical gross amounts are missing. Open just the affected days; no new statement scan is needed.</p>
      <Link className="home-secondary w-full" to="/app/records?payReview=1" state={{periodId:period.id}}>Review saved workdays <ArrowRight size={16}/></Link>
