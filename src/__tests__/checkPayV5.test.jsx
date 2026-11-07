@@ -149,7 +149,7 @@ describe('V5 one-upload pay journey',()=>{
   stub.extract.mockResolvedValue(statement({contractorPayout:300,contractorCharges:0,statementAmount:300}));
   stub.save.mockImplementation(async(id,patch)=>{stub.data.periodRecords={...stub.data.periodRecords,[id]:patch};return true;});
   open();await upload();
-  expect(screen.getByText(/1 workday needs attention/)).toBeInTheDocument();
+  expect(screen.getByText(/1 stop\/date difference to review/)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button',{name:'Save pay check'}));
   await waitFor(()=>expect(stub.save).toHaveBeenCalledOnce());
   expect(stub.save.mock.calls[0][1]).toMatchObject({status:'checked',needsReview:true});
