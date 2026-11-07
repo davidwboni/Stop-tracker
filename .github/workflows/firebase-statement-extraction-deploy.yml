@@ -4,6 +4,9 @@ on:
     branches: [main]
     paths:
       - functions/index.js
+      - functions/statementModel.js
+      - functions/statementDeepSeekRequest.js
+      - functions/statementResponse.js
       - functions/statementProviderErrors.js
       - .github/workflows/firebase-statement-extraction-deploy.yml
   workflow_dispatch:

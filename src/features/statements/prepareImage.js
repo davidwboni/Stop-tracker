@@ -82,3 +82,11 @@ export async function prepareStatementImage(file){
     bitmap?.close?.();
   }
 }
+
+// Rasterised PDF statements often contain fine print. Avoid rendering a full
+// letter-sized page at only ~900px wide; keep the pixel area bounded on phones.
+// This is not OCR: it only sets the canvas resolution prior to Firebase upload.
+export function pdfStatementRenderScale(pageWidth,pageHeight){
+  if(!Number.isFinite(pageWidth)||!Number.isFinite(pageHeight)||pageWidth<=0||pageHeight<=0)return 1.2;
+  return Math.min(2.25, Math.sqrt(12_000_000/(pageWidth*pageHeight)));
+}
