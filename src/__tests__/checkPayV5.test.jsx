@@ -199,7 +199,7 @@ describe('V5 one-upload pay journey',()=>{
   expect(saved.payoutComparison).toBeNull();
  });
  it('stores a verified VAT conversion in pence without overwriting VAT-inclusive original',async()=>{
-  stub.extract.mockResolvedValue(statement({taxBasis:'included',contractorPayout:360,vatAmount:60,beforeVatPayout:300}));
+  stub.extract.mockResolvedValue(statement({taxBasis:'included',contractorPayout:360,vatAmount:60,beforeVatPayout:300,statementAmount:320}));
   open();await upload();
   expect(screen.getByRole('button',{name:'Save pay check'})).toBeEnabled();
   fireEvent.click(screen.getByRole('button',{name:'Save pay check'}));
