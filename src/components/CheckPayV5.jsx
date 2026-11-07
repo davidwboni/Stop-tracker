@@ -143,8 +143,17 @@ export default function CheckPayV5(){
  }
  function loadRecord(item){
    const range={start:item.start,end:item.end,id:item.id};
-   setChosen(summarizePeriod(logs,range));setScanSource(item.record?.payoutComparison?.source||'saved');
-   setAi(savedStatementDraft(item.record));setPeriodEvidence(null);setConfirmedStatementPeriod(null);setVatChoice('');setVatEntry('');setConfirmedDays(mergeFindingDecisions(item.record));setLimitedAccepted(item.record?.statementFindings?.limitedCoverageAccepted===true);setStep(item.record?.payoutComparison?'saved':'result');setError('');
+   const draft=savedStatementDraft(item.record);
+   // A previously archived OCR header may have reversed UK dates. Use the
+   // archived daily figures to detect this without a new paid AI upload.
+   // The old record is untouched; a corrected comparison is saved to the
+   // newly confirmed range only after the driver's explicit action.
+   const evidence=draft?inferStatementPeriod(draft,available):null;
+   const target=evidence?.needsConfirmation&&evidence.suggested?evidence.suggested:range;
+   setChosen(summarizePeriod(logs,target));setScanSource(item.record?.payoutComparison?.source||'saved');
+   setAi(draft);setPeriodEvidence(evidence);setConfirmedStatementPeriod(null);
+   setVatChoice('');setVatEntry('');setConfirmedDays(mergeFindingDecisions(item.record));setLimitedAccepted(item.record?.statementFindings?.limitedCoverageAccepted===true);
+   setStep(evidence?.needsConfirmation?'result':item.record?.payoutComparison?'saved':'result');setError('');
  }
  async function saveCheck(){
    if(savingLock.current||!ai)return;
