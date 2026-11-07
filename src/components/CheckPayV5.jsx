@@ -267,11 +267,20 @@ export default function CheckPayV5(){
       </div>)}
       {view.flagged.length>3&&<button type="button" className="home-secondary w-full" onClick={()=>setShowMore(v=>!v)}>{showMore?'Show fewer':`See all ${view.flagged.length} workdays`}</button>}
      </details>}
-     {view?.unknown.length>0&&<p className="home-banner">{view.unknown.length} workdays have insufficient figures for a full comparison. They are not marked as matching.</p>}
-   {chargeEvidence.length>0&&<details className="home-card v5-charge-evidence"><summary>Contractor charges & fuel — {chargeEvidence.length} read</summary><p className="home-muted text-sm">AI checked these charges only where independent records exist. Fuel-card discounts are never assumed.</p>
-    {chargeEvidence.map(row=><div className="v5-charge-row" key={row.id}><div><strong>{row.label}</strong><p className="home-muted text-xs">{row.explanation}</p></div><span>{cash(row.amountPence)}</span></div>)}
-   </details>}
-   {ai&&step==='result'&&(!view?.canCompare||!view?.periodOk)&&<section className="home-card v5-one-question">
+     {(audit.status==='mismatch'||audit.dailyCoverage===false||view?.unknown.length>0||view?.outsidePeriod>0||view?.ignoredZeroDays>0||typeof ai?.extraPaymentsTotal==='number')&&<details className="home-card v5-diagnostics">
+      <summary>How was this checked?</summary>
+      {audit.status==='mismatch'&&<p className="home-muted text-sm">Some printed totals or extracted values don't add up; the payout difference cannot be verified yet.</p>}
+      {audit.dailyCoverage===false&&<p className="home-muted text-sm">The daily stop counts read do not match the statement's printed total.</p>}
+      {view?.unknown.length>0&&<p className="home-muted text-sm">{view.unknown.length} day(s) lack comparable stop figures, so were not treated as matches.</p>}
+      {view?.outsidePeriod>0&&<p className="home-muted text-sm">{view.outsidePeriod} statement date(s) fell outside this pay period.</p>}
+      {view?.ignoredZeroDays>0&&<p className="home-muted text-sm">{view.ignoredZeroDays} zero-pay calendar day(s) with no logged work were not flagged as missing shifts.</p>}
+      {typeof ai?.extraPaymentsTotal==='number'&&<p className="home-muted text-sm">Extra payments shown: {cash(Math.round(ai.extraPaymentsTotal*100))}; their dates may fall outside the work period.</p>}
+      {view?.vatSource==='printed_vat'&&<p className="home-muted text-sm">The before-VAT payout uses the exact VAT amount read from the statement, subject to your review.</p>}
+     </details>}
+     {chargeEvidence.length>0&&<details className="home-card v5-charge-evidence"><summary>Contractor charges & fuel · {chargeEvidence.length} items</summary><p className="home-muted text-sm">Charges are checked only against independent records. Fuel-card discounts are not assumed.</p>
+      {chargeEvidence.map(row=><div className="v5-charge-row" key={row.id}><div><strong>{row.label}</strong><p className="home-muted text-xs">{row.explanation}</p></div><span>{cash(row.amountPence)}</span></div>)}
+     </details>}
+     {ai&&step==='result'&&(!view?.canCompare||!view?.periodOk)&&<section className="home-card v5-one-question">
     <h2>One detail needs checking</h2>
     {!view?.periodOk&&<p className="home-muted">The statement dates don't match the selected range. Choose the matching period:</p>}
     <label className="home-field">Work period<select value={period.id} onChange={e=>{const p=available.find(a=>a.id===e.target.value);if(p)setChosen(p);}}>{[period,...available.filter(p=>p.id!==period.id)].map(p=><option key={p.id} value={p.id}>{p.start} – {p.end}</option>)}</select></label>
