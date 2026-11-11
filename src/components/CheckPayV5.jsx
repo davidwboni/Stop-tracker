@@ -58,6 +58,7 @@ function savedStatementDraft(record){
 export default function CheckPayV5(){
  const {logs=[],payPeriodAnchor,periodRecords={},paymentConfig,updatePeriodRecord,updateLogs,loading,loadError,forceSync}=useData();
  const costs=useExpenses(),nav=useNavigate(),location=useLocation(),fileInput=useRef(null),savingLock=useRef(false);
+ const stopDetailsRef=useRef(null),earningsDetailsRef=useRef(null),chargeDetailsRef=useRef(null);
  const today=isoDate(new Date());
  const periods=useMemo(()=>listPeriods(logs,payPeriodAnchor||today,13),[logs,payPeriodAnchor,today]);
  const archived=useMemo(()=>Object.keys(periodRecords).filter(id=>/^\d{4}-\d{2}-\d{2}_\d{4}-\d{2}-\d{2}$/.test(id))
@@ -242,6 +243,14 @@ export default function CheckPayV5(){
  const latestCheck=periodRecords[period.id];
  // After upload, show the result headline on small mobile screens.
  useEffect(()=>{if(step==='result')document.querySelector('.st-app-shell > main')?.scrollTo?.({top:0,behavior:'auto'});},[step]);
+ // Finding counts navigate to evidence. Show every affected day on the first tap.
+ const jumpToDetails=(ref,showAllStops=false)=>{
+   const section=ref.current;
+   if(!section)return;
+   if(showAllStops){setOpenDays(true);setShowMore(true);}
+   section.open=true;
+   section.scrollIntoView?.({behavior:typeof window!=='undefined'&&window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
+ };
  const displayResult=step==='result'||step==='saved';
  return <div className="home-screen st-page v5-pay">
   <header className="home-row v5-header"><div><h1>{displayResult?'Your pay check':'Check your pay'}</h1><p className="home-muted">{displayResult?'AI compared the figures it could read. Review what matters.':'Log your work. Upload the statement. See what changed.'}</p></div><HeaderControls hidden={hidden} onToggleMoney={()=>{setHidden(v=>{try{localStorage.setItem('home-hide-money',v?'0':'1');}catch(_){}return !v;});}}/></header>
@@ -281,7 +290,10 @@ export default function CheckPayV5(){
    {step==='result'&&confirmedStatementPeriod?.id===period.id&&<p className="home-muted text-xs v5-period-confirmed" role="status">Statement dates confirmed for {showDate(period.start)} – {showDate(period.end)}. Only workdays in this range are included.</p>}
    <PayResultSummary ai={ai} view={view} step={step} period={period} rowSummary={rowSummary}
      showComparableWork={showComparableWork} scopeNeedsConfirmation={scopeNeedsConfirmation}
-     audit={audit} canCompare={canCompare} readable={readable} hidden={hidden}/>
+     audit={audit} canCompare={canCompare} readable={readable} hidden={hidden}
+     onShowStops={()=>jumpToDetails(stopDetailsRef,true)}
+     onShowEarnings={()=>jumpToDetails(earningsDetailsRef)}
+     onShowCharges={()=>jumpToDetails(chargeDetailsRef)}/>
    {step==='result'&&<section className="home-card v5-finish" aria-label="Save or continue pay check">
       <button type="button" className="home-primary w-full" disabled={busy||!ai||!sourceNet||scopeNeedsConfirmation||!view?.periodOk||!view?.currencyOk||view.rawPayout==null} onClick={saveCheck}>{busy?'Saving…':canCompare?'Save pay check':'Save statement — check later'}</button>
       {!canCompare&&<p className="home-muted text-xs">{scopeNeedsConfirmation?'Confirm the statement date range above before saving the check.':'Saves the statement without claiming it matches your work. No new scan needed later.'}</p>}
@@ -306,18 +318,22 @@ export default function CheckPayV5(){
      {savedCheck&&<Link to="/app/records?tab=documents" className="home-secondary w-full">Save and finish (self-billed)</Link>}
      {!savedCheck&&unresolvedSaved.length===0&&<button className="home-secondary w-full" type="button" onClick={()=>setStep('result')}>Review missing details</button>}
    </section>}
-    {view?.earningsVariations.length>0&&<details className="home-card v5-earnings-note" aria-label="Daily earnings details">
+    {view?.earningsVariations.length>0&&<details ref={earningsDetailsRef} className="home-card v5-earnings-note v5-finding-target" aria-label="Daily earnings details" tabIndex={-1}>
       <summary>{view.earningsVariations.length} days with different pay totals</summary>
       <p className="home-muted text-sm">Stops match. Extras, parcels or rates may explain the amounts; no individual decisions needed.</p>
       <div className="v5-earnings-list">{view.earningsVariations.map(row=><div key={row.date} className="v5-earnings-row"><strong>{showDate(row.date)}</strong><span>{cash(row.loggedGross)} logged / {cash(row.statementGross)} statement</span></div>)}</div>
      </details>}
-     {view?.flagged.length>0&&<details className="home-card v5-differences" open={openDays} onToggle={e=>setOpenDays(e.currentTarget.open)}>
+     {view?.flagged.length>0&&<details ref={stopDetailsRef} className="home-card v5-differences v5-finding-target" open={openDays} tabIndex={-1} onToggle={e=>setOpenDays(e.currentTarget.open)}>
       <summary>Review {view.flagged.length} stop/date {view.flagged.length===1?'difference':'differences'}</summary>
       <p className="home-muted text-xs">Only these dates have different stops or missing work. A duplicate is possible but not confirmed.</p>
       {(showMore?view.flagged:view.flagged.slice(0,3)).map(row=><div className="v5-day" key={row.date}>
        <strong>{showDate(row.date)}</strong>
        <p className="home-muted text-sm">{row.reason||'Review this workday.'}</p>
-       <div className="v5-day-numbers"><span>Stops: {row.loggedStops??'—'} yours / {row.statementStops??'—'} statement</span></div>
+       <div className="v5-day-numbers">
+         <span>Stops: {row.loggedStops??'—'} yours / {row.statementStops??'—'} statement</span>
+         {Number.isSafeInteger(row.loggedStops)&&Number.isSafeInteger(row.statementStops)&&row.loggedStops!==row.statementStops&&
+          <strong className="v5-stop-delta">{Math.abs(row.loggedStops-row.statementStops)} {Math.abs(row.loggedStops-row.statementStops)===1?'stop':'stops'} {row.statementStops<row.loggedStops?'fewer on statement':'more on statement'} · reason not confirmed</strong>}
+        </div>
        <label className="v5-day-accept">Your decision<select value={confirmedDays[row.date]||''} onChange={e=>setConfirmedDays(v=>({...v,[row.date]:e.target.value}))}><option value="">Needs review</option><option value="possible_duplicate_accepted">Possible duplicate — accepted</option><option value="figures_verified">Checked and accepted</option><option value="dispute">Query with contractor</option></select></label>
       </div>)}
       {view.flagged.length>3&&<button type="button" className="home-secondary w-full" onClick={()=>setShowMore(v=>!v)}>{showMore?'Show fewer':`See all ${view.flagged.length} workdays`}</button>}
@@ -332,7 +348,7 @@ export default function CheckPayV5(){
       {typeof ai?.extraPaymentsTotal==='number'&&<p className="home-muted text-sm">Extra payments shown: {cash(Math.round(ai.extraPaymentsTotal*100))}; their dates may fall outside the work period.</p>}
       {view?.vatSource==='printed_vat'&&<p className="home-muted text-sm">The before-VAT payout uses the exact VAT amount read from the statement, subject to your review.</p>}
      </details>}
-     {chargeEvidence.length>0&&<details className="home-card v5-charge-evidence"><summary>{chargeEvidence.length} contractor charges · {cash(readable.listedCharges)}</summary>
+     {chargeEvidence.length>0&&<details ref={chargeDetailsRef} className="home-card v5-charge-evidence v5-finding-target" tabIndex={-1}><summary>{chargeEvidence.length} contractor charges · {cash(readable.listedCharges)}</summary>
       <p className="home-muted text-xs">From your statement. Tap a charge for the evidence. No fuel-card discount is guessed.</p>
       {chargeEvidence.map(row=><details className="v5-charge-item" key={row.id}>
        <summary><strong>{row.label}</strong><span>{cash(row.amountPence)}</span></summary>
