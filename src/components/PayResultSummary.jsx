@@ -1,12 +1,13 @@
 import React from 'react';
 import {money} from '../features/home/homeModel';
+import {ArrowRight} from 'lucide-react';
 
 const currency=p=>p==null?'Not available':money(p/100);
 const showDate=s=>new Date(s+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
 
 export default function PayResultSummary({
   ai,view,step,period,rowSummary,showComparableWork,scopeNeedsConfirmation,
-  audit,canCompare,readable,hidden
+  audit,canCompare,readable,hidden,onShowStops,onShowEarnings,onShowCharges
 }){
  const cash=p=>hidden?'••••':currency(p);
  const differences=view?.flagged?.length||0;
@@ -48,9 +49,18 @@ export default function PayResultSummary({
      <p>Illustration only: assumes these charges weren't already included. Rate differences and extras may still affect the result.</p>
    </div>}
    <div className="v5-findings" aria-label="Pay check findings">
-     <div><strong>{showComparableWork?differences:'—'}</strong><span>Stop/date issues</span></div>
-     <div><strong>{showComparableWork?sameStops:'—'}</strong><span>Pay variations</span></div>
-     <div><strong>{charges}</strong><span>Charge items</span></div>
+     <button type="button" disabled={!showComparableWork||differences===0||!onShowStops} onClick={onShowStops}
+       aria-label={`View ${differences} stop/date ${differences===1?'issue':'issues'} by date`}>
+       <strong>{showComparableWork?differences:'—'}</strong><span>Stop/date issues <ArrowRight size={14} aria-hidden="true"/></span>
+     </button>
+     <button type="button" disabled={!showComparableWork||sameStops===0||!onShowEarnings} onClick={onShowEarnings}
+       aria-label={`View ${sameStops} daily pay ${sameStops===1?'variation':'variations'} by date`}>
+       <strong>{showComparableWork?sameStops:'—'}</strong><span>Pay variations <ArrowRight size={14} aria-hidden="true"/></span>
+     </button>
+     <button type="button" disabled={charges===0||!onShowCharges} onClick={onShowCharges}
+       aria-label={`View ${charges} contractor charge ${charges===1?'item':'items'}`}>
+       <strong>{charges}</strong><span>Charge items <ArrowRight size={14} aria-hidden="true"/></span>
+     </button>
    </div>
    {canCompare?<p className="v5-result-hint" role="status">
      {readable.bridgeAvailable?

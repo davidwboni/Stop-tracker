@@ -89,6 +89,45 @@ describe('V5 one-upload pay journey',()=>{
   expect(screen.getByRole('button',{name:'Save pay check'})).toBeEnabled();
   expect(stub.save).not.toHaveBeenCalled();
  });
+ it('tapping Stop/date issues opens the affected workday and describes the stop difference',async()=>{
+  open();await upload();
+  expect(screen.getByRole('button',{name:'View 1 stop/date issue by date'})).toBeEnabled();
+  expect(document.querySelector('.v5-differences')).not.toHaveAttribute('open');
+  fireEvent.click(screen.getByRole('button',{name:'View 1 stop/date issue by date'}));
+  await waitFor(()=>expect(document.querySelector('.v5-differences')).toHaveAttribute('open'));
+  expect(screen.getByText('1 stop fewer on statement · reason not confirmed')).toBeInTheDocument();
+  expect(screen.getByText('Different stop counts')).toBeInTheDocument();
+  expect(screen.getByDisplayValue('Needs review')).toBeInTheDocument();
+ });
+ it('one tap from the headline reveals all six affected dates, not only the first three',async()=>{
+  const six=Array.from({length:6},(_,i)=>({
+    ...logs[0],id:'shift-'+i,date:'2026-09-'+String(i+14).padStart(2,'0'),
+    stops:120,total:100
+  }));
+  stub.data.logs=six;
+  stub.extract.mockResolvedValue(statement({
+    daily:six.map(row=>({date:row.date,stops:119,amount:100})),
+    statementAmount:600,contractorCharges:20,contractorPayout:580
+  }));
+  open();await upload();
+  fireEvent.click(screen.getByRole('button',{name:'View 6 stop/date issues by date'}));
+  await waitFor(()=>expect(document.querySelector('.v5-differences')).toHaveAttribute('open'));
+  expect(screen.getAllByText('1 stop fewer on statement · reason not confirmed')).toHaveLength(6);
+  expect(screen.queryByRole('button',{name:'See all 6 workdays'})).not.toBeInTheDocument();
+ });
+ it('tapping Pay variations or Charge items opens their supporting details',async()=>{
+  stub.extract.mockResolvedValue(statement({
+    daily:[{date:'2026-09-14',stops:120,amount:101.70},{date:'2026-09-15',stops:130,amount:200}],
+    charges:[{label:'Lease cost',amount:20}]
+  }));
+  open();await upload();
+  fireEvent.click(screen.getByRole('button',{name:'View 1 daily pay variation by date'}));
+  expect(document.querySelector('.v5-earnings-note')).toHaveAttribute('open');
+  expect(screen.getByText(/£100.00 logged \/ £101.70 statement/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'View 1 contractor charge item'}));
+  expect(document.querySelector('.v5-charge-evidence')).toHaveAttribute('open');
+  expect(within(document.querySelector('.v5-charge-evidence')).getByText('Lease cost')).toBeInTheDocument();
+ });
  it('shows a concise result and save action before optional discrepancy/charge details',async()=>{
   open();await upload();
   const root=document.querySelector('.v5-pay');

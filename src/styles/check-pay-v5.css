@@ -150,9 +150,16 @@
 .v5-bridge-delta{padding-top:8px;border-top:1px solid var(--border)}
 .v5-bridge p{color:var(--home-muted);font-size:12px;line-height:1.4;margin:0}
 .v5-findings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
-.v5-findings>div{display:flex;align-items:center;gap:6px;padding:12px 8px;border:1px solid var(--border);border-radius:12px;min-width:0}
+.v5-findings>button{display:grid;align-content:center;justify-items:center;text-align:center;gap:4px;padding:11px 5px;min-height:78px;border:1px solid var(--border);border-radius:12px;background:var(--card);color:var(--foreground);cursor:pointer;min-width:0;transition:border-color .16s ease,background-color .16s ease}
 .v5-findings strong{font-size:clamp(19px,4.6vw,24px);font-weight:760;font-variant-numeric:tabular-nums;flex:none}
-.v5-findings span{font-size:11px;line-height:1.25;color:var(--home-muted)}
+.v5-findings span{font-size:11px;line-height:1.25;color:var(--home-muted);display:flex;align-items:center;justify-content:center;gap:3px;flex-wrap:wrap}
+.v5-findings>button:hover:not(:disabled){border-color:var(--home-purple)}
+.v5-findings>button:focus-visible{outline:3px solid var(--home-purple);outline-offset:3px}
+.v5-findings>button:disabled{cursor:default;opacity:.67}
+.v5-findings>button:disabled svg{display:none}
+.v5-finding-target{scroll-margin-top:20px}
+.v5-stop-delta{display:block;color:var(--foreground);font-size:13px;font-weight:650;line-height:1.4}
+@media(prefers-reduced-motion:reduce){.v5-findings>button{transition:none}}
 .v5-simple-result .v5-result-hint{font-size:13px;line-height:1.5;padding-top:3px}
 .v5-result-math{border-top:1px solid var(--border);padding-top:5px;min-width:0}
 .v5-result-math summary{font-size:13px;min-height:48px;display:list-item;align-content:center;cursor:pointer;color:var(--home-purple);font-weight:650}
