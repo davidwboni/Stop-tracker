@@ -126,7 +126,7 @@ describe('V5 one-upload pay journey',()=>{
   expect(screen.getByText(/£100.00 logged \/ £101.70 statement/)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button',{name:'View 1 contractor charge item'}));
   expect(document.querySelector('.v5-charge-evidence')).toHaveAttribute('open');
-  expect(screen.getByText('Lease cost')).toBeInTheDocument();
+  expect(within(document.querySelector('.v5-charge-evidence')).getByText('Lease cost')).toBeInTheDocument();
  });
  it('shows a concise result and save action before optional discrepancy/charge details',async()=>{
   open();await upload();
