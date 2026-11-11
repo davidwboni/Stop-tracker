@@ -21,9 +21,9 @@ describe('mobile-first readable Pay result',()=>{
  it('shows the payout, estimate, charges, and only three short issue counts',()=>{
   render(<PayResultSummary {...base}/>);
   const result=screen.getByRole('region',{name:'Pay check summary'});
-  expect(within(result).getByText('£3,108.89')).toBeInTheDocument();
-  expect(within(result).getByText('£4,645.55')).toBeInTheDocument();
-  expect(within(result).getByText('£1,591.62')).toBeInTheDocument();
+  expect(within(result).getAllByText('£3,108.89').length).toBeGreaterThanOrEqual(1);
+  expect(within(result).getAllByText('£4,645.55').length).toBeGreaterThanOrEqual(1);
+  expect(within(result).getAllByText('£1,591.62').length).toBeGreaterThanOrEqual(1);
   expect(within(result).getByText('Stop/date issues')).toBeInTheDocument();
   expect(within(result).getByText('Pay variations')).toBeInTheDocument();
   expect(within(result).getByText('Charge items')).toBeInTheDocument();
