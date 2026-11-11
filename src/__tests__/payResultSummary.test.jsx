@@ -30,8 +30,9 @@ describe('mobile-first readable Pay result',()=>{
   expect(within(result).getByText('Estimate after those charges')).toBeInTheDocument();
   expect(within(result).getByText('£3,053.93')).toBeInTheDocument();
   expect(within(result).getByText('£54.96 higher')).toBeInTheDocument();
-  expect(within(result).queryByText('£1,536.66')).not.toBeInTheDocument();
+  // The raw gap exists only inside a closed-on-load explanatory disclosure.
   expect(result.querySelector('.v5-result-math')).not.toHaveAttribute('open');
+  expect(within(result.querySelector('.v5-result-math')).getByText('£1,536.66')).toBeInTheDocument();
   expect(result.querySelectorAll('.v5-quick-summary p')).toHaveLength(0);
  });
  it('still explains the full unadjusted £1,536.66 gap only on demand',()=>{
@@ -56,6 +57,12 @@ describe('mobile-first readable Pay result',()=>{
   expect(screen.getByText('VAT needs checking')).toBeInTheDocument();
   expect(screen.getByText(/Confirm the statement dates above/)).toBeInTheDocument();
   expect(screen.queryByText('£54.96 higher')).not.toBeInTheDocument();
+ });
+ it('does not assume VAT included when the scanned statement basis is unknown',()=>{
+  const uncertain={...check,payoutBeforeVat:null,vatSource:'unknown'};
+  render(<PayResultSummary {...base} view={uncertain} canCompare={false} readable={{...read,expected:null,paid:null,rawGap:null,bridgeAvailable:false}}/>);
+  expect(screen.getByText(/as printed · VAT not confirmed/)).toBeInTheDocument();
+  expect(screen.queryByText(/including VAT/)).not.toBeInTheDocument();
  });
  it('honours financial privacy mode across all visible amounts',()=>{
   render(<PayResultSummary {...base} hidden/>);
