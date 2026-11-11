@@ -132,3 +132,54 @@
  .v5-result .v5-totals dd{font-size:16px}
  .v5-result .v5-totals dt{font-size:13px}
 }
+
+/* V5 pay-check result: money first, three skimmable findings, evidence on demand.
+   Theme variables keep dark/light in sync; no green "underpayment" claims. */
+.v5-simple-result{gap:12px!important;min-width:0}
+.v5-simple-result>.v5-period-label{margin-top:-4px}
+.v5-outcome{display:grid;gap:5px;min-width:0;padding:15px 0;border-block:1px solid var(--border)}
+.v5-outcome>span,.v5-outcome small{font-size:13px;color:var(--home-muted);line-height:1.45}
+.v5-outcome strong{color:var(--foreground);font-size:clamp(25px,6.5vw,38px);font-weight:780;letter-spacing:-.035em;line-height:1.1;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.v5-money-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.v5-money-pair>div{border:1px solid var(--border);border-radius:13px;padding:13px 12px;display:grid;align-content:start;gap:7px;min-width:0}
+.v5-money-pair span,.v5-bridge span{color:var(--home-muted);font-size:12px;line-height:1.4}
+.v5-money-pair strong{font-size:clamp(17px,4.4vw,23px);line-height:1.25;font-weight:750;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.v5-bridge{padding:13px;border:1px solid var(--border);border-radius:13px;display:grid;gap:9px;min-width:0}
+.v5-bridge>div{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.v5-bridge strong{font-size:clamp(17px,4.3vw,21px);font-variant-numeric:tabular-nums;white-space:nowrap}
+.v5-bridge-delta{padding-top:8px;border-top:1px solid var(--border)}
+.v5-bridge p{color:var(--home-muted);font-size:12px;line-height:1.4;margin:0}
+.v5-findings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.v5-findings>div{display:flex;align-items:center;gap:6px;padding:12px 8px;border:1px solid var(--border);border-radius:12px;min-width:0}
+.v5-findings strong{font-size:clamp(19px,4.6vw,24px);font-weight:760;font-variant-numeric:tabular-nums;flex:none}
+.v5-findings span{font-size:11px;line-height:1.25;color:var(--home-muted)}
+.v5-simple-result .v5-result-hint{font-size:13px;line-height:1.5;padding-top:3px}
+.v5-result-math{border-top:1px solid var(--border);padding-top:5px;min-width:0}
+.v5-result-math summary{font-size:13px;min-height:48px;display:list-item;align-content:center;cursor:pointer;color:var(--home-purple);font-weight:650}
+.v5-result-math .v5-totals>div{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,max-content);padding:10px 0;gap:10px}
+.v5-result-math .v5-totals dt{font-size:12px}
+.v5-result-math .v5-totals dd{font-size:15px;white-space:normal;overflow-wrap:anywhere}
+.v5-result-math p{margin:7px 0}
+.v5-result-math summary:focus-visible,.v5-charge-item summary:focus-visible{outline:3px solid var(--home-purple);outline-offset:2px;border-radius:8px}
+.v5-charge-item{border-top:1px solid var(--border);padding:4px 0}
+.v5-charge-item summary{display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer;min-height:47px;font-size:14px;list-style:none}
+.v5-charge-item summary::-webkit-details-marker{display:none}
+.v5-charge-item summary::before{content:'›';font-size:19px;line-height:1;color:var(--home-muted)}
+.v5-charge-item[open] summary::before{content:'⌄'}
+.v5-charge-item summary strong{font-weight:650;flex:1;text-transform:capitalize;overflow-wrap:anywhere}
+.v5-charge-item summary span{font-weight:690;font-variant-numeric:tabular-nums;white-space:nowrap}
+.v5-charge-item>p{padding:0 0 10px 20px;margin:0;line-height:1.45}
+@media(max-width:380px){
+ .v5-findings>div{display:grid;gap:2px;text-align:center;padding:10px 5px}
+ .v5-bridge>div{flex-wrap:wrap}
+ .v5-money-pair>div{padding:11px 9px}
+}
+@media(min-width:768px){
+ .v5-money-pair{gap:14px}
+ .v5-findings>div{padding:16px;gap:10px}
+ .v5-findings span{font-size:13px}
+}
+@media(prefers-reduced-motion:no-preference){
+ .v5-simple-result{animation:v5-result-enter .22s ease-out both}
+ @keyframes v5-result-enter{from{opacity:.8;transform:translateY(5px)}to{opacity:1;transform:none}}
+}
