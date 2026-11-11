@@ -18,7 +18,7 @@ export default function PayResultSummary({
   scopeNeedsConfirmation?'Confirm statement dates':
   !view?.currencyOk?'Confirm statement currency':
   audit?.status==='mismatch'?'Statement totals need checking':
-  differences?differences+' workdays need a look':
+  differences?differences+(differences===1?' workday needs a look':' workdays need a look'):
   view?.hasDaily?'Workdays checked':'Statement totals read';
  return <section className="home-card v5-result v5-simple-result" aria-label="Pay check summary">
    <div className="v5-topline">
