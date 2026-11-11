@@ -10,6 +10,8 @@ import {buildStatementAutoCheck} from '../features/statements/autoCheck';
 import {inferStatementPeriod} from '../features/statements/periodEvidence';
 import {briefPayFindings} from '../features/statements/findingsSummary';
 import {statementChargeEvidence} from '../features/statements/chargeEvidence';
+import {readablePayResult} from '../features/statements/readablePayResult';
+import PayResultSummary from './PayResultSummary';
 import {auditStatementArithmetic} from '../features/statements/statementAudit';
 import {unresolvedStatementFindings,statementInvoiceReady,mergeFindingDecisions,requiresLimitedCoverageAcceptance} from '../features/statements/findingGate';
 import {createStatementReview,confirmedReview,captureIssues} from '../features/statements/reviewModel';
@@ -98,6 +100,7 @@ export default function CheckPayV5(){
  const canCompare=!!view?.canCompare&&!scopeNeedsConfirmation&&audit.status!=='mismatch'&&!loading&&!costs.loading&&!loadError&&!costs.error;
  const findings=briefPayFindings({check:view,confirmedScope:!scopeNeedsConfirmation&&!!view?.periodOk,auditStatus:audit.status,rows:rowSummary.rows});
  const showComparableWork=!!view?.periodOk&&!scopeNeedsConfirmation;
+ const readable=readablePayResult({check:view?{...view,canCompare}:null,statement:sourceNet,summary:rowSummary,audit,chargeEvidence});
  const scanEnabled=!!permission&&(permission.isPro||permission.betaAccess||permission.statementAiUses<3);
  const savedCheck=['matched','difference','reconciled'].includes(previous.state);
  const unresolvedSaved=unresolvedStatementFindings(statusRecord);
@@ -276,22 +279,9 @@ export default function CheckPayV5(){
      <button className="home-primary w-full" type="button" onClick={()=>{setConfirmedStatementPeriod({start:period.start,end:period.end,id:period.id});setError('');}}>Use {showDate(period.start)} – {showDate(period.end)} for this check <ArrowRight size={17}/></button>
    </section>}
    {step==='result'&&confirmedStatementPeriod?.id===period.id&&<p className="home-muted text-xs v5-period-confirmed" role="status">Statement dates confirmed for {showDate(period.start)} – {showDate(period.end)}. Only workdays in this range are included.</p>}
-   <section className="home-card v5-result" aria-label="Pay check summary">
-    <div className="v5-topline"><span className="st-badge">{step==='saved'?'Saved':'AI findings · Not yet confirmed'}</span><span className="home-muted text-xs">{showComparableWork?rowSummary.rows.length+' workdays logged':'Date range needs checking'}</span></div>
-    <h2>{!ai?'No statement read':scopeNeedsConfirmation?'Confirm statement dates':!view?.currencyOk?'Check statement details':audit.status==='mismatch'?'Statement totals need checking':view.flagged.length?view.flagged.length+' stop/date '+(view.flagged.length===1?'difference':'differences')+' to review':view.hasDaily?'Stop counts checked':'Statement summary read'}</h2>
-    <p className="home-muted text-sm">{showDate(period.start)} – {showDate(period.end)}</p>
-    <dl className="v5-totals">
-     <div><dt>Contractor statement {sourceNet?.taxBasis==='included'?'(incl. VAT)':''}</dt><dd>{cash(view?.rawPayout)}</dd></div>
-     {view?.payoutBeforeVat!=null&&view.rawPayout!==view.payoutBeforeVat&&<div><dt>Statement before VAT</dt><dd>{cash(view.payoutBeforeVat)}</dd></div>}
-     <div><dt>Your expected payout</dt><dd>{showComparableWork?cash(rowSummary.payout):'Confirm dates first'}</dd></div>
-     <div className={'v5-difference '+(canCompare&&view.difference!==0?'v5-warning-difference':'')}><dt>Potential difference</dt><dd>{canCompare?cash(Math.abs(view.difference)):'Not comparable yet'}</dd></div>
-    </dl>
-    {canCompare&&<p className="home-muted text-xs">{view.difference===0?'Totals match on a before-VAT basis.':view.difference<0?'The statement is below your estimate.':'The statement is above your estimate.'} This is not proof of an underpayment.</p>}
-    {!canCompare&&<p className="home-muted text-sm" role="status">{audit.status==='mismatch'?'Some AI-read totals do not add up. Save the statement now, then check the source figures.':view?.vatSource==='unknown'?'The VAT basis needs confirming before comparing.':rowSummary.payout==null?'Some saved pay settings need reviewing before comparing.':'This check is incomplete. Save the statement and review it later.'}</p>}
-    <div className="v5-quick-summary" aria-label="What AI found"><h3>Quick summary</h3>{findings.map((line,i)=><p key={i}>{line}</p>)}</div>
-    {showComparableWork&&view?.flagged.length>0&&<p className="v5-result-hint"><strong>{view.flagged.length} stop/date {view.flagged.length===1?'issue':'issues'}</strong> · review only those days.</p>}
-    {showComparableWork&&view?.earningsVariations.length>0&&<p className="home-muted text-xs">{view.earningsVariations.length} same-stop days have different earnings totals. Not confirmed underpayments.</p>}
-   </section>
+   <PayResultSummary ai={ai} view={view} step={step} period={period} rowSummary={rowSummary}
+     showComparableWork={showComparableWork} scopeNeedsConfirmation={scopeNeedsConfirmation}
+     audit={audit} canCompare={canCompare} readable={readable} hidden={hidden}/>
    {step==='result'&&<section className="home-card v5-finish" aria-label="Save or continue pay check">
       <button type="button" className="home-primary w-full" disabled={busy||!ai||!sourceNet||scopeNeedsConfirmation||!view?.periodOk||!view?.currencyOk||view.rawPayout==null} onClick={saveCheck}>{busy?'Saving…':canCompare?'Save pay check':'Save statement — check later'}</button>
       {!canCompare&&<p className="home-muted text-xs">{scopeNeedsConfirmation?'Confirm the statement date range above before saving the check.':'Saves the statement without claiming it matches your work. No new scan needed later.'}</p>}
@@ -317,13 +307,13 @@ export default function CheckPayV5(){
      {!savedCheck&&unresolvedSaved.length===0&&<button className="home-secondary w-full" type="button" onClick={()=>setStep('result')}>Review missing details</button>}
    </section>}
     {view?.earningsVariations.length>0&&<details className="home-card v5-earnings-note" aria-label="Daily earnings details">
-      <summary>{view.earningsVariations.length} days · Stops match, pay figures differ</summary>
-      <p className="home-muted text-sm">Daily totals may include parcels, extras or different VAT treatment. These are not confirmed underpayments; no individual decisions needed.</p>
+      <summary>{view.earningsVariations.length} days with different pay totals</summary>
+      <p className="home-muted text-sm">Stops match. Extras, parcels or rates may explain the amounts; no individual decisions needed.</p>
       <div className="v5-earnings-list">{view.earningsVariations.map(row=><div key={row.date} className="v5-earnings-row"><strong>{showDate(row.date)}</strong><span>{cash(row.loggedGross)} logged / {cash(row.statementGross)} statement</span></div>)}</div>
      </details>}
      {view?.flagged.length>0&&<details className="home-card v5-differences" open={openDays} onToggle={e=>setOpenDays(e.currentTarget.open)}>
       <summary>Review {view.flagged.length} stop/date {view.flagged.length===1?'difference':'differences'}</summary>
-      <p className="home-muted text-xs">Only these days have different stops, missing work or duplicate statement rows. AI cannot prove if a one-stop difference is a duplicate.</p>
+      <p className="home-muted text-xs">Only these dates have different stops or missing work. A duplicate is possible but not confirmed.</p>
       {(showMore?view.flagged:view.flagged.slice(0,3)).map(row=><div className="v5-day" key={row.date}>
        <strong>{showDate(row.date)}</strong>
        <p className="home-muted text-sm">{row.reason||'Review this workday.'}</p>
@@ -342,10 +332,14 @@ export default function CheckPayV5(){
       {typeof ai?.extraPaymentsTotal==='number'&&<p className="home-muted text-sm">Extra payments shown: {cash(Math.round(ai.extraPaymentsTotal*100))}; their dates may fall outside the work period.</p>}
       {view?.vatSource==='printed_vat'&&<p className="home-muted text-sm">The before-VAT payout uses the exact VAT amount read from the statement, subject to your review.</p>}
      </details>}
-     {chargeEvidence.length>0&&<details className="home-card v5-charge-evidence"><summary>Contractor charges & fuel · {chargeEvidence.length} items</summary><p className="home-muted text-sm">Charges are checked only against independent records. Fuel-card discounts are not assumed.</p>
-      {chargeEvidence.map(row=><div className="v5-charge-row" key={row.id}><div><strong>{row.label}</strong><p className="home-muted text-xs">{row.explanation}</p></div><span>{cash(row.amountPence)}</span></div>)}
+     {chargeEvidence.length>0&&<details className="home-card v5-charge-evidence"><summary>{chargeEvidence.length} contractor charges · {cash(readable.listedCharges)}</summary>
+      <p className="home-muted text-xs">From your statement. Tap a charge for the evidence. No fuel-card discount is guessed.</p>
+      {chargeEvidence.map(row=><details className="v5-charge-item" key={row.id}>
+       <summary><strong>{row.label}</strong><span>{cash(row.amountPence)}</span></summary>
+       <p className="home-muted text-xs">{row.explanation}</p>
+      </details>)}
      </details>}
-     {ai&&step==='result'&&!scopeNeedsConfirmation&&(!view?.canCompare)&&<section className="home-card v5-one-question">
+          {ai&&step==='result'&&!scopeNeedsConfirmation&&(!view?.canCompare)&&<section className="home-card v5-one-question">
     <h2>One detail needs checking</h2>
     {view?.vatSource==='unknown'&&<><label className="home-field">Does the statement payout include VAT?<select value={vatChoice||'unknown'} onChange={e=>setVatChoice(e.target.value)}><option value="unknown">Not sure / show me later</option><option value="excluded">No — this is before VAT</option><option value="included">Yes — it includes VAT</option><option value="not_applicable">No VAT applies</option></select></label>
      {vatChoice==='included'&&<label className="home-field">VAT amount printed on the statement (£)<input inputMode="decimal" placeholder="Only enter an amount shown on the original" value={vatEntry} onChange={e=>setVatEntry(e.target.value)}/></label>}</>}

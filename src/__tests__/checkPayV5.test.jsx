@@ -69,9 +69,9 @@ describe('V5 one-upload pay journey',()=>{
      contractorFee:0,contractorCharges:20,beforeVatPayout:280
    }));
    open();await upload();
-   expect(screen.getByText(/Some AI-read totals do not add up/)).toBeInTheDocument();
+   expect(screen.getByText(/AI-read totals do not add up/)).toBeInTheDocument();
    expect(screen.getByRole('button',{name:'Save statement — check later'})).toBeEnabled();
-   expect(screen.getByText('Not comparable yet')).toBeInTheDocument();
+   expect(screen.getByText('Not comparable')).toBeInTheDocument();
    fireEvent.click(screen.getByRole('button',{name:'Save statement — check later'}));
    await waitFor(()=>expect(stub.save).toHaveBeenCalledOnce());
    expect(stub.save.mock.calls[0][1]).toMatchObject({
@@ -83,9 +83,9 @@ describe('V5 one-upload pay journey',()=>{
  it('reads a statement and automatically reports differences with the corresponding saved day',async()=>{
   open();await upload();
   expect(stub.extract).toHaveBeenCalledOnce();
-  expect(screen.getByText(/1 stop\/date difference to review/)).toBeInTheDocument();
+  expect(screen.getByText(/1 workday needs a look/)).toBeInTheDocument();
   expect(screen.getByText(/120 yours \/ 119 statement/)).toBeInTheDocument();
-  expect(screen.getByText('Potential difference')).toBeInTheDocument();
+  expect(screen.getByText('Raw gap before accounting for new charges')).toBeInTheDocument();
   expect(screen.getByRole('button',{name:'Save pay check'})).toBeEnabled();
   expect(stub.save).not.toHaveBeenCalled();
  });
@@ -99,7 +99,7 @@ describe('V5 one-upload pay journey',()=>{
   expect(summary.compareDocumentPosition(save)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(save.compareDocumentPosition(detail)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(detail).not.toHaveAttribute('open');
-  expect(screen.getByText(/1 stop\/date difference to review/)).toBeInTheDocument();
+  expect(screen.getByText(/1 workday needs a look/)).toBeInTheDocument();
   expect(screen.getByRole('button',{name:'Save pay check'})).toBeEnabled();
   expect(screen.getByText('About this check')).toBeInTheDocument();
   expect(root.querySelector('.v5-disclaimer')).not.toHaveAttribute('open');
@@ -121,12 +121,12 @@ describe('V5 one-upload pay journey',()=>{
   }));
   stub.save.mockImplementation(async(id,patch)=>{stub.data.periodRecords={...stub.data.periodRecords,[id]:patch};return true;});
   open();await upload();
-  expect(screen.getByText('2 days · Stops match, pay figures differ')).toBeInTheDocument();
-  expect(screen.getByText(/2 same-stop days have different earnings totals/)).toBeInTheDocument();
+  expect(screen.getByText('2 days with different pay totals')).toBeInTheDocument();
+  expect(screen.getByText('Pay variations')).toBeInTheDocument();
   expect(screen.queryByText('Workdays to review')).not.toBeInTheDocument();
   expect(screen.queryByText(/Without an itemised breakdown, AI cannot prove/)).not.toBeInTheDocument();
   expect(screen.queryByDisplayValue('Needs review')).not.toBeInTheDocument();
-  const disclosure=screen.getByText('2 days · Stops match, pay figures differ');
+  const disclosure=screen.getByText('2 days with different pay totals');
   fireEvent.click(disclosure);
   expect(screen.getByText(/£100.00 logged \/ £101.70 statement/)).toBeInTheDocument();
   fireEvent.click(screen.getByText('Before invoicing · Unverified daily details'));
@@ -149,7 +149,7 @@ describe('V5 one-upload pay journey',()=>{
   stub.extract.mockResolvedValue(statement({contractorPayout:300,contractorCharges:0,statementAmount:300}));
   stub.save.mockImplementation(async(id,patch)=>{stub.data.periodRecords={...stub.data.periodRecords,[id]:patch};return true;});
   open();await upload();
-  expect(screen.getByText(/1 stop\/date difference to review/)).toBeInTheDocument();
+  expect(screen.getByText(/1 workday needs a look/)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button',{name:'Save pay check'}));
   await waitFor(()=>expect(stub.save).toHaveBeenCalledOnce());
   expect(stub.save.mock.calls[0][1]).toMatchObject({status:'checked',needsReview:true});
@@ -227,11 +227,11 @@ describe('V5 one-upload pay journey',()=>{
   expect(within(confirm).getByText(/AI read 14 Sept 2026 – 10 Nov 2026/)).toBeInTheDocument();
   expect(within(confirm).getByRole('combobox',{name:'Period shown on statement'})).toHaveValue(period.id);
   const summary=screen.getByRole('region',{name:'Pay check summary'});
-  expect(within(summary).getByText('Confirm dates first')).toBeInTheDocument();
+  expect(within(summary).getByText('Dates need checking')).toBeInTheDocument();
   expect(within(summary).queryByText('£2,100.00')).not.toBeInTheDocument();
   expect(screen.getByRole('button',{name:'Save statement — check later'})).toBeDisabled();
-  expect(within(summary).getByText('Quick summary')).toBeInTheDocument();
-  expect(within(summary).getByText(/dates need confirming before any workdays/)).toBeInTheDocument();
+  expect(within(summary).getByText('Stop/date issues')).toBeInTheDocument();
+  expect(within(summary).getByText(/Confirm the statement dates above before comparing/)).toBeInTheDocument();
   fireEvent.click(within(confirm).getByRole('button',{name:/Use 14 Sept 2026 – 11 Oct 2026 for this check/}));
   await waitFor(()=>expect(within(summary).getAllByText('£300.00').length).toBeGreaterThan(0));
   expect(within(summary).queryByText('£2,100.00')).not.toBeInTheDocument();
@@ -276,7 +276,7 @@ describe('V5 one-upload pay journey',()=>{
   open();await upload();
   expect(screen.getByRole('heading',{name:'Confirm the statement dates'})).toBeInTheDocument();
   const summary=screen.getByRole('region',{name:'Pay check summary'});
-  expect(within(summary).getByText('Confirm dates first')).toBeInTheDocument();
+  expect(within(summary).getByText('Dates need checking')).toBeInTheDocument();
   expect(screen.getByRole('button',{name:'Save statement — check later'})).toBeDisabled();
   expect(stub.save).not.toHaveBeenCalled();
  });
