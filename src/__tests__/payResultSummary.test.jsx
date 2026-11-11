@@ -1,5 +1,5 @@
 import React from 'react';
-import {describe,it,expect} from 'vitest';
+import {describe,it,expect,vi} from 'vitest';
 import {render,screen,fireEvent,within} from '@testing-library/react';
 import PayResultSummary from '../components/PayResultSummary';
 import {readablePayResult} from '../features/statements/readablePayResult';
@@ -34,6 +34,23 @@ describe('mobile-first readable Pay result',()=>{
   expect(result.querySelector('.v5-result-math')).not.toHaveAttribute('open');
   expect(within(result.querySelector('.v5-result-math')).getByText('£1,536.66')).toBeInTheDocument();
   expect(result.querySelectorAll('.v5-quick-summary p')).toHaveLength(0);
+ });
+ it('the three finding counts are accessible shortcuts to their evidence',()=>{
+  const onShowStops=vi.fn(),onShowEarnings=vi.fn(),onShowCharges=vi.fn();
+  render(<PayResultSummary {...base} onShowStops={onShowStops} onShowEarnings={onShowEarnings} onShowCharges={onShowCharges}/>);
+  const result=screen.getByRole('region',{name:'Pay check summary'});
+  fireEvent.click(within(result).getByRole('button',{name:'View 6 stop/date issues by date'}));
+  fireEvent.click(within(result).getByRole('button',{name:'View 13 daily pay variations by date'}));
+  fireEvent.click(within(result).getByRole('button',{name:'View 6 contractor charge items'}));
+  expect(onShowStops).toHaveBeenCalledOnce();
+  expect(onShowEarnings).toHaveBeenCalledOnce();
+  expect(onShowCharges).toHaveBeenCalledOnce();
+ });
+ it('does not offer a misleading date shortcut when pay periods are not comparable',()=>{
+  render(<PayResultSummary {...base} showComparableWork={false} onShowStops={vi.fn()} onShowEarnings={vi.fn()} onShowCharges={vi.fn()}/>);
+  expect(screen.getByRole('button',{name:'View 6 stop/date issues by date'})).toBeDisabled();
+  expect(screen.getByRole('button',{name:'View 13 daily pay variations by date'})).toBeDisabled();
+  expect(screen.getByRole('button',{name:'View 6 contractor charge items'})).toBeEnabled();
  });
  it('still explains the full unadjusted £1,536.66 gap only on demand',()=>{
   render(<PayResultSummary {...base}/>);
