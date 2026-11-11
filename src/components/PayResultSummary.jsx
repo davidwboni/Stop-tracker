@@ -22,7 +22,7 @@ export default function PayResultSummary({
   view?.hasDaily?'Workdays checked':'Statement totals read';
  return <section className="home-card v5-result v5-simple-result" aria-label="Pay check summary">
    <div className="v5-topline">
-     <span className="st-badge">{step==='saved'?'Check saved':'AI check · Review needed'}</span>
+     <span className="st-badge">{step==='saved'?'Check saved':'AI results · Not confirmed'}</span>
      <span className="home-muted text-xs">{showComparableWork?rowSummary.rows.length+' workdays':'Confirm dates first'}</span>
    </div>
    <h2>{headline}</h2>
@@ -32,7 +32,8 @@ export default function PayResultSummary({
      <span>Contractor payout · before VAT</span>
      <strong>{view?.payoutBeforeVat!=null?cash(view.payoutBeforeVat):'VAT needs checking'}</strong>
      {view?.rawPayout!=null&&view.rawPayout!==view.payoutBeforeVat&&
-       <small>{cash(view.rawPayout)} including VAT {view.vat!=null?'· VAT '+cash(view.vat):''}</small>}
+       <small>{cash(view.rawPayout)} {view.vatSource==='unknown'?'as printed · VAT not confirmed':
+         'including VAT '+(view.vat!=null?'· VAT '+cash(view.vat):'')}</small>}
    </div>
    <div className="v5-money-pair">
      <div><span>Your recorded estimate</span><strong>{showComparableWork?cash(readable.expected):'Dates need checking'}</strong></div>
