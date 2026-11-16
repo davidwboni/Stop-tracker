@@ -9,7 +9,7 @@ const f=vi.hoisted(()=>({data:{},expenses:{},invoice:{},confirmSent:vi.fn()}));
 vi.mock('../contexts/DataContext',()=>({useData:()=>f.data}));
 vi.mock('../contexts/InvoiceContext',()=>({useInvoice:()=>f.invoice}));
 vi.mock('../hooks/useExpenses',()=>({default:()=>f.expenses}));
-vi.mock('../components/InvoiceCreate',()=>({default:({prefill})=><div><h2>InvoiceCreate</h2><p data-testid="prefill-total">{prefill.statementAmount??'unverified'}</p><p data-testid="prefill-period">{prefill.periodId}</p></div>}));
+vi.mock('../components/InvoiceCreate',()=>({default:({prefill})=><div><h2>InvoiceCreate</h2><p data-testid="prefill-total">{prefill.statementAmount??'unverified'}</p><p data-testid="prefill-period">{prefill.periodId}</p><p data-testid="prefill-vat">{prefill.vatAmount??'none'}</p><p data-testid="prefill-vat-total">{prefill.vatInclusiveAmount??'none'}</p></div>}));
 vi.stubGlobal('crypto',webcrypto);
 const period={id:'2026-08-17_2026-09-13',start:'2026-08-17',end:'2026-09-13'};
 const logs=[{id:'day',date:period.start,total:100,stops:50,payStructureSnapshot:{contractorFeePercent:6}}];
@@ -156,5 +156,25 @@ it('rejects stale approval when work or comparison fingerprint has changed',asyn
    invoiceApproval:{kind:'driver_accepted_contractor_amount',statementPence:9300,revision:'wrong-revision',acceptedAt:'2026-11-16T00:00:00Z'}};
  mount();
  await screen.findByText('Check your statement first');
+ expect(screen.queryByText('InvoiceCreate')).not.toBeInTheDocument();
+});
+
+it('carries exact printed VAT totals from a checked statement without silently adding tax',async()=>{
+ const base=await checked();
+ f.data.periodRecords[period.id]={...base,reviewedStatement:{
+   reviewed:true,vatAmountPence:1880,vatIncludedPayoutPence:11280,payoutPence:9400
+ }};
+ mount();
+ await screen.findByText('InvoiceCreate');
+ expect(screen.getByTestId('prefill-total')).toHaveTextContent('94.00');
+ expect(screen.getByTestId('prefill-vat')).toHaveTextContent('18.80');
+ expect(screen.getByTestId('prefill-vat-total')).toHaveTextContent('112.80');
+});
+it('shows a direct saved invoice download without rerunning pay reconciliation',async()=>{
+ f.data.periodRecords[period.id]=await checked({revision:'stale'});
+ f.invoice.invoices=[{id:'saved',invoiceNumber:8,periodId:period.id,status:'generated',senderSnapshot:{name:'Driver'},clientEmail:'accounts@example.com'}];
+ mount();
+ await screen.findByText('Invoice already prepared for this period');
+ expect(screen.getByRole('button',{name:'Download saved invoice PDF'})).toBeEnabled();
  expect(screen.queryByText('InvoiceCreate')).not.toBeInTheDocument();
 });
