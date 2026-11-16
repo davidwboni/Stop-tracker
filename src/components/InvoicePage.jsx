@@ -28,7 +28,7 @@ export default function InvoicePage(){
  const summary=useMemo(()=>moneySummary(logs,expenses.expenses,p),[logs,expenses.expenses,p.start,p.end]);
  const record=periodRecords[p.id];
  const checked=fromPay?payoutComparison(record,p,summary,revision,loading||expenses.loading||!!loadError||!!expenses.error):null;
- const allowed=fromPay&&(checked?.state==='matched'||checked?.state==='reconciled')&&statementInvoiceReady(record);
+ const allowed=fromPay&&['matched','reconciled','difference'].includes(checked?.state)&&statementInvoiceReady(record);
  const prior=(invoice.invoices||[]).filter(i=>i.periodId===p.id);
  const blocked=loading||expenses.loading||invoice.loading||(fromPay&&revision===null);
  useEffect(()=>{
@@ -40,7 +40,7 @@ export default function InvoicePage(){
  const prefill={
    periodId:p.id,startDate:p.start,endDate:p.end,stops:p.stops,
    amount:summary.payout==null?null:summary.payout/100,
-   // Only a checked GBP contractor-payout figure may prefill an invoice.
+   // Only a checked and driver-approved GBP contractor payout may prefill an invoice.
    statementAmount:allowed?(record.payoutComparison.statementPence/100).toFixed(2):null
  };
  const prepare=fromPay||creating;
@@ -54,7 +54,7 @@ export default function InvoicePage(){
   {loc.state?.startInvoice&&<div className="home-banner" role="status"><strong>Manual invoice · Pay not checked</strong><p>Use the amount on your contractor's statement and confirm the recipient and VAT details. This does not verify your earnings or mark you as paid.</p></div>}
   {blocked?<div className="home-skeleton" role="status" aria-label="Loading invoice records"/>:
    loadError||invoice.loadError||expenses.error?<p role="alert" className="home-banner">Invoice or pay records could not be verified. Retry when connected. <button className="home-text-button" onClick={()=>{invoice.retry?.();expenses.retry?.()}}>Retry</button></p>:
-   fromPay&&!allowed?<section className="home-card space-y-3"><h2>Check your statement first</h2>
+   fromPay&&!allowed&&!prior.length?<section className="home-card space-y-3"><h2>Check your statement first</h2>
      <p className="home-muted">{checked?.state==='stale'?'Your work or contractor figures changed since the check. Review them before preparing an invoice.':unresolvedStatementFindings(record).length?'Your saved statement has workday differences you still need to review and accept before invoicing.':checked?.state==='difference'?'The payout difference needs reviewing and accepting before creating an invoice.':'A valid saved pay comparison is required before this invoice can be prepared.'}</p>
      <Link className="home-primary w-full" state={{periodId:p.id}} to="/app/check-pay">Return to Pay</Link>
    </section>:
@@ -82,6 +82,7 @@ export default function InvoicePage(){
      <Link className="home-primary w-full" to="/app/records?tab=documents">View saved invoice</Link>
      <button className="home-text-button" onClick={()=>{if(window.confirm('Prepare another invoice for these same contractor statement dates? Check you are not billing twice.'))setCreateDuplicate(true);}}>Create another invoice anyway</button>
    </section>:
+   fromPay&&!allowed?<section className="home-card space-y-3"><h2>Review your statement before another invoice</h2><p className="home-muted">Your saved invoice remains available above. A new invoice needs a current approved contractor amount.</p><Link className="home-primary w-full" state={{periodId:p.id}} to="/app/check-pay">Return to Pay</Link></section>:
    prepare?<InvoiceCreate key={p.id} prefill={prefill}/>:
    <>
      <label className="home-field">Pay period
