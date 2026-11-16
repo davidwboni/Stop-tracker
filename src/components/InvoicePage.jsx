@@ -41,6 +41,7 @@ export default function InvoicePage(){
    moneyRevision(logs,expenses.expenses,p).then(value=>{if(active)setRevision(value);}).catch(()=>{if(active)setRevision('');});
    return()=>{active=false;};
  },[fromPay,logs,expenses.expenses,p.start,p.end]);
+ const statementAmounts=allowed?statementInvoiceAmounts(record):null;
  const prefill={
    periodId:p.id,startDate:p.start,endDate:p.end,stops:p.stops,
    amount:summary.payout==null?null:summary.payout/100,
@@ -49,7 +50,6 @@ export default function InvoicePage(){
     vatAmount:statementAmounts?.vatEvidence?(statementAmounts.vatPence/100).toFixed(2):null,
     vatInclusiveAmount:statementAmounts?.vatEvidence?(statementAmounts.vatInclusivePence/100).toFixed(2):null
  };
- const statementAmounts=allowed?statementInvoiceAmounts(record):null;
  const prepare=fromPay||creating;
  return <div className="home-screen st-page invoice-workflow" style={{maxWidth:760}}>
   <Link className="home-text-button" to={fromPayHub?'/app/check-pay':'/app/records?tab=documents'} state={fromPayHub?{periodId:p.id}:undefined}>
