@@ -158,75 +158,64 @@ describe('V5 one-upload pay journey',()=>{
   expect(patch).toMatchObject({status:'checked',needsReview:false,reviewedStatement:{payoutPence:28000,reviewed:true},payoutComparison:{source:'ai',statementPence:28000,expectedPence:30000},statementFindings:{hasDaily:true,flagged:[{date:'2026-09-14',acceptedReason:'possible_duplicate_accepted'}]}});
   expect(stub.data.logs).toEqual(logs);
  });
- it('groups all-in pay variations into one acknowledgement rather than requiring each day accepted',async()=>{
-  stub.extract.mockResolvedValue(statement({
-    daily:[{date:'2026-09-14',stops:120,amount:101.70},{date:'2026-09-15',stops:130,amount:201.10}],
-    contractorPayout:280,statementAmount:303,contractorCharges:23
-  }));
-  stub.save.mockImplementation(async(id,patch)=>{stub.data.periodRecords={...stub.data.periodRecords,[id]:patch};return true;});
-  open();await upload();
-  expect(screen.getByText('2 days with different pay totals')).toBeInTheDocument();
-  expect(screen.getByText('Pay variations')).toBeInTheDocument();
-  expect(screen.queryByText('Workdays to review')).not.toBeInTheDocument();
-  expect(screen.queryByText(/Without an itemised breakdown, AI cannot prove/)).not.toBeInTheDocument();
-  expect(screen.queryByDisplayValue('Needs review')).not.toBeInTheDocument();
-  const disclosure=screen.getByText('2 days with different pay totals');
-  fireEvent.click(disclosure);
-  expect(screen.getByText(/£100.00 logged \/ £101.70 statement/)).toBeInTheDocument();
-  fireEvent.click(screen.getByText('Before invoicing · Unverified daily details'));
-  expect(screen.getByRole('checkbox',{name:/Some workday figures could not be verified/})).not.toBeChecked();
-  fireEvent.click(screen.getByRole('button',{name:'Save & continue'}));
-  await waitFor(()=>expect(savedChecks()).toHaveLength(1));
-  expect(savedChecks()[0][1]).toMatchObject({
-    needsReview:true,statementFindings:{flagged:[],earningsDifferences:2,limitedCoverageAccepted:false}
-  });
-  expect(screen.queryByRole('button',{name:'Prepare invoice from statement'})).not.toBeInTheDocument();
-  fireEvent.click(await screen.findByRole('button',{name:'Review limited pay check'}));
-  fireEvent.click(screen.getByText('Before invoicing · Unverified daily details'));
-  fireEvent.click(screen.getByRole('checkbox',{name:/Some workday figures could not be verified/}));
-  fireEvent.click(screen.getByRole('button',{name:'Save & continue'}));
-  await waitFor(()=>expect(savedChecks()).toHaveLength(2));
-  expect(savedChecks()[1][1]).toMatchObject({needsReview:false,statementFindings:{flagged:[],earningsDifferences:2,limitedCoverageAccepted:true}});
-  expect(await screen.findByRole('button',{name:'Accept difference & prepare invoice'})).toBeInTheDocument();
+
+ it('automatically saves extracted numbers and resumes a scan without uploading it twice',async()=>{
+   open();await upload();
+   expect(savedDrafts()).toHaveLength(1);
+   const safeDraft=savedDrafts()[0][1].scanDraft;
+   expect(safeDraft.data.daily).toHaveLength(2);
+   expect(JSON.stringify(safeDraft)).not.toContain('fileBase64');
+   fireEvent.click(screen.getByRole('button',{name:/Back to Pay/}));
+   expect(screen.getByRole('region',{name:'Your latest statement'})).toBeInTheDocument();
+   expect(screen.getByRole('button',{name:'Continue saved AI scan'})).toBeEnabled();
+   fireEvent.click(screen.getByRole('button',{name:'Continue saved AI scan'}));
+   expect(screen.getByText(/1 workday needs a look/)).toBeInTheDocument();
+   expect(stub.extract).toHaveBeenCalledOnce();
  });
- it('keeps the invoice closed when identical totals hide a missing stop until the driver accepts it',async()=>{
-  stub.extract.mockResolvedValue(statement({contractorPayout:300,contractorCharges:0,statementAmount:300}));
-  stub.save.mockImplementation(async(id,patch)=>{stub.data.periodRecords={...stub.data.periodRecords,[id]:patch};return true;});
-  open();await upload();
-  expect(screen.getByText(/1 workday needs a look/)).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button',{name:'Save & continue'}));
-  await waitFor(()=>expect(savedChecks()).toHaveLength(1));
-  expect(savedChecks()[0][1]).toMatchObject({status:'checked',needsReview:true});
-  expect(await screen.findByRole('button',{name:'Review differences'})).toBeInTheDocument();
-  expect(screen.queryByRole('button',{name:'Prepare invoice from statement'})).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button',{name:'Review differences'}));
-  expect(screen.getByText(/120 yours \/ 119 statement/)).toBeInTheDocument();
-  fireEvent.change(screen.getByDisplayValue('Needs review'),{target:{value:'possible_duplicate_accepted'}});
-  fireEvent.click(screen.getByRole('button',{name:'Save & continue'}));
-  await waitFor(()=>expect(savedChecks()).toHaveLength(2));
-  expect(savedChecks()[1][1]).toMatchObject({needsReview:false,statementFindings:{flagged:[{date:'2026-09-14',acceptedReason:'possible_duplicate_accepted'}]}});
-  expect(await screen.findByRole('button',{name:'Prepare invoice from statement'})).toBeInTheDocument();
+ it('saves a checked statement then explicitly approves invoicing while preserving unresolved differences',async()=>{
+   open();await upload();
+   fireEvent.click(screen.getByRole('button',{name:'Save & continue'}));
+   await waitFor(()=>expect(savedChecks()).toHaveLength(1));
+   const saved=savedChecks()[0][1];
+   expect(saved).toMatchObject({status:'checked',needsReview:true,statementFindings:{flagged:[{date:period.start,acceptedReason:null}]}});
+   expect(screen.getByRole('button',{name:'Continue to invoice'})).toBeEnabled();
+   fireEvent.click(screen.getByRole('button',{name:'Continue to invoice'}));
+   expect(screen.getByRole('button',{name:'Approve amount & create invoice'})).toBeDisabled();
+   fireEvent.click(screen.getByRole('checkbox',{name:/I have checked the statement payout/}));
+   fireEvent.click(screen.getByRole('button',{name:'Approve amount & create invoice'}));
+   await waitFor(()=>expect(approvals()).toHaveLength(1));
+   expect(approvals()[0][1].invoiceApproval).toMatchObject({
+      kind:'driver_accepted_contractor_amount',statementPence:28000,openWorkdayDifferences:1
+   });
+   expect(approvals()[0][1].statementFindings.flagged[0].acceptedReason).toBeNull();
+   expect(screen.getByText('Invoice screen')).toBeInTheDocument();
  });
- it('saves a totals-only AI check but prevents invoicing until the driver accepts incomplete coverage',async()=>{
-  stub.extract.mockResolvedValue(statement({daily:[],extractionMode:'summary_only',contractorPayout:300,contractorCharges:0}));
-  stub.save.mockImplementation(async(id,patch)=>{stub.data.periodRecords={...stub.data.periodRecords,[id]:patch};return true;});
-  open();await upload();
-  expect(screen.getByText('Before invoicing · Unverified daily details')).toBeInTheDocument();
-  fireEvent.click(screen.getByText('Before invoicing · Unverified daily details'));
-  const ack=screen.getByRole('checkbox',{name:/Some workday figures could not be verified/});
-  expect(ack).not.toBeChecked();
-  fireEvent.click(screen.getByRole('button',{name:'Save & continue'}));
-  await waitFor(()=>expect(savedChecks()).toHaveLength(1));
-  const first=savedChecks()[0][1];
-  expect(first).toMatchObject({status:'checked',needsReview:true,statementFindings:{summaryOnly:true,hasDaily:false,limitedCoverageAccepted:false}});
-  expect(screen.queryByRole('button',{name:'Prepare invoice from statement'})).not.toBeInTheDocument();
-  fireEvent.click(await screen.findByRole('button',{name:/Review limited pay check/}));
-  fireEvent.click(screen.getByText('Before invoicing · Unverified daily details'));
-  fireEvent.click(screen.getByRole('checkbox',{name:/Some workday figures could not be verified/}));
-  fireEvent.click(screen.getByRole('button',{name:'Save & continue'}));
-  await waitFor(()=>expect(savedChecks()).toHaveLength(2));
-  expect(savedChecks()[1][1]).toMatchObject({needsReview:false,statementFindings:{limitedCoverageAccepted:true}});
-  expect(await screen.findByRole('button',{name:'Prepare invoice from statement'})).toBeInTheDocument();
+ it('needs only one explicit acknowledgement before invoicing a totals-only statement',async()=>{
+   stub.extract.mockResolvedValue(statement({daily:[],extractionMode:'summary_only',contractorPayout:300,contractorCharges:0}));
+   open();await upload();
+   fireEvent.click(screen.getByRole('button',{name:'Save & continue'}));
+   await waitFor(()=>expect(savedChecks()).toHaveLength(1));
+   expect(savedChecks()[0][1]).toMatchObject({status:'checked',needsReview:true,statementFindings:{summaryOnly:true,hasDaily:false,limitedCoverageAccepted:false}});
+   fireEvent.click(screen.getByRole('button',{name:'Continue to invoice'}));
+   expect(screen.getByText(/Some daily figures were not independently verified/)).toBeInTheDocument();
+   fireEvent.click(screen.getByRole('checkbox',{name:/I have checked the statement payout/}));
+   fireEvent.click(screen.getByRole('button',{name:'Approve amount & create invoice'}));
+   await waitFor(()=>expect(approvals()).toHaveLength(1));
+   expect(approvals()[0][1].invoiceApproval.limitedCoverageAcceptedForInvoice).toBe(true);
+   expect(approvals()[0][1].statementFindings.limitedCoverageAccepted).toBe(false);
+ });
+ it('reopens existing invoice access from Pay home rather than prompting another scan',async()=>{
+   stub.data.periodRecords[period.id]={
+      status:'checked',reviewedStatement:{reviewed:true,start:period.start,end:period.end,currency:'GBP',taxBasis:'excluded',payoutPence:28000},
+      payoutComparison:{scope:'contractor_payout',currency:'GBP',taxBasis:'same_as_records',basisConfirmed:true,start:period.start,end:period.end,statementPence:28000,expectedPence:30000},
+      statementWorkDetails:{daily:{}}
+   };
+   stub.invoice.invoices=[{id:'paid-invoice',periodId:period.id,status:'generated'}];
+   open();
+   expect(screen.getByRole('button',{name:'View or send saved invoice'})).toBeEnabled();
+   fireEvent.click(screen.getByRole('button',{name:'View or send saved invoice'}));
+   expect(screen.getByText('Invoice screen')).toBeInTheDocument();
+   expect(stub.extract).not.toHaveBeenCalled();
  });
  it('shows the historic fee repair action alongside result instead of burying it in old settings',async()=>{
   stub.data.logs=[{...logs[0],payStructureSnapshot:{}}];
