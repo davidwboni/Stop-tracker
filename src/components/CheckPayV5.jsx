@@ -354,7 +354,7 @@ export default function CheckPayV5(){
      onShowEarnings={()=>jumpToDetails(earningsDetailsRef)}
      onShowCharges={()=>jumpToDetails(chargeDetailsRef)}/>
    {step==='result'&&<section className="home-card v5-finish" aria-label="Save or continue pay check">
-      <button type="button" className="home-primary w-full" disabled={busy||!ai||!sourceNet||scopeNeedsConfirmation||!view?.periodOk||!view?.currencyOk||view.rawPayout==null} onClick={saveCheck}>{busy?'Saving…':canCompare?'Save pay check':'Save statement — check later'}</button>
+      <button type="button" className="home-primary w-full" disabled={busy||!ai||!sourceNet||scopeNeedsConfirmation||!view?.periodOk||!view?.currencyOk||view.rawPayout==null} onClick={saveCheck}>{busy?'Saving…':canCompare?'Save & continue':'Save statement & continue'}</button>
       {!canCompare&&<p className="home-muted text-xs">{scopeNeedsConfirmation?'Confirm the statement date range above before saving the check.':'Saves the statement without claiming it matches your work. No new scan needed later.'}</p>}
       {limitedCoverage&&canCompare&&<details className="v5-manual"><summary>Before invoicing · Unverified daily details</summary>
        <label className="v5-ack"><input type="checkbox" checked={limitedAccepted} onChange={e=>setLimitedAccepted(e.target.checked)}/> Some workday figures could not be verified. I accept this limited comparison for invoicing.</label>
