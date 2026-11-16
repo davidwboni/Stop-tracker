@@ -8,7 +8,7 @@ import {moneyRevision,moneySummary,payoutComparison,validRange} from '../feature
 import InvoiceCreate from './InvoiceCreate';
 import {shareSavedInvoice} from '../services/invoicePdf';
 import {money} from '../features/home/homeModel';
-import {statementInvoiceReady,unresolvedStatementFindings} from '../features/statements/findingGate';
+import {statementInvoiceReady,unresolvedStatementFindings,hasExplicitInvoiceApproval} from '../features/statements/findingGate';
 
 export default function InvoicePage(){
  const {logs=[],payPeriodAnchor,periodRecords={},loading,loadError}=useData();
@@ -28,7 +28,10 @@ export default function InvoicePage(){
  const summary=useMemo(()=>moneySummary(logs,expenses.expenses,p),[logs,expenses.expenses,p.start,p.end]);
  const record=periodRecords[p.id];
  const checked=fromPay?payoutComparison(record,p,summary,revision,loading||expenses.loading||!!loadError||!!expenses.error):null;
- const allowed=fromPay&&['matched','reconciled','difference'].includes(checked?.state)&&statementInvoiceReady(record);
+ const allowed=fromPay&&statementInvoiceReady(record)&&(
+    ['matched','reconciled'].includes(checked?.state)||
+    (checked?.state==='difference'&&hasExplicitInvoiceApproval(record))
+  );
  const prior=(invoice.invoices||[]).filter(i=>i.periodId===p.id);
  const blocked=loading||expenses.loading||invoice.loading||(fromPay&&revision===null);
  useEffect(()=>{
