@@ -34,6 +34,12 @@ export default function InvoiceCreate({ prefill }) {
 
   const [editingSender, setEditingSender] = useState(false);
   const [invoiceAmount, setInvoiceAmount] = useState(prefill?.statementAmount != null ? String(prefill.statementAmount) : "");
+  const [statementVatSelected,setStatementVatSelected]=useState(false);
+  const netFromStatement=Number(prefill?.statementAmount),vatFromStatement=Number(prefill?.vatAmount),inclusiveFromStatement=Number(prefill?.vatInclusiveAmount);
+  const vatAvailable=prefill?.statementAmount!=null&&prefill?.vatAmount!=null&&prefill?.vatInclusiveAmount!=null&&
+     Number.isFinite(netFromStatement)&&Number.isFinite(vatFromStatement)&&Number.isFinite(inclusiveFromStatement)&&
+     netFromStatement>0&&vatFromStatement>0&&
+     Math.round((netFromStatement+vatFromStatement)*100)===Math.round(inclusiveFromStatement*100);
   const [sender, setSender] = useState(
     senderProfile || { name: "", address: "", email: "", extra: "" }
   );
@@ -143,7 +149,12 @@ export default function InvoiceCreate({ prefill }) {
   };
 
   // ---------- Generate PDF ----------
-  const invoiceRecord = () => ({invoiceNumber,senderSnapshot:{...sender},clientSnapshot:{...client},notes,issuedDate:new Date().toISOString().slice(0,10),clientName:client.name,clientEmail:client.email||'',invoiceAmount:total.toFixed(2),dateFrom,dateTo,lines:[{desc:'Delivery services',qty:'1',rate:String(total)}],periodId:prefill?.periodId||null,status:'generated'});
+  const invoiceRecord = () => ({invoiceNumber,senderSnapshot:{...sender},clientSnapshot:{...client},notes,issuedDate:new Date().toISOString().slice(0,10),clientName:client.name,clientEmail:client.email||'',
+     invoiceAmount:total.toFixed(2),
+     netAmount:(statementVatSelected&&vatAvailable?netFromStatement:total).toFixed(2),
+     vatAmount:(statementVatSelected&&vatAvailable?vatFromStatement:0).toFixed(2),
+     vatConfirmedFromStatement:!!(statementVatSelected&&vatAvailable),
+     dateFrom,dateTo,lines:[{desc:'Delivery services',qty:'1',rate:String(statementVatSelected&&vatAvailable?netFromStatement:total)}],periodId:prefill?.periodId||null,status:'generated'});
   const persist = async () => {
     if (persisted) return savedInvoiceId.current;
     const item = await addInvoice(invoiceRecord(), {defaultClientId:client?.id});
@@ -312,9 +323,22 @@ export default function InvoiceCreate({ prefill }) {
 
       <div className="rounded-2xl border border-border bg-card p-4">
         <label htmlFor="invoice-amount" className="block text-xs font-bold uppercase tracking-[.14em] text-muted-foreground">Amount to invoice</label>
-        <div className="mt-2 flex items-center rounded-xl border border-border bg-background px-4"><span className="text-xl text-muted-foreground">£</span><input id="invoice-amount" inputMode="decimal" value={invoiceAmount} onChange={e=>setInvoiceAmount(e.target.value)} placeholder="0.00" className="h-14 min-w-0 flex-1 bg-transparent px-2 text-2xl font-bold text-foreground outline-none"/></div>
-        <p className="mt-2 text-xs leading-5 text-muted-foreground">{prefill?.statementAmount != null ? "From your checked statement. Confirm whether VAT should be added or is already included before sending." : "Enter the agreed amount and verify whether VAT should be shown separately."}</p>
+        <div className="mt-2 flex items-center rounded-xl border border-border bg-background px-4"><span className="text-xl text-muted-foreground">£</span><input id="invoice-amount" inputMode="decimal" value={invoiceAmount} onChange={e=>{setInvoiceAmount(e.target.value);setStatementVatSelected(false);}} placeholder="0.00" className="h-14 min-w-0 flex-1 bg-transparent px-2 text-2xl font-bold text-foreground outline-none"/></div>
+        <p className="mt-2 text-xs leading-5 text-muted-foreground">{vatAvailable?'The statement lists separate before-VAT and VAT amounts. Choose below whether your invoice should include that VAT.':'From the contractor statement where available. Check the amount and any VAT obligations before sending.'}</p>
       </div>
+
+      {vatAvailable&&<section className="rounded-2xl border border-border bg-card p-4 space-y-3" aria-label="VAT on contractor statement">
+        <h3 className="font-semibold">VAT shown on contractor statement</h3>
+        <p className="text-sm text-muted-foreground">Before VAT: £{netFromStatement.toFixed(2)} · VAT: £{vatFromStatement.toFixed(2)} · Total: £{inclusiveFromStatement.toFixed(2)}</p>
+        <label className="flex items-start gap-3 text-sm leading-6">
+          <input type="checkbox" checked={statementVatSelected} onChange={e=>{
+            const selected=e.target.checked;setStatementVatSelected(selected);
+            setInvoiceAmount(selected?inclusiveFromStatement.toFixed(2):netFromStatement.toFixed(2));
+          }} className="mt-1 h-5 w-5 shrink-0 accent-primary" aria-label="Include VAT shown on contractor statement"/>
+          <span>Include the exact VAT shown above. I confirm my business is entitled to charge VAT and the amount applies to this invoice.</span>
+        </label>
+        <p className="text-xs text-muted-foreground">VAT is not added automatically. If you include it, make sure your business details contain the required VAT registration information.</p>
+      </section>}
 
       <textarea aria-label="Invoice notes (optional)" maxLength={5000}
         value={notes}
