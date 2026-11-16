@@ -217,8 +217,7 @@ describe('V5 one-upload pay journey',()=>{
    stub.invoice.invoices=[{id:'paid-invoice',periodId:period.id,status:'generated'}];
    open();
    expect(screen.getByRole('button',{name:'View or send saved invoice'})).toBeEnabled();
-   fireEvent.click(screen.getByText('See calculations and detailed findings'));
-  fireEvent.click(screen.getByRole('button',{name:'View or send saved invoice'}));
+   fireEvent.click(screen.getByRole('button',{name:'View or send saved invoice'}));
    expect(screen.getByText('Invoice screen')).toBeInTheDocument();
    expect(stub.extract).not.toHaveBeenCalled();
  });
@@ -297,7 +296,7 @@ describe('V5 one-upload pay journey',()=>{
   },statementWorkDetails:{daily:dated,stops:'250',gross:'300'},statementExtractionMode:null};
   stub.data.periodRecords={[wrong]:original};
   open();
-  fireEvent.click(screen.getByRole('button',{name:/10 Nov 2026/}));
+  fireEvent.click(screen.getByRole('button',{name:'Open saved pay check'}));
   expect(screen.getByRole('region',{name:'Confirm statement period'})).toBeInTheDocument();
   expect(screen.getByRole('region',{name:'Pay check summary'})).toHaveTextContent('Confirm dates first');
   expect(stub.extract).not.toHaveBeenCalled();
