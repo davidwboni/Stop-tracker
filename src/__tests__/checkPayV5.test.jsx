@@ -98,6 +98,7 @@ describe('V5 one-upload pay journey',()=>{
   open();await upload();
   expect(screen.getByRole('button',{name:'View 1 stop/date issue by date'})).toBeEnabled();
   expect(document.querySelector('.v5-differences')).not.toHaveAttribute('open');
+  fireEvent.click(screen.getByText('See calculations and detailed findings'));
   fireEvent.click(screen.getByRole('button',{name:'View 1 stop/date issue by date'}));
   await waitFor(()=>expect(document.querySelector('.v5-differences')).toHaveAttribute('open'));
   expect(screen.getByText('1 stop fewer on statement · reason not confirmed')).toBeInTheDocument();
@@ -115,6 +116,7 @@ describe('V5 one-upload pay journey',()=>{
     statementAmount:600,contractorCharges:20,contractorPayout:580
   }));
   open();await upload();
+  fireEvent.click(screen.getByText('See calculations and detailed findings'));
   fireEvent.click(screen.getByRole('button',{name:'View 6 stop/date issues by date'}));
   await waitFor(()=>expect(document.querySelector('.v5-differences')).toHaveAttribute('open'));
   expect(screen.getAllByText('1 stop fewer on statement · reason not confirmed')).toHaveLength(6);
@@ -126,9 +128,11 @@ describe('V5 one-upload pay journey',()=>{
     charges:[{label:'Lease cost',amount:20}]
   }));
   open();await upload();
+  fireEvent.click(screen.getByText('See calculations and detailed findings'));
   fireEvent.click(screen.getByRole('button',{name:'View 1 daily pay variation by date'}));
   expect(document.querySelector('.v5-earnings-note')).toHaveAttribute('open');
   expect(screen.getByText(/£100.00 logged \/ £101.70 statement/)).toBeInTheDocument();
+  fireEvent.click(screen.getByText('See calculations and detailed findings'));
   fireEvent.click(screen.getByRole('button',{name:'View 1 contractor charge item'}));
   expect(document.querySelector('.v5-charge-evidence')).toHaveAttribute('open');
   expect(within(document.querySelector('.v5-charge-evidence')).getByText('Lease cost')).toBeInTheDocument();
@@ -213,7 +217,8 @@ describe('V5 one-upload pay journey',()=>{
    stub.invoice.invoices=[{id:'paid-invoice',periodId:period.id,status:'generated'}];
    open();
    expect(screen.getByRole('button',{name:'View or send saved invoice'})).toBeEnabled();
-   fireEvent.click(screen.getByRole('button',{name:'View or send saved invoice'}));
+   fireEvent.click(screen.getByText('See calculations and detailed findings'));
+  fireEvent.click(screen.getByRole('button',{name:'View or send saved invoice'}));
    expect(screen.getByText('Invoice screen')).toBeInTheDocument();
    expect(stub.extract).not.toHaveBeenCalled();
  });
