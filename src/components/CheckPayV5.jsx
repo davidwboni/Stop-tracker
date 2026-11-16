@@ -10,12 +10,11 @@ import {isoDate,listPeriods,summarizePeriod} from '../features/payperiod/periods
 import {moneyRevision,moneySummary,payoutComparison,validRange} from '../features/money/moneyModel';
 import {buildStatementAutoCheck} from '../features/statements/autoCheck';
 import {inferStatementPeriod} from '../features/statements/periodEvidence';
-import {briefPayFindings} from '../features/statements/findingsSummary';
 import {statementChargeEvidence} from '../features/statements/chargeEvidence';
 import {readablePayResult} from '../features/statements/readablePayResult';
 import PayResultSummary from './PayResultSummary';
 import {auditStatementArithmetic} from '../features/statements/statementAudit';
-import {unresolvedStatementFindings,statementInvoiceReady,mergeFindingDecisions,requiresLimitedCoverageAcceptance,hasExplicitInvoiceApproval} from '../features/statements/findingGate';
+import {unresolvedStatementFindings,statementInvoiceReady,mergeFindingDecisions,requiresLimitedCoverageAcceptance} from '../features/statements/findingGate';
 import {createStatementReview,confirmedReview,captureIssues} from '../features/statements/reviewModel';
 import {historicalFeeIssue,applyConfirmedHistoricalFee,validHistoricalFee} from '../features/money/historicalFeeRepair';
 import {extractStatement,getPremiumStatus} from '../services/premium';
@@ -72,7 +71,7 @@ export default function CheckPayV5(){
  },[periods,archived]);
  const requested=available.find(p=>p.id===location.state?.periodId);
  const [chosen,setChosen]=useState(null),[step,setStep]=useState('home');
- const [ai,setAi]=useState(null),[scanSource,setScanSource]=useState('ai'),[scanFile,setScanFile]=useState(null);
+ const [ai,setAi]=useState(null),[scanSource,setScanSource]=useState('ai'),[,setScanFile]=useState(null);
  const [periodEvidence,setPeriodEvidence]=useState(null),[confirmedStatementPeriod,setConfirmedStatementPeriod]=useState(null);
  const [manualPayout,setManualPayout]=useState(''),[vatChoice,setVatChoice]=useState(''),[vatEntry,setVatEntry]=useState('');
  const [error,setError]=useState(''),[stage,setStage]=useState(''),[busy,setBusy]=useState(false);
@@ -102,11 +101,9 @@ export default function CheckPayV5(){
  const audit=useMemo(()=>auditStatementArithmetic(sourceNet),[ai,vatChoice,vatEntry]);
  const scopeNeedsConfirmation=!!ai&&(!!periodEvidence?.needsConfirmation&&confirmedStatementPeriod?.id!==period.id||!view?.periodOk);
  const canCompare=!!view?.canCompare&&!scopeNeedsConfirmation&&audit.status!=='mismatch'&&!loading&&!costs.loading&&!loadError&&!costs.error;
- const findings=briefPayFindings({check:view,confirmedScope:!scopeNeedsConfirmation&&!!view?.periodOk,auditStatus:audit.status,rows:rowSummary.rows});
  const showComparableWork=!!view?.periodOk&&!scopeNeedsConfirmation;
  const readable=readablePayResult({check:view?{...view,canCompare}:null,statement:sourceNet,summary:rowSummary,audit,chargeEvidence});
  const scanEnabled=!!permission&&(permission.isPro||permission.betaAccess||permission.statementAiUses<3);
- const savedCheck=['matched','difference','reconciled'].includes(previous.state);
  const unresolvedSaved=unresolvedStatementFindings(statusRecord);
  const invoiceReady=statementInvoiceReady(statusRecord);
  const relatedInvoice=(invoices.invoices||[]).find(item=>item.periodId===period.id)||null;
@@ -121,7 +118,6 @@ export default function CheckPayV5(){
  const unresolvedCurrent=(view?.flagged||[]).filter(row=>!['figures_verified','possible_duplicate_accepted'].includes(confirmedDays[row.date]));
  const limitedCoverage=!!view&&(requiresLimitedCoverageAcceptance({summaryOnly:view.summaryOnly,hasDaily:view.hasDaily,incompleteDays:view.unknown.length,outsidePeriod:view.outsidePeriod,earningsDifferences:view.earningsVariations.length})||audit.dailyCoverage===false);
  const savedCoveragePending=requiresLimitedCoverageAcceptance(statusRecord?.statementFindings)&&statusRecord?.statementFindings?.limitedCoverageAccepted!==true;
- const requiredPeriod=period.start+' – '+period.end;
  useEffect(()=>{let active=true;getPremiumStatus().then(s=>{if(active)setPermission(s);}).catch(()=>{if(active)setPermissionError(true);});return()=>{active=false;};},[]);
  useEffect(()=>{track('check_pay_opened');},[]);
  const cash=value=>hidden?'••••':currency(value);
@@ -242,17 +238,6 @@ export default function CheckPayV5(){
    }catch(_){setError('Could not save this pay check. Your work records were not changed. Please retry.');}
    finally{savingLock.current=false;setBusy(false);}
  }
- async function acceptDifference(){
-   if(savingLock.current||previous.state!=='difference'||!statusRecord?.payoutComparison||!invoiceReady)return;
-   savingLock.current=true;setBusy(true);setError('');
-   try{
-     const latest=await moneyRevision(logs,costs.expenses||[],period);
-     if(statusRecord.payoutComparison.revision!==latest)throw new Error('stale');
-     await updatePeriodRecord(period.id,{...statusRecord,status:'reconciled',needsReview:false,resolvedAt:new Date().toISOString(),resolutionReason:'driver_reviewed_and_accepted'},true);
-     nav('/app/invoice',{state:{fromPay:true,periodId:period.id}});
-   }catch(_){setError('Your pay check changed or could not be saved. Review the statement and try again.');}
-   finally{savingLock.current=false;setBusy(false);}
- }
  async function approveContractorInvoice(){
    if(savingLock.current||busy||!approvalComparable||!invoiceAck)return;
    const comparison=statusRecord.payoutComparison;
@@ -291,7 +276,6 @@ export default function CheckPayV5(){
  ).slice(0,14);
  const recent=history[0]||null;
  const recentInvoice=recent?(invoices.invoices||[]).find(i=>i.periodId===recent.id):null;
- const latestCheck=periodRecords[period.id];
  // After upload, show the result headline on small mobile screens.
  useEffect(()=>{if(step==='result')document.querySelector('.st-app-shell > main')?.scrollTo?.({top:0,behavior:'auto'});},[step]);
  // Finding counts navigate to evidence. Show every affected day on the first tap.
