@@ -15,12 +15,27 @@ export function requiresLimitedCoverageAcceptance(findings){
    Number(findings.incompleteDays||0)>0 || Number(findings.outsidePeriod||0)>0 ||
    Number(findings.earningsDifferences||0)>0;
 }
+// Drivers may deliberately invoice the amount printed on the contractor
+// statement while keeping discrepancies open for a later dispute. This is
+// authorisation to invoice a particular figure, NOT verification of those
+// disputed workdays and NOT confirmation that payment was received.
+export function hasExplicitInvoiceApproval(record){
+ const approval=record?.invoiceApproval,comparison=record?.payoutComparison;
+ return !!approval&&approval.kind==='driver_accepted_contractor_amount'&&
+   typeof approval.acceptedAt==='string'&&approval.acceptedAt.length>0&&
+   Number.isSafeInteger(comparison?.statementPence)&&comparison.statementPence>=0&&
+   approval.statementPence===comparison.statementPence&&
+   typeof comparison.revision==='string'&&approval.revision===comparison.revision&&
+   record?.reviewedStatement?.reviewed===true;
+}
 export function statementInvoiceReady(record){
  const findings=record?.statementFindings;
  return !!record?.payoutComparison &&
    (!findings || record?.reviewedStatement?.reviewed===true) &&
-   unresolvedStatementFindings(record).length===0 &&
-   (!requiresLimitedCoverageAcceptance(findings)||findings?.limitedCoverageAccepted===true);
+   (hasExplicitInvoiceApproval(record) || (
+     unresolvedStatementFindings(record).length===0 &&
+     (!requiresLimitedCoverageAcceptance(findings)||findings?.limitedCoverageAccepted===true)
+   ));
 }
 export function mergeFindingDecisions(record){
  const flagged=record?.statementFindings?.flagged;
