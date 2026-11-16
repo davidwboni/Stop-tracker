@@ -2,6 +2,8 @@ import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {useLocation,useNavigate,Link} from 'react-router-dom';
 import {FileUp,ArrowRight,Loader2,Sparkles} from 'lucide-react';
 import {useData} from '../contexts/DataContext';
+import {useInvoice} from '../contexts/InvoiceContext';
+import {compactStatementScan} from '../features/statements/scanDraft';
 import useExpenses from '../hooks/useExpenses';
 import HeaderControls from './HeaderControls';
 import {isoDate,listPeriods,summarizePeriod} from '../features/payperiod/periods';
@@ -13,7 +15,7 @@ import {statementChargeEvidence} from '../features/statements/chargeEvidence';
 import {readablePayResult} from '../features/statements/readablePayResult';
 import PayResultSummary from './PayResultSummary';
 import {auditStatementArithmetic} from '../features/statements/statementAudit';
-import {unresolvedStatementFindings,statementInvoiceReady,mergeFindingDecisions,requiresLimitedCoverageAcceptance} from '../features/statements/findingGate';
+import {unresolvedStatementFindings,statementInvoiceReady,mergeFindingDecisions,requiresLimitedCoverageAcceptance,hasExplicitInvoiceApproval} from '../features/statements/findingGate';
 import {createStatementReview,confirmedReview,captureIssues} from '../features/statements/reviewModel';
 import {historicalFeeIssue,applyConfirmedHistoricalFee,validHistoricalFee} from '../features/money/historicalFeeRepair';
 import {extractStatement,getPremiumStatus} from '../services/premium';
@@ -57,7 +59,7 @@ function savedStatementDraft(record){
 }
 export default function CheckPayV5(){
  const {logs=[],payPeriodAnchor,periodRecords={},paymentConfig,updatePeriodRecord,updateLogs,loading,loadError,forceSync}=useData();
- const costs=useExpenses(),nav=useNavigate(),location=useLocation(),fileInput=useRef(null),savingLock=useRef(false);
+ const costs=useExpenses(),invoices=useInvoice(),nav=useNavigate(),location=useLocation(),fileInput=useRef(null),savingLock=useRef(false);
  const stopDetailsRef=useRef(null),earningsDetailsRef=useRef(null),chargeDetailsRef=useRef(null);
  const today=isoDate(new Date());
  const periods=useMemo(()=>listPeriods(logs,payPeriodAnchor||today,13),[logs,payPeriodAnchor,today]);
@@ -78,6 +80,7 @@ export default function CheckPayV5(){
  const [confirmedDays,setConfirmedDays]=useState({});
  const [openDays,setOpenDays]=useState(false),[showMore,setShowMore]=useState(false);
  const [limitedAccepted,setLimitedAccepted]=useState(false);
+ const [approvalOpen,setApprovalOpen]=useState(false),[invoiceAck,setInvoiceAck]=useState(false);
  const [feeInput,setFeeInput]=useState(()=>validHistoricalFee(paymentConfig?.contractorFeePercent)?String(paymentConfig.contractorFeePercent):''),[feeAck,setFeeAck]=useState(false),[feeSaving,setFeeSaving]=useState(false);
  const [hidden,setHidden]=useState(()=>{try{return localStorage.getItem('home-hide-money')==='1';}catch{return false;}});
  const initially=available.find(p=>p.daysLogged>0)||available[0]||{start:today,end:today,id:today+'_'+today};
@@ -106,6 +109,15 @@ export default function CheckPayV5(){
  const savedCheck=['matched','difference','reconciled'].includes(previous.state);
  const unresolvedSaved=unresolvedStatementFindings(statusRecord);
  const invoiceReady=statementInvoiceReady(statusRecord);
+ const relatedInvoice=(invoices.invoices||[]).find(item=>item.periodId===period.id)||null;
+ const approvalComparable=!!statusRecord?.payoutComparison&&statusRecord.reviewedStatement?.reviewed===true&&
+   statusRecord.payoutComparison.start===period.start&&statusRecord.payoutComparison.end===period.end&&
+   statusRecord.payoutComparison.currency==='GBP'&&statusRecord.payoutComparison.taxBasis==='same_as_records'&&
+   Number.isSafeInteger(statusRecord.payoutComparison.statementPence)&&!!revision&&
+   revision===statusRecord.payoutComparison.revision&&rowSummary.payout!=null&&
+   rowSummary.payout===statusRecord.payoutComparison.expectedPence&&
+   !loading&&!costs.loading&&!loadError&&!costs.error;
+ const approvalNeeded=approvalComparable&&!invoiceReady;
  const unresolvedCurrent=(view?.flagged||[]).filter(row=>!['figures_verified','possible_duplicate_accepted'].includes(confirmedDays[row.date]));
  const limitedCoverage=!!view&&(requiresLimitedCoverageAcceptance({summaryOnly:view.summaryOnly,hasDaily:view.hasDaily,incompleteDays:view.unknown.length,outsidePeriod:view.outsidePeriod,earningsDifferences:view.earningsVariations.length})||audit.dailyCoverage===false);
  const savedCoveragePending=requiresLimitedCoverageAcceptance(statusRecord?.statementFindings)&&statusRecord?.statementFindings?.limitedCoverageAccepted!==true;
@@ -113,7 +125,7 @@ export default function CheckPayV5(){
  useEffect(()=>{let active=true;getPremiumStatus().then(s=>{if(active)setPermission(s);}).catch(()=>{if(active)setPermissionError(true);});return()=>{active=false;};},[]);
  useEffect(()=>{track('check_pay_opened');},[]);
  const cash=value=>hidden?'••••':currency(value);
- const reset=()=>{if(busy)return;setStep('home');setAi(null);setScanFile(null);setError('');setConfirmedDays({});setVatChoice('');setVatEntry('');setLimitedAccepted(false);setPeriodEvidence(null);setConfirmedStatementPeriod(null);};
+ const reset=()=>{if(busy)return;setApprovalOpen(false);setInvoiceAck(false);setStep('home');setAi(null);setScanFile(null);setError('');setConfirmedDays({});setVatChoice('');setVatEntry('');setLimitedAccepted(false);setPeriodEvidence(null);setConfirmedStatementPeriod(null);};
  // Re-tapping the persistent Pay tab returns to the beginning of the flow.
  // It does not delete the server-side statement, comparisons or work history.
  useEffect(()=>{if(location.state?.payHome&&!busy){setStep('home');setAi(null);setScanFile(null);setError('');setLimitedAccepted(false);setConfirmedDays({});setPeriodEvidence(null);setConfirmedStatementPeriod(null);}},[location.key]);
@@ -131,6 +143,16 @@ export default function CheckPayV5(){
      if(evidence.suggested){
        setChosen(summarizePeriod(logs,evidence.suggested));
      }
+     // Autosave a bounded extracted draft when its period is unambiguous.
+     // Never store the uploaded PDF/photo or personal driver/bank details.
+     if(evidence?.suggested&&!evidence.needsConfirmation&&data.currency==='GBP'){
+       const id=evidence.suggested.id||dateKey(evidence.suggested);
+       try{
+         await updatePeriodRecord(id,{scanDraft:{data:compactStatementScan(data),savedAt:new Date().toISOString(),source:'ai'}},true);
+       }catch(_){
+         setError('AI read the statement, but its draft could not be saved. Tap Save pay check before leaving.');
+       }
+     }
      setAi(data);setScanSource('ai');setVatChoice(data.taxBasis||'unknown');setVatEntry('');
      setConfirmedDays({});setLimitedAccepted(false);setStep('result');setOpenDays(false);setShowMore(false);
      track('statement_ai_completed');
@@ -147,17 +169,17 @@ export default function CheckPayV5(){
  }
  function loadRecord(item){
    const range={start:item.start,end:item.end,id:item.id};
-   const draft=savedStatementDraft(item.record);
+   const draft=item.record?.scanDraft?.data||savedStatementDraft(item.record);
    // A previously archived OCR header may have reversed UK dates. Use the
    // archived daily figures to detect this without a new paid AI upload.
    // The old record is untouched; a corrected comparison is saved to the
    // newly confirmed range only after the driver's explicit action.
    const evidence=draft?inferStatementPeriod(draft,available):null;
    const target=evidence?.needsConfirmation&&evidence.suggested?evidence.suggested:range;
-   setChosen(summarizePeriod(logs,target));setScanSource(item.record?.payoutComparison?.source||'saved');
+   setChosen(summarizePeriod(logs,target));setScanSource(item.record?.scanDraft?.data?'ai':item.record?.payoutComparison?.source||'saved');
    setAi(draft);setPeriodEvidence(evidence);setConfirmedStatementPeriod(null);
    setVatChoice('');setVatEntry('');setConfirmedDays(mergeFindingDecisions(item.record));setLimitedAccepted(item.record?.statementFindings?.limitedCoverageAccepted===true);
-   setStep(evidence?.needsConfirmation?'result':item.record?.payoutComparison?'saved':'result');setError('');
+   setStep(evidence?.needsConfirmation?'result':item.record?.scanDraft?.data?'result':item.record?.payoutComparison?'saved':'result');setApprovalOpen(false);setInvoiceAck(false);setError('');
  }
  async function saveCheck(){
    if(savingLock.current||!ai)return;
@@ -187,6 +209,7 @@ export default function CheckPayV5(){
        daily:Object.fromEntries((ai.daily||[]).filter(x=>x?.date&&x.date>=period.start&&x.date<=period.end).map(x=>[x.date,{stops:x.stops==null?'':String(x.stops),amount:x.amount==null?'':String(x.amount)}]))
      };
      const base={
+       scanDraft:null,invoiceApproval:null,
        status:netKnown?'checked':'statement_received',
        needsReview:!netKnown||unresolvedCurrent.length>0||(limitedCoverage&&!limitedAccepted),
        statementReceivedAt:new Date().toISOString(),
@@ -214,7 +237,7 @@ export default function CheckPayV5(){
        base.payoutComparison=null;
      }
      await updatePeriodRecord(period.id,{...existing,...base},true);
-     setStep('saved');setScanFile(null);
+     setStep('saved');setScanFile(null);setApprovalOpen(false);setInvoiceAck(false);
      track(netKnown?'statement_compared':'statement_reviewed');
    }catch(_){setError('Could not save this pay check. Your work records were not changed. Please retry.');}
    finally{savingLock.current=false;setBusy(false);}
