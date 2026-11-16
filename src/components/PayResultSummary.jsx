@@ -36,6 +36,12 @@ export default function PayResultSummary({
        <small>{cash(view.rawPayout)} {view.vatSource==='unknown'?'as printed · VAT not confirmed':
          'including VAT '+(view.vat!=null?'· VAT '+cash(view.vat):'')}</small>}
    </div>
+   <div className="v5-summary-verdict" aria-label="Short pay result">
+     <strong>{scopeNeedsConfirmation?'Statement dates need checking':differences>0?`${differences} ${differences===1?'workday differs':'workdays differ'}`:view?.hasDaily?'No stop/date differences found':'Statement totals available'}</strong>
+     <p className="home-muted text-sm">{differences>0?'AI identified the affected dates. Differences are not proof of underpayment and can remain open when you choose to invoice the contractor amount.':sameStops>0?'Some daily pay totals differ. See the evidence only if you want to inspect them.':'Use the contractor statement amount to prepare your invoice after saving this check.'}</p>
+   </div>
+   <details className="v5-deep-details">
+    <summary>See calculations and detailed findings</summary>
    <div className="v5-money-pair">
      <div><span>Your recorded estimate</span><strong>{showComparableWork?cash(readable.expected):'Dates need checking'}</strong></div>
      <div><span>Contractor's listed charges</span><strong>{cash(readable.itemizedConsistent?readable.listedCharges:readable.reportedCharges)}</strong></div>
@@ -87,6 +93,7 @@ export default function PayResultSummary({
        <p className="home-muted text-xs">The charge items sum to the printed total. This confirms arithmetic, not that the deductions are correct.</p>:
        charges>0&&<p className="home-muted text-xs">The itemised charges don't fully match the reported total. Their difference has not been silently adjusted.</p>}
      {readable.alreadyIncludedCharges>0&&<p className="home-muted text-xs">Some charges are already deducted in your saved estimate. The app has not subtracted them twice.</p>}
+   </details>
    </details>
  </section>;
 }

@@ -2,13 +2,14 @@ import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {useLocation,useNavigate,Link} from 'react-router-dom';
 import {FileUp,ArrowRight,Loader2,Sparkles} from 'lucide-react';
 import {useData} from '../contexts/DataContext';
+import {useInvoice} from '../contexts/InvoiceContext';
+import {compactStatementScan} from '../features/statements/scanDraft';
 import useExpenses from '../hooks/useExpenses';
 import HeaderControls from './HeaderControls';
 import {isoDate,listPeriods,summarizePeriod} from '../features/payperiod/periods';
 import {moneyRevision,moneySummary,payoutComparison,validRange} from '../features/money/moneyModel';
 import {buildStatementAutoCheck} from '../features/statements/autoCheck';
 import {inferStatementPeriod} from '../features/statements/periodEvidence';
-import {briefPayFindings} from '../features/statements/findingsSummary';
 import {statementChargeEvidence} from '../features/statements/chargeEvidence';
 import {readablePayResult} from '../features/statements/readablePayResult';
 import PayResultSummary from './PayResultSummary';
@@ -57,7 +58,7 @@ function savedStatementDraft(record){
 }
 export default function CheckPayV5(){
  const {logs=[],payPeriodAnchor,periodRecords={},paymentConfig,updatePeriodRecord,updateLogs,loading,loadError,forceSync}=useData();
- const costs=useExpenses(),nav=useNavigate(),location=useLocation(),fileInput=useRef(null),savingLock=useRef(false);
+ const costs=useExpenses(),invoices=useInvoice(),nav=useNavigate(),location=useLocation(),fileInput=useRef(null),savingLock=useRef(false);
  const stopDetailsRef=useRef(null),earningsDetailsRef=useRef(null),chargeDetailsRef=useRef(null);
  const today=isoDate(new Date());
  const periods=useMemo(()=>listPeriods(logs,payPeriodAnchor||today,13),[logs,payPeriodAnchor,today]);
@@ -70,7 +71,7 @@ export default function CheckPayV5(){
  },[periods,archived]);
  const requested=available.find(p=>p.id===location.state?.periodId);
  const [chosen,setChosen]=useState(null),[step,setStep]=useState('home');
- const [ai,setAi]=useState(null),[scanSource,setScanSource]=useState('ai'),[scanFile,setScanFile]=useState(null);
+ const [ai,setAi]=useState(null),[scanSource,setScanSource]=useState('ai'),[,setScanFile]=useState(null);
  const [periodEvidence,setPeriodEvidence]=useState(null),[confirmedStatementPeriod,setConfirmedStatementPeriod]=useState(null);
  const [manualPayout,setManualPayout]=useState(''),[vatChoice,setVatChoice]=useState(''),[vatEntry,setVatEntry]=useState('');
  const [error,setError]=useState(''),[stage,setStage]=useState(''),[busy,setBusy]=useState(false);
@@ -78,6 +79,7 @@ export default function CheckPayV5(){
  const [confirmedDays,setConfirmedDays]=useState({});
  const [openDays,setOpenDays]=useState(false),[showMore,setShowMore]=useState(false);
  const [limitedAccepted,setLimitedAccepted]=useState(false);
+ const [approvalOpen,setApprovalOpen]=useState(false),[invoiceAck,setInvoiceAck]=useState(false);
  const [feeInput,setFeeInput]=useState(()=>validHistoricalFee(paymentConfig?.contractorFeePercent)?String(paymentConfig.contractorFeePercent):''),[feeAck,setFeeAck]=useState(false),[feeSaving,setFeeSaving]=useState(false);
  const [hidden,setHidden]=useState(()=>{try{return localStorage.getItem('home-hide-money')==='1';}catch{return false;}});
  const initially=available.find(p=>p.daysLogged>0)||available[0]||{start:today,end:today,id:today+'_'+today};
@@ -99,21 +101,27 @@ export default function CheckPayV5(){
  const audit=useMemo(()=>auditStatementArithmetic(sourceNet),[ai,vatChoice,vatEntry]);
  const scopeNeedsConfirmation=!!ai&&(!!periodEvidence?.needsConfirmation&&confirmedStatementPeriod?.id!==period.id||!view?.periodOk);
  const canCompare=!!view?.canCompare&&!scopeNeedsConfirmation&&audit.status!=='mismatch'&&!loading&&!costs.loading&&!loadError&&!costs.error;
- const findings=briefPayFindings({check:view,confirmedScope:!scopeNeedsConfirmation&&!!view?.periodOk,auditStatus:audit.status,rows:rowSummary.rows});
  const showComparableWork=!!view?.periodOk&&!scopeNeedsConfirmation;
  const readable=readablePayResult({check:view?{...view,canCompare}:null,statement:sourceNet,summary:rowSummary,audit,chargeEvidence});
  const scanEnabled=!!permission&&(permission.isPro||permission.betaAccess||permission.statementAiUses<3);
- const savedCheck=['matched','difference','reconciled'].includes(previous.state);
  const unresolvedSaved=unresolvedStatementFindings(statusRecord);
  const invoiceReady=statementInvoiceReady(statusRecord);
+ const relatedInvoice=(invoices.invoices||[]).find(item=>item.periodId===period.id)||null;
+ const approvalComparable=!!statusRecord?.payoutComparison&&statusRecord.reviewedStatement?.reviewed===true&&
+   statusRecord.payoutComparison.start===period.start&&statusRecord.payoutComparison.end===period.end&&
+   statusRecord.payoutComparison.currency==='GBP'&&statusRecord.payoutComparison.taxBasis==='same_as_records'&&
+   Number.isSafeInteger(statusRecord.payoutComparison.statementPence)&&!!revision&&
+   revision===statusRecord.payoutComparison.revision&&rowSummary.payout!=null&&
+   rowSummary.payout===statusRecord.payoutComparison.expectedPence&&
+   !loading&&!costs.loading&&!loadError&&!costs.error;
+ const approvalNeeded=approvalComparable&&!invoiceReady;
  const unresolvedCurrent=(view?.flagged||[]).filter(row=>!['figures_verified','possible_duplicate_accepted'].includes(confirmedDays[row.date]));
  const limitedCoverage=!!view&&(requiresLimitedCoverageAcceptance({summaryOnly:view.summaryOnly,hasDaily:view.hasDaily,incompleteDays:view.unknown.length,outsidePeriod:view.outsidePeriod,earningsDifferences:view.earningsVariations.length})||audit.dailyCoverage===false);
  const savedCoveragePending=requiresLimitedCoverageAcceptance(statusRecord?.statementFindings)&&statusRecord?.statementFindings?.limitedCoverageAccepted!==true;
- const requiredPeriod=period.start+' – '+period.end;
  useEffect(()=>{let active=true;getPremiumStatus().then(s=>{if(active)setPermission(s);}).catch(()=>{if(active)setPermissionError(true);});return()=>{active=false;};},[]);
  useEffect(()=>{track('check_pay_opened');},[]);
  const cash=value=>hidden?'••••':currency(value);
- const reset=()=>{if(busy)return;setStep('home');setAi(null);setScanFile(null);setError('');setConfirmedDays({});setVatChoice('');setVatEntry('');setLimitedAccepted(false);setPeriodEvidence(null);setConfirmedStatementPeriod(null);};
+ const reset=()=>{if(busy)return;setApprovalOpen(false);setInvoiceAck(false);setStep('home');setAi(null);setScanFile(null);setError('');setConfirmedDays({});setVatChoice('');setVatEntry('');setLimitedAccepted(false);setPeriodEvidence(null);setConfirmedStatementPeriod(null);};
  // Re-tapping the persistent Pay tab returns to the beginning of the flow.
  // It does not delete the server-side statement, comparisons or work history.
  useEffect(()=>{if(location.state?.payHome&&!busy){setStep('home');setAi(null);setScanFile(null);setError('');setLimitedAccepted(false);setConfirmedDays({});setPeriodEvidence(null);setConfirmedStatementPeriod(null);}},[location.key]);
@@ -131,6 +139,16 @@ export default function CheckPayV5(){
      if(evidence.suggested){
        setChosen(summarizePeriod(logs,evidence.suggested));
      }
+     // Autosave a bounded extracted draft when its period is unambiguous.
+     // Never store the uploaded PDF/photo or personal driver/bank details.
+     if(evidence?.suggested&&!evidence.needsConfirmation&&data.currency==='GBP'){
+       const id=evidence.suggested.id||dateKey(evidence.suggested);
+       try{
+         await updatePeriodRecord(id,{scanDraft:{data:compactStatementScan(data),savedAt:new Date().toISOString(),source:'ai'}},true);
+       }catch(_){
+         setError('AI read the statement, but its draft could not be saved. Tap Save pay check before leaving.');
+       }
+     }
      setAi(data);setScanSource('ai');setVatChoice(data.taxBasis||'unknown');setVatEntry('');
      setConfirmedDays({});setLimitedAccepted(false);setStep('result');setOpenDays(false);setShowMore(false);
      track('statement_ai_completed');
@@ -147,17 +165,17 @@ export default function CheckPayV5(){
  }
  function loadRecord(item){
    const range={start:item.start,end:item.end,id:item.id};
-   const draft=savedStatementDraft(item.record);
+   const draft=item.record?.scanDraft?.data||savedStatementDraft(item.record);
    // A previously archived OCR header may have reversed UK dates. Use the
    // archived daily figures to detect this without a new paid AI upload.
    // The old record is untouched; a corrected comparison is saved to the
    // newly confirmed range only after the driver's explicit action.
    const evidence=draft?inferStatementPeriod(draft,available):null;
    const target=evidence?.needsConfirmation&&evidence.suggested?evidence.suggested:range;
-   setChosen(summarizePeriod(logs,target));setScanSource(item.record?.payoutComparison?.source||'saved');
+   setChosen(summarizePeriod(logs,target));setScanSource(item.record?.scanDraft?.data?'ai':item.record?.payoutComparison?.source||'saved');
    setAi(draft);setPeriodEvidence(evidence);setConfirmedStatementPeriod(null);
    setVatChoice('');setVatEntry('');setConfirmedDays(mergeFindingDecisions(item.record));setLimitedAccepted(item.record?.statementFindings?.limitedCoverageAccepted===true);
-   setStep(evidence?.needsConfirmation?'result':item.record?.payoutComparison?'saved':'result');setError('');
+   setStep(evidence?.needsConfirmation?'result':item.record?.scanDraft?.data?'result':item.record?.payoutComparison?'saved':'result');setApprovalOpen(false);setInvoiceAck(false);setError('');
  }
  async function saveCheck(){
    if(savingLock.current||!ai)return;
@@ -187,6 +205,7 @@ export default function CheckPayV5(){
        daily:Object.fromEntries((ai.daily||[]).filter(x=>x?.date&&x.date>=period.start&&x.date<=period.end).map(x=>[x.date,{stops:x.stops==null?'':String(x.stops),amount:x.amount==null?'':String(x.amount)}]))
      };
      const base={
+       scanDraft:null,invoiceApproval:null,
        status:netKnown?'checked':'statement_received',
        needsReview:!netKnown||unresolvedCurrent.length>0||(limitedCoverage&&!limitedAccepted),
        statementReceivedAt:new Date().toISOString(),
@@ -214,20 +233,32 @@ export default function CheckPayV5(){
        base.payoutComparison=null;
      }
      await updatePeriodRecord(period.id,{...existing,...base},true);
-     setStep('saved');setScanFile(null);
+     setStep('saved');setScanFile(null);setApprovalOpen(false);setInvoiceAck(false);
      track(netKnown?'statement_compared':'statement_reviewed');
    }catch(_){setError('Could not save this pay check. Your work records were not changed. Please retry.');}
    finally{savingLock.current=false;setBusy(false);}
  }
- async function acceptDifference(){
-   if(savingLock.current||previous.state!=='difference'||!statusRecord?.payoutComparison||!invoiceReady)return;
+ async function approveContractorInvoice(){
+   if(savingLock.current||busy||!approvalComparable||!invoiceAck)return;
+   const comparison=statusRecord.payoutComparison;
    savingLock.current=true;setBusy(true);setError('');
    try{
-     const latest=await moneyRevision(logs,costs.expenses||[],period);
-     if(statusRecord.payoutComparison.revision!==latest)throw new Error('stale');
-     await updatePeriodRecord(period.id,{...statusRecord,status:'reconciled',needsReview:false,resolvedAt:new Date().toISOString(),resolutionReason:'driver_reviewed_and_accepted'},true);
+     const currentRevision=await moneyRevision(logs,costs.expenses||[],period);
+     if(!currentRevision||currentRevision!==comparison.revision||
+        rowSummary.payout!==comparison.expectedPence)throw new Error('stale');
+     // Acknowledges the invoice AMOUNT, not that the stops, pay variations
+     // or contractor charges have been independently resolved.
+     await updatePeriodRecord(period.id,{
+       ...statusRecord,invoiceApproval:{
+         kind:'driver_accepted_contractor_amount',statementPence:comparison.statementPence,
+         revision:comparison.revision,acceptedAt:new Date().toISOString(),
+         openWorkdayDifferences:unresolvedSaved.length,
+         limitedCoverageAcceptedForInvoice:savedCoveragePending
+       }
+     },true);
+     track('pay_invoice_amount_approved',{openFindings:unresolvedSaved.length});
      nav('/app/invoice',{state:{fromPay:true,periodId:period.id}});
-   }catch(_){setError('Your pay check changed or could not be saved. Review the statement and try again.');}
+   }catch(_){setError('Could not approve this statement for invoicing. Check that your work records have not changed, then retry.');}
    finally{savingLock.current=false;setBusy(false);}
  }
  async function recoverFee(){
@@ -239,8 +270,12 @@ export default function CheckPayV5(){
    }catch(_){setError('Unable to save the confirmed historical deduction. Your workdays were not changed.');}
    finally{setFeeSaving(false);}
  }
- const history=available.filter(p=>periodRecords[p.id]?.reviewedStatement||periodRecords[p.id]?.payoutComparison).slice(0,7);
- const latestCheck=periodRecords[period.id];
+ const history=available.filter(p=>
+   periodRecords[p.id]?.reviewedStatement||periodRecords[p.id]?.payoutComparison||
+   periodRecords[p.id]?.scanDraft||(invoices.invoices||[]).some(i=>i.periodId===p.id)
+ ).slice(0,14);
+ const recent=history[0]||null;
+ const recentInvoice=recent?(invoices.invoices||[]).find(i=>i.periodId===recent.id):null;
  // After upload, show the result headline on small mobile screens.
  useEffect(()=>{if(step==='result')document.querySelector('.st-app-shell > main')?.scrollTo?.({top:0,behavior:'auto'});},[step]);
  // Finding counts navigate to evidence. Show every affected day on the first tap.
@@ -255,8 +290,16 @@ export default function CheckPayV5(){
  return <div className="home-screen st-page v5-pay">
   <header className="home-row v5-header"><div><h1>{displayResult?'Your pay check':'Check your pay'}</h1><p className="home-muted">{displayResult?'AI compared the figures it could read. Review what matters.':'Log your work. Upload the statement. See what changed.'}</p></div><HeaderControls hidden={hidden} onToggleMoney={()=>{setHidden(v=>{try{localStorage.setItem('home-hide-money',v?'0':'1');}catch(_){}return !v;});}}/></header>
   {step==='home'&&<>
+   {recent&&<section className="home-card v5-resume" aria-label="Your latest statement">
+     <div className="v5-topline"><h2>Continue your latest check</h2><span className="st-badge">{recentInvoice?'Invoice saved':periodRecords[recent.id]?.scanDraft?'AI scan saved':periodRecords[recent.id]?.payoutComparison?'Pay check saved':'Statement saved'}</span></div>
+     <p className="home-muted text-sm">{showDate(recent.start)} – {showDate(recent.end)} · {recent.daysLogged} logged workdays</p>
+     <button type="button" className="home-primary w-full" onClick={()=>loadRecord({id:recent.id,start:recent.start,end:recent.end,record:periodRecords[recent.id]||{}})}>
+       {periodRecords[recent.id]?.scanDraft?'Continue saved AI scan':'Open saved pay check'} <ArrowRight size={18}/>
+     </button>
+     {recentInvoice&&<button className="home-secondary w-full" type="button" onClick={()=>nav('/app/invoice',{state:{fromPay:true,periodId:recent.id}})}>View or send saved invoice <ArrowRight size={18}/></button>}
+   </section>}
    <section className="home-card v5-upload">
-     <div className="v5-upload-heading"><Sparkles size={23} aria-hidden="true"/><h2>Ready to check a statement?</h2></div>
+     <div className="v5-upload-heading"><Sparkles size={23} aria-hidden="true"/><h2>{recent?'Check another statement':'Ready to check a statement?'}</h2></div>
      <p className="home-muted">Upload the statement from your contractor. Stop Tracker reads the dates, finds your logged days and checks the differences.</p>
      {permissionError?<div className="home-banner">AI access couldn't be confirmed. You can still record the payout manually. <button className="home-text-button" type="button" onClick={()=>{setPermissionError(false);getPremiumStatus().then(setPermission).catch(()=>setPermissionError(true));}}>Retry AI access</button></div>:null}
      <label className={'home-primary v5-upload-cta '+(!scanEnabled||busy?'v5-inactive':'')}><FileUp size={20} aria-hidden="true"/> Upload & check with AI
@@ -272,7 +315,7 @@ export default function CheckPayV5(){
     {rowSummary.payout==null&&rowSummary.rows.length>0&&<p className="home-muted text-sm">Some historical earnings or fees need confirming. AI can still check workday counts.</p>}
     <Link className="home-text-button" to="/app/dashboard">Log a workday <ArrowRight size={16}/></Link>
    </section>
-   {!!history.length&&<section className="home-card v5-history"><h2>Previous checks</h2>{history.map(p=><button type="button" key={p.id} onClick={()=>loadRecord({id:p.id,start:p.start,end:p.end,record:periodRecords[p.id]})}><span><strong>{showDate(p.start)} – {showDate(p.end)}</strong><small>{periodRecords[p.id]?.payoutComparison?'Check saved':'Statement saved · Finish review'}</small></span><ArrowRight size={17} aria-hidden="true"/></button>)}</section>}
+   {history.length>1&&<section className="home-card v5-history"><h2>Earlier checks</h2>{history.slice(1).map(p=><button type="button" key={p.id} onClick={()=>loadRecord({id:p.id,start:p.start,end:p.end,record:periodRecords[p.id]||{}})}><span><strong>{showDate(p.start)} – {showDate(p.end)}</strong><small>{(invoices.invoices||[]).some(i=>i.periodId===p.id)?'Invoice available':periodRecords[p.id]?.scanDraft?'AI scan saved':periodRecords[p.id]?.payoutComparison?'Check saved':'Statement saved · Finish review'}</small></span><ArrowRight size={17} aria-hidden="true"/></button>)}</section>}
   </>}
   {(step==='result'||step==='saved')&&<>
    <button className="home-text-button v5-back" onClick={reset} disabled={busy}>← Back to Pay</button>
@@ -295,7 +338,7 @@ export default function CheckPayV5(){
      onShowEarnings={()=>jumpToDetails(earningsDetailsRef)}
      onShowCharges={()=>jumpToDetails(chargeDetailsRef)}/>
    {step==='result'&&<section className="home-card v5-finish" aria-label="Save or continue pay check">
-      <button type="button" className="home-primary w-full" disabled={busy||!ai||!sourceNet||scopeNeedsConfirmation||!view?.periodOk||!view?.currencyOk||view.rawPayout==null} onClick={saveCheck}>{busy?'Saving…':canCompare?'Save pay check':'Save statement — check later'}</button>
+      <button type="button" className="home-primary w-full" disabled={busy||!ai||!sourceNet||scopeNeedsConfirmation||!view?.periodOk||!view?.currencyOk||view.rawPayout==null} onClick={saveCheck}>{busy?'Saving…':canCompare?'Save & continue':'Save statement & continue'}</button>
       {!canCompare&&<p className="home-muted text-xs">{scopeNeedsConfirmation?'Confirm the statement date range above before saving the check.':'Saves the statement without claiming it matches your work. No new scan needed later.'}</p>}
       {limitedCoverage&&canCompare&&<details className="v5-manual"><summary>Before invoicing · Unverified daily details</summary>
        <label className="v5-ack"><input type="checkbox" checked={limitedAccepted} onChange={e=>setLimitedAccepted(e.target.checked)}/> Some workday figures could not be verified. I accept this limited comparison for invoicing.</label>
@@ -306,19 +349,30 @@ export default function CheckPayV5(){
        <Link className="home-text-button" to="/app/check-pay/advanced" state={{periodId:period.id}}>Correct statement figures manually <ArrowRight size={16}/></Link>
       </details>
      </section>}
-   {step==='saved'&&<section className="home-card v5-finish">
-     <h2>{savedCheck?'Pay check saved':'Statement saved · Needs review'}</h2>
-     <p className="home-muted">{savedCheck?'Your statement was compared with the saved work available for this period. The actual payment is not independently confirmed.':'Your statement is saved. The app did not falsely mark VAT, missing rates or unknown daily figures as verified.'}</p>
-     {unresolvedSaved.length>0&&<div className="home-banner" role="status"><strong>{unresolvedSaved.length} workday {unresolvedSaved.length===1?'difference':'differences'} to review</strong><p className="home-muted text-sm">Your statement is saved. Only genuine stop or date mismatches need decisions, not each daily earnings variation. You don't need to scan again.</p>
-       <button className="home-primary w-full" type="button" onClick={()=>{setConfirmedDays(mergeFindingDecisions(statusRecord));setStep('result');setOpenDays(true);}}>Review differences <ArrowRight size={18}/></button>
-     </div>}
-     {statusRecord?.payoutComparison&&savedCoveragePending&&unresolvedSaved.length===0&&<button className="home-primary w-full" type="button" onClick={()=>{setLimitedAccepted(false);setStep('result');}}>Review limited pay check <ArrowRight size={18}/></button>}
-     {savedCheck&&previous.state==='difference'&&invoiceReady&&<button className="home-primary w-full" type="button" disabled={busy} onClick={acceptDifference}>{busy?'Saving…':'Accept difference & prepare invoice'} <ArrowRight size={18}/></button>}
-     {savedCheck&&['matched','reconciled'].includes(previous.state)&&invoiceReady&&<button className="home-primary w-full" type="button" onClick={()=>nav('/app/invoice',{state:{fromPay:true,periodId:period.id}})}>Prepare invoice from statement <ArrowRight size={18}/></button>}
-     {savedCheck&&<Link to="/app/records?tab=documents" className="home-secondary w-full">Save and finish (self-billed)</Link>}
-     {!savedCheck&&unresolvedSaved.length===0&&<button className="home-secondary w-full" type="button" onClick={()=>setStep('result')}>Review missing details</button>}
+   {step==='saved'&&<section className="home-card v5-finish" aria-label="Next step after pay check">
+      <h2>{relatedInvoice?'Invoice already prepared':statusRecord?.payoutComparison?'Statement saved. What next?':'Statement saved — one detail left'}</h2>
+      <p className="home-muted text-sm">{relatedInvoice?'Your invoice is already stored. You can open it or send it without scanning this statement again.':statusRecord?.payoutComparison?'AI has saved the comparison. You can use the contractor statement amount for your invoice; any open differences stay recorded for later review.':'You can return here without another AI scan. Confirm the outstanding VAT, dates or missing pay details before creating an invoice.'}</p>
+      {relatedInvoice?
+        <button className="home-primary w-full" type="button" onClick={()=>nav('/app/invoice',{state:{fromPay:true,periodId:period.id}})}>View or send invoice <ArrowRight size={18}/></button>:
+        invoiceReady&&approvalComparable?
+          <button className="home-primary w-full" type="button" onClick={()=>nav('/app/invoice',{state:{fromPay:true,periodId:period.id}})}>Create invoice using {cash(statusRecord?.payoutComparison?.statementPence)} <ArrowRight size={18}/></button>:
+        approvalNeeded?
+          <>
+            <button className="home-primary w-full" type="button" onClick={()=>{setApprovalOpen(true);setInvoiceAck(false);}}>Continue to invoice <ArrowRight size={18}/></button>
+            {approvalOpen&&<div className="v5-approval" role="group" aria-label="Confirm contractor invoice amount">
+              <h3>Use the contractor's stated amount?</h3>
+              <p className="home-muted text-sm">Invoice amount: <strong>{cash(statusRecord.payoutComparison.statementPence)}</strong>. {unresolvedSaved.length} stop/date {unresolvedSaved.length===1?'difference remains':'differences remain'} open. {savedCoveragePending?'Some daily figures were not independently verified.':''} You can query those differences with your contractor after invoicing.</p>
+              <label className="v5-ack"><input type="checkbox" checked={invoiceAck} onChange={e=>setInvoiceAck(e.target.checked)}/> I have checked the statement payout and agree to invoice this amount. I understand this does not resolve any flagged differences or confirm payment.</label>
+              <button type="button" className="home-primary w-full" disabled={!invoiceAck||busy} onClick={approveContractorInvoice}>{busy?'Saving…':'Approve amount & create invoice'} <ArrowRight size={18}/></button>
+              <button type="button" className="home-secondary w-full" onClick={()=>setApprovalOpen(false)} disabled={busy}>Not yet</button>
+            </div>}
+          </>:
+          <button className="home-primary w-full" type="button" onClick={()=>{setStep('result');setOpenDays(false);}}>Finish checking statement <ArrowRight size={18}/></button>
+      }
+      {unresolvedSaved.length>0&&<button className="home-text-button" type="button" onClick={()=>{setConfirmedDays(mergeFindingDecisions(statusRecord));setStep('result');setOpenDays(true);setShowMore(true);}}>Review {unresolvedSaved.length} flagged {unresolvedSaved.length===1?'workday':'workdays'} (optional before invoicing)</button>}
+      <button className="home-secondary w-full" type="button" onClick={reset}>Finish for now — keep saved</button>
    </section>}
-    {view?.earningsVariations.length>0&&<details ref={earningsDetailsRef} className="home-card v5-earnings-note v5-finding-target" aria-label="Daily earnings details" tabIndex={-1}>
+   {view?.earningsVariations.length>0&&<details ref={earningsDetailsRef} className="home-card v5-earnings-note v5-finding-target" aria-label="Daily earnings details" tabIndex={-1}>
       <summary>{view.earningsVariations.length} days with different pay totals</summary>
       <p className="home-muted text-sm">Stops match. Extras, parcels or rates may explain the amounts; no individual decisions needed.</p>
       <div className="v5-earnings-list">{view.earningsVariations.map(row=><div key={row.date} className="v5-earnings-row"><strong>{showDate(row.date)}</strong><span>{cash(row.loggedGross)} logged / {cash(row.statementGross)} statement</span></div>)}</div>

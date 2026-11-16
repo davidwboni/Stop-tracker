@@ -190,3 +190,23 @@
  .v5-simple-result{animation:v5-result-enter .22s ease-out both}
  @keyframes v5-result-enter{from{opacity:.8;transform:translateY(5px)}to{opacity:1;transform:none}}
 }
+
+/* V5 continuity: saved statement and invoice appear before another upload. */
+.v5-pay .v5-resume{gap:12px;min-width:0;border-color:var(--home-purple);}
+.v5-resume .home-primary,.v5-resume .home-secondary{display:flex;align-items:center;justify-content:center;gap:10px;min-height:50px;}
+.v5-resume .v5-topline h2{min-width:0;}
+.v5-summary-verdict{display:grid;gap:6px;padding:12px 0 4px;}
+.v5-summary-verdict strong{font-size:clamp(17px,4.5vw,21px);line-height:1.35;color:var(--foreground);}
+.v5-summary-verdict p{margin:0;line-height:1.5;}
+.v5-deep-details{border-top:1px solid var(--border);padding-top:8px;min-width:0;}
+.v5-deep-details>summary{color:var(--home-purple);font-weight:700;min-height:48px;display:flex;align-items:center;cursor:pointer;line-height:1.4;}
+.v5-deep-details[open]{display:grid;gap:14px;}
+.v5-deep-details .v5-money-pair{min-width:0;}
+.v5-pay .v5-approval{display:grid;gap:12px;border:1px solid var(--border);border-radius:16px;padding:16px;min-width:0;}
+.v5-approval h3{font-size:17px;font-weight:760;line-height:1.35;}
+.v5-approval .v5-ack{align-items:flex-start;}
+.v5-approval .v5-ack input{margin-top:2px;}
+.v5-approval .home-primary,.v5-approval .home-secondary{display:flex;justify-content:center;align-items:center;gap:8px;min-height:50px;}
+.v5-finish>.home-text-button{min-height:45px;text-align:left;}
+@media(min-width:768px){.v5-pay>.v5-resume{grid-column:1/-1;max-width:860px;}}
+@media(max-width:450px){.v5-pay .v5-resume{padding:17px;}.v5-pay .v5-deep-details .v5-money-pair{grid-template-columns:1fr;}}

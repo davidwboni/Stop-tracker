@@ -123,3 +123,38 @@ it('lets the driver confirm sending a previously prepared invoice without creati
  await waitFor(()=>expect(f.confirmSent).toHaveBeenCalledWith('saved-invoice'));
  expect(screen.queryByText('InvoiceCreate')).not.toBeInTheDocument();
 });
+
+it('allows a clearly approved contractor payout to prefill invoice while retaining disputed stops',async()=>{
+ const base=await checked({statementPence:9300});
+ f.data.periodRecords[period.id]={
+   ...base,needsReview:true,
+   reviewedStatement:{reviewed:true},
+   statementFindings:{flagged:[{date:period.start,acceptedReason:'dispute'}],hasDaily:false,summaryOnly:true,limitedCoverageAccepted:false},
+   invoiceApproval:{
+     kind:'driver_accepted_contractor_amount',statementPence:9300,
+     revision:base.payoutComparison.revision,acceptedAt:'2026-11-16T00:00:00Z'
+   }
+ };
+ mount();
+ await screen.findByText('InvoiceCreate');
+ expect(screen.getByTestId('prefill-total')).toHaveTextContent('93.00');
+ expect(f.data.periodRecords[period.id].statementFindings.flagged[0].acceptedReason).toBe('dispute');
+});
+it('keeps existing saved invoice accessible even if the original comparison becomes stale',async()=>{
+ f.data.periodRecords[period.id]=await checked({revision:'outdated'});
+ f.invoice.invoices=[{id:'saved',invoiceNumber:51,periodId:period.id,status:'generated',senderSnapshot:{name:'Driver'},clientEmail:'billing@example.com'}];
+ mount();
+ await screen.findByText('Invoice already prepared for this period');
+ expect(screen.getByText('Invoice INV-0051')).toBeInTheDocument();
+ expect(screen.getByRole('button',{name:'Email saved invoice'})).toBeEnabled();
+ expect(screen.queryByText('Check your statement first')).not.toBeInTheDocument();
+});
+it('rejects stale approval when work or comparison fingerprint has changed',async()=>{
+ const base=await checked({statementPence:9300});
+ f.data.periodRecords[period.id]={...base,needsReview:true,reviewedStatement:{reviewed:true},
+   statementFindings:{flagged:[{date:period.start,acceptedReason:null}]},
+   invoiceApproval:{kind:'driver_accepted_contractor_amount',statementPence:9300,revision:'wrong-revision',acceptedAt:'2026-11-16T00:00:00Z'}};
+ mount();
+ await screen.findByText('Check your statement first');
+ expect(screen.queryByText('InvoiceCreate')).not.toBeInTheDocument();
+});
