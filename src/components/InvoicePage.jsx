@@ -6,7 +6,8 @@ import useExpenses from '../hooks/useExpenses';
 import {isoDate,listPeriods,summarizePeriod} from '../features/payperiod/periods';
 import {moneyRevision,moneySummary,payoutComparison,validRange} from '../features/money/moneyModel';
 import InvoiceCreate from './InvoiceCreate';
-import {shareSavedInvoice} from '../services/invoicePdf';
+import {shareSavedInvoice,downloadSavedInvoice} from '../services/invoicePdf';
+import {statementInvoiceAmounts} from '../features/statements/invoiceAmounts';
 import {money} from '../features/home/homeModel';
 import {statementInvoiceReady,unresolvedStatementFindings,hasExplicitInvoiceApproval} from '../features/statements/findingGate';
 
@@ -44,8 +45,11 @@ export default function InvoicePage(){
    periodId:p.id,startDate:p.start,endDate:p.end,stops:p.stops,
    amount:summary.payout==null?null:summary.payout/100,
    // Only a checked and driver-approved GBP contractor payout may prefill an invoice.
-   statementAmount:allowed?(record.payoutComparison.statementPence/100).toFixed(2):null
+   statementAmount:statementAmounts?(statementAmounts.netPence/100).toFixed(2):null,
+    vatAmount:statementAmounts?.vatEvidence?(statementAmounts.vatPence/100).toFixed(2):null,
+    vatInclusiveAmount:statementAmounts?.vatEvidence?(statementAmounts.vatInclusivePence/100).toFixed(2):null
  };
+ const statementAmounts=allowed?statementInvoiceAmounts(record):null;
  const prepare=fromPay||creating;
  return <div className="home-screen st-page invoice-workflow" style={{maxWidth:760}}>
   <Link className="home-text-button" to={fromPayHub?'/app/check-pay':'/app/records?tab=documents'} state={fromPayHub?{periodId:p.id}:undefined}>
@@ -82,6 +86,11 @@ export default function InvoicePage(){
           }}>Yes, I've sent it</button>
         </div>}
      {sendError&&<p role="alert" className="home-banner home-error">{sendError}</p>}
+     <button type="button" className="home-secondary w-full" disabled={sending} onClick={async()=>{
+        setSending(true);setSendError('');
+        try{await downloadSavedInvoice(prior[0]);}catch(e){setSendError(e?.message||'Could not download the saved PDF. Try again.');}
+        finally{setSending(false);}
+      }}>Download saved invoice PDF</button>
      <Link className="home-primary w-full" to="/app/records?tab=documents">View saved invoice</Link>
      <button className="home-text-button" onClick={()=>{if(window.confirm('Prepare another invoice for these same contractor statement dates? Check you are not billing twice.'))setCreateDuplicate(true);}}>Create another invoice anyway</button>
    </section>:
