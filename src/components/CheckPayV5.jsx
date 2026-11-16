@@ -365,19 +365,30 @@ export default function CheckPayV5(){
        <Link className="home-text-button" to="/app/check-pay/advanced" state={{periodId:period.id}}>Correct statement figures manually <ArrowRight size={16}/></Link>
       </details>
      </section>}
-   {step==='saved'&&<section className="home-card v5-finish">
-     <h2>{savedCheck?'Pay check saved':'Statement saved · Needs review'}</h2>
-     <p className="home-muted">{savedCheck?'Your statement was compared with the saved work available for this period. The actual payment is not independently confirmed.':'Your statement is saved. The app did not falsely mark VAT, missing rates or unknown daily figures as verified.'}</p>
-     {unresolvedSaved.length>0&&<div className="home-banner" role="status"><strong>{unresolvedSaved.length} workday {unresolvedSaved.length===1?'difference':'differences'} to review</strong><p className="home-muted text-sm">Your statement is saved. Only genuine stop or date mismatches need decisions, not each daily earnings variation. You don't need to scan again.</p>
-       <button className="home-primary w-full" type="button" onClick={()=>{setConfirmedDays(mergeFindingDecisions(statusRecord));setStep('result');setOpenDays(true);}}>Review differences <ArrowRight size={18}/></button>
-     </div>}
-     {statusRecord?.payoutComparison&&savedCoveragePending&&unresolvedSaved.length===0&&<button className="home-primary w-full" type="button" onClick={()=>{setLimitedAccepted(false);setStep('result');}}>Review limited pay check <ArrowRight size={18}/></button>}
-     {savedCheck&&previous.state==='difference'&&invoiceReady&&<button className="home-primary w-full" type="button" disabled={busy} onClick={acceptDifference}>{busy?'Saving…':'Accept difference & prepare invoice'} <ArrowRight size={18}/></button>}
-     {savedCheck&&['matched','reconciled'].includes(previous.state)&&invoiceReady&&<button className="home-primary w-full" type="button" onClick={()=>nav('/app/invoice',{state:{fromPay:true,periodId:period.id}})}>Prepare invoice from statement <ArrowRight size={18}/></button>}
-     {savedCheck&&<Link to="/app/records?tab=documents" className="home-secondary w-full">Save and finish (self-billed)</Link>}
-     {!savedCheck&&unresolvedSaved.length===0&&<button className="home-secondary w-full" type="button" onClick={()=>setStep('result')}>Review missing details</button>}
+   {step==='saved'&&<section className="home-card v5-finish" aria-label="Next step after pay check">
+      <h2>{relatedInvoice?'Invoice already prepared':statusRecord?.payoutComparison?'Statement saved. What next?':'Statement saved — one detail left'}</h2>
+      <p className="home-muted text-sm">{relatedInvoice?'Your invoice is already stored. You can open it or send it without scanning this statement again.':statusRecord?.payoutComparison?'AI has saved the comparison. You can use the contractor statement amount for your invoice; any open differences stay recorded for later review.':'You can return here without another AI scan. Confirm the outstanding VAT, dates or missing pay details before creating an invoice.'}</p>
+      {relatedInvoice?
+        <button className="home-primary w-full" type="button" onClick={()=>nav('/app/invoice',{state:{fromPay:true,periodId:period.id}})}>View or send invoice <ArrowRight size={18}/></button>:
+        invoiceReady&&approvalComparable?
+          <button className="home-primary w-full" type="button" onClick={()=>nav('/app/invoice',{state:{fromPay:true,periodId:period.id}})}>Create invoice using {cash(statusRecord?.payoutComparison?.statementPence)} <ArrowRight size={18}/></button>:
+        approvalNeeded?
+          <>
+            <button className="home-primary w-full" type="button" onClick={()=>{setApprovalOpen(true);setInvoiceAck(false);}}>Continue to invoice <ArrowRight size={18}/></button>
+            {approvalOpen&&<div className="v5-approval" role="group" aria-label="Confirm contractor invoice amount">
+              <h3>Use the contractor's stated amount?</h3>
+              <p className="home-muted text-sm">Invoice amount: <strong>{cash(statusRecord.payoutComparison.statementPence)}</strong>. {unresolvedSaved.length} stop/date {unresolvedSaved.length===1?'difference remains':'differences remain'} open. {savedCoveragePending?'Some daily figures were not independently verified.':''} You can query those differences with your contractor after invoicing.</p>
+              <label className="v5-ack"><input type="checkbox" checked={invoiceAck} onChange={e=>setInvoiceAck(e.target.checked)}/> I have checked the statement payout and agree to invoice this amount. I understand this does not resolve any flagged differences or confirm payment.</label>
+              <button type="button" className="home-primary w-full" disabled={!invoiceAck||busy} onClick={approveContractorInvoice}>{busy?'Saving…':'Approve amount & create invoice'} <ArrowRight size={18}/></button>
+              <button type="button" className="home-secondary w-full" onClick={()=>setApprovalOpen(false)} disabled={busy}>Not yet</button>
+            </div>}
+          </>:
+          <button className="home-primary w-full" type="button" onClick={()=>{setStep('result');setOpenDays(false);}}>Finish checking statement <ArrowRight size={18}/></button>
+      }
+      {unresolvedSaved.length>0&&<button className="home-text-button" type="button" onClick={()=>{setConfirmedDays(mergeFindingDecisions(statusRecord));setStep('result');setOpenDays(true);setShowMore(true);}}>Review {unresolvedSaved.length} flagged {unresolvedSaved.length===1?'workday':'workdays'} (optional before invoicing)</button>}
+      <button className="home-secondary w-full" type="button" onClick={reset}>Finish for now — keep saved</button>
    </section>}
-    {view?.earningsVariations.length>0&&<details ref={earningsDetailsRef} className="home-card v5-earnings-note v5-finding-target" aria-label="Daily earnings details" tabIndex={-1}>
+   {view?.earningsVariations.length>0&&<details ref={earningsDetailsRef} className="home-card v5-earnings-note v5-finding-target" aria-label="Daily earnings details" tabIndex={-1}>
       <summary>{view.earningsVariations.length} days with different pay totals</summary>
       <p className="home-muted text-sm">Stops match. Extras, parcels or rates may explain the amounts; no individual decisions needed.</p>
       <div className="v5-earnings-list">{view.earningsVariations.map(row=><div key={row.date} className="v5-earnings-row"><strong>{showDate(row.date)}</strong><span>{cash(row.loggedGross)} logged / {cash(row.statementGross)} statement</span></div>)}</div>
