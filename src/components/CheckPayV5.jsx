@@ -253,6 +253,29 @@ export default function CheckPayV5(){
    }catch(_){setError('Your pay check changed or could not be saved. Review the statement and try again.');}
    finally{savingLock.current=false;setBusy(false);}
  }
+ async function approveContractorInvoice(){
+   if(savingLock.current||busy||!approvalComparable||!invoiceAck)return;
+   const comparison=statusRecord.payoutComparison;
+   savingLock.current=true;setBusy(true);setError('');
+   try{
+     const currentRevision=await moneyRevision(logs,costs.expenses||[],period);
+     if(!currentRevision||currentRevision!==comparison.revision||
+        rowSummary.payout!==comparison.expectedPence)throw new Error('stale');
+     // Acknowledges the invoice AMOUNT, not that the stops, pay variations
+     // or contractor charges have been independently resolved.
+     await updatePeriodRecord(period.id,{
+       ...statusRecord,invoiceApproval:{
+         kind:'driver_accepted_contractor_amount',statementPence:comparison.statementPence,
+         revision:comparison.revision,acceptedAt:new Date().toISOString(),
+         openWorkdayDifferences:unresolvedSaved.length,
+         limitedCoverageAcceptedForInvoice:savedCoveragePending
+       }
+     },true);
+     track('pay_invoice_amount_approved',{openFindings:unresolvedSaved.length});
+     nav('/app/invoice',{state:{fromPay:true,periodId:period.id}});
+   }catch(_){setError('Could not approve this statement for invoicing. Check that your work records have not changed, then retry.');}
+   finally{savingLock.current=false;setBusy(false);}
+ }
  async function recoverFee(){
    if(feeSaving||!feeAck)return;
    setFeeSaving(true);setError('');
@@ -262,7 +285,12 @@ export default function CheckPayV5(){
    }catch(_){setError('Unable to save the confirmed historical deduction. Your workdays were not changed.');}
    finally{setFeeSaving(false);}
  }
- const history=available.filter(p=>periodRecords[p.id]?.reviewedStatement||periodRecords[p.id]?.payoutComparison).slice(0,7);
+ const history=available.filter(p=>
+   periodRecords[p.id]?.reviewedStatement||periodRecords[p.id]?.payoutComparison||
+   periodRecords[p.id]?.scanDraft||(invoices.invoices||[]).some(i=>i.periodId===p.id)
+ ).slice(0,14);
+ const recent=history[0]||null;
+ const recentInvoice=recent?(invoices.invoices||[]).find(i=>i.periodId===recent.id):null;
  const latestCheck=periodRecords[period.id];
  // After upload, show the result headline on small mobile screens.
  useEffect(()=>{if(step==='result')document.querySelector('.st-app-shell > main')?.scrollTo?.({top:0,behavior:'auto'});},[step]);
@@ -278,8 +306,16 @@ export default function CheckPayV5(){
  return <div className="home-screen st-page v5-pay">
   <header className="home-row v5-header"><div><h1>{displayResult?'Your pay check':'Check your pay'}</h1><p className="home-muted">{displayResult?'AI compared the figures it could read. Review what matters.':'Log your work. Upload the statement. See what changed.'}</p></div><HeaderControls hidden={hidden} onToggleMoney={()=>{setHidden(v=>{try{localStorage.setItem('home-hide-money',v?'0':'1');}catch(_){}return !v;});}}/></header>
   {step==='home'&&<>
+   {recent&&<section className="home-card v5-resume" aria-label="Your latest statement">
+     <div className="v5-topline"><h2>Continue your latest check</h2><span className="st-badge">{recentInvoice?'Invoice saved':periodRecords[recent.id]?.scanDraft?'AI scan saved':periodRecords[recent.id]?.payoutComparison?'Pay check saved':'Statement saved'}</span></div>
+     <p className="home-muted text-sm">{showDate(recent.start)} – {showDate(recent.end)} · {recent.daysLogged} logged workdays</p>
+     <button type="button" className="home-primary w-full" onClick={()=>loadRecord({id:recent.id,start:recent.start,end:recent.end,record:periodRecords[recent.id]||{}})}>
+       {periodRecords[recent.id]?.scanDraft?'Continue saved AI scan':'Open saved pay check'} <ArrowRight size={18}/>
+     </button>
+     {recentInvoice&&<button className="home-secondary w-full" type="button" onClick={()=>nav('/app/invoice',{state:{fromPay:true,periodId:recent.id}})}>View or send saved invoice <ArrowRight size={18}/></button>}
+   </section>}
    <section className="home-card v5-upload">
-     <div className="v5-upload-heading"><Sparkles size={23} aria-hidden="true"/><h2>Ready to check a statement?</h2></div>
+     <div className="v5-upload-heading"><Sparkles size={23} aria-hidden="true"/><h2>{recent?'Check another statement':'Ready to check a statement?'}</h2></div>
      <p className="home-muted">Upload the statement from your contractor. Stop Tracker reads the dates, finds your logged days and checks the differences.</p>
      {permissionError?<div className="home-banner">AI access couldn't be confirmed. You can still record the payout manually. <button className="home-text-button" type="button" onClick={()=>{setPermissionError(false);getPremiumStatus().then(setPermission).catch(()=>setPermissionError(true));}}>Retry AI access</button></div>:null}
      <label className={'home-primary v5-upload-cta '+(!scanEnabled||busy?'v5-inactive':'')}><FileUp size={20} aria-hidden="true"/> Upload & check with AI
@@ -295,7 +331,7 @@ export default function CheckPayV5(){
     {rowSummary.payout==null&&rowSummary.rows.length>0&&<p className="home-muted text-sm">Some historical earnings or fees need confirming. AI can still check workday counts.</p>}
     <Link className="home-text-button" to="/app/dashboard">Log a workday <ArrowRight size={16}/></Link>
    </section>
-   {!!history.length&&<section className="home-card v5-history"><h2>Previous checks</h2>{history.map(p=><button type="button" key={p.id} onClick={()=>loadRecord({id:p.id,start:p.start,end:p.end,record:periodRecords[p.id]})}><span><strong>{showDate(p.start)} – {showDate(p.end)}</strong><small>{periodRecords[p.id]?.payoutComparison?'Check saved':'Statement saved · Finish review'}</small></span><ArrowRight size={17} aria-hidden="true"/></button>)}</section>}
+   {history.length>1&&<section className="home-card v5-history"><h2>Earlier checks</h2>{history.slice(1).map(p=><button type="button" key={p.id} onClick={()=>loadRecord({id:p.id,start:p.start,end:p.end,record:periodRecords[p.id]||{}})}><span><strong>{showDate(p.start)} – {showDate(p.end)}</strong><small>{(invoices.invoices||[]).some(i=>i.periodId===p.id)?'Invoice available':periodRecords[p.id]?.scanDraft?'AI scan saved':periodRecords[p.id]?.payoutComparison?'Check saved':'Statement saved · Finish review'}</small></span><ArrowRight size={17} aria-hidden="true"/></button>)}</section>}
   </>}
   {(step==='result'||step==='saved')&&<>
    <button className="home-text-button v5-back" onClick={reset} disabled={busy}>← Back to Pay</button>
