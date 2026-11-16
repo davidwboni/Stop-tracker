@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {unresolvedStatementFindings,statementInvoiceReady,mergeFindingDecisions,requiresLimitedCoverageAcceptance} from '../features/statements/findingGate';
+import {unresolvedStatementFindings,statementInvoiceReady,hasExplicitInvoiceApproval,mergeFindingDecisions,requiresLimitedCoverageAcceptance} from '../features/statements/findingGate';
 const saved={payoutComparison:{statementPence:20000},reviewedStatement:{reviewed:true},
  statementFindings:{flagged:[{date:'2026-09-14',loggedStops:120,statementStops:119,acceptedReason:null},
  {date:'2026-09-15',acceptedReason:'possible_duplicate_accepted'},
@@ -58,5 +58,27 @@ describe('V5 statement-to-invoice safeguards',()=>{
  it('restores saved decisions without inventing missing user confirmations',()=>{
    expect(mergeFindingDecisions(saved)).toEqual({'2026-09-15':'possible_duplicate_accepted','2026-09-16':'dispute'});
    expect(mergeFindingDecisions(null)).toEqual({});
+ });
+});
+describe('explicit contractor-amount invoice approval',()=>{
+ const base={payoutComparison:{statementPence:310889,revision:'record-r1'},reviewedStatement:{reviewed:true},
+    statementFindings:{flagged:[{date:'2026-10-21',acceptedReason:'dispute'}],hasDaily:true,earningsDifferences:13,limitedCoverageAccepted:false}};
+ const approval={kind:'driver_accepted_contractor_amount',statementPence:310889,revision:'record-r1',acceptedAt:'2026-11-16T00:00:00Z'};
+ it('allows an invoice from the contractor amount while keeping open disputed days',()=>{
+   const record={...base,needsReview:true,invoiceApproval:approval};
+   expect(statementInvoiceReady(base)).toBe(false);
+   expect(hasExplicitInvoiceApproval(record)).toBe(true);
+   expect(statementInvoiceReady(record)).toBe(true);
+   expect(unresolvedStatementFindings(record)).toHaveLength(1);
+   expect(record.statementFindings.flagged[0].acceptedReason).toBe('dispute');
+ });
+ it('does not let approval survive a different statement payout, revision or missing reviewed figure',()=>{
+   for(const modified of [
+     {...approval,statementPence:310888},
+     {...approval,revision:'other'},
+     {...approval,kind:'client_edited'},
+     {...approval,acceptedAt:''}
+   ])expect(statementInvoiceReady({...base,invoiceApproval:modified})).toBe(false);
+   expect(statementInvoiceReady({...base,reviewedStatement:{reviewed:false},invoiceApproval:approval})).toBe(false);
  });
 });
