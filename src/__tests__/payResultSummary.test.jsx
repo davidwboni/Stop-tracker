@@ -39,6 +39,7 @@ describe('mobile-first readable Pay result',()=>{
   const onShowStops=vi.fn(),onShowEarnings=vi.fn(),onShowCharges=vi.fn();
   render(<PayResultSummary {...base} onShowStops={onShowStops} onShowEarnings={onShowEarnings} onShowCharges={onShowCharges}/>);
   const result=screen.getByRole('region',{name:'Pay check summary'});
+  fireEvent.click(within(result).getByText('See calculations and detailed findings'));
   fireEvent.click(within(result).getByRole('button',{name:'View 6 stop/date issues by date'}));
   fireEvent.click(within(result).getByRole('button',{name:'View 13 daily pay variations by date'}));
   fireEvent.click(within(result).getByRole('button',{name:'View 6 contractor charge items'}));
@@ -48,6 +49,7 @@ describe('mobile-first readable Pay result',()=>{
  });
  it('does not offer a misleading date shortcut when pay periods are not comparable',()=>{
   render(<PayResultSummary {...base} showComparableWork={false} onShowStops={vi.fn()} onShowEarnings={vi.fn()} onShowCharges={vi.fn()}/>);
+  fireEvent.click(screen.getByText('See calculations and detailed findings'));
   expect(screen.getByRole('button',{name:'View 6 stop/date issues by date'})).toBeDisabled();
   expect(screen.getByRole('button',{name:'View 13 daily pay variations by date'})).toBeDisabled();
   expect(screen.getByRole('button',{name:'View 6 contractor charge items'})).toBeEnabled();
