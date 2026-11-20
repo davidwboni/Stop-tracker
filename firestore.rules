@@ -15,7 +15,9 @@ service cloud.firestore {
       // Covers every subcollection under a user's own document (deliveryLogs,
       // settings, and any future one) — a rule on the parent doc does not
       // cascade to subcollections in Firestore without this.
-      match /{document=**} {
+      // Require a subcollection document: in rules version 2 a recursive
+      // wildcard alone also matches the parent user document.
+      match /{collectionId}/{documentId}/{nested=**} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
     }

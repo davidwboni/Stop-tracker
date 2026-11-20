@@ -20,6 +20,7 @@ import {
   doc, 
   setDoc, 
   getDoc, 
+  getDocFromServer,
   updateDoc, 
   onSnapshot,
   collection,
@@ -793,6 +794,7 @@ export const subscribeToUserSettings = (userId, callback) => {
 // Add connectivity methods
 
 // This sync service manages access to data with improved sync logic
+const pendingSyncs = new Map();
 export const syncData = {
   // Generic subscribe method for any collection with improved cross-device sync
   subscribeToCollection: (userId, collection, callback) => {
@@ -881,71 +883,12 @@ export const syncData = {
       }
     };
     
-    // Process any pending transactions for this collection
-    const processPendingTransactions = async (userId) => {
-      try {
-        const pendingKey = `${userId}-pendingTransactions`;
-        const pendingTx = localStorage.getItem(pendingKey);
-        
-        if (!pendingTx) return false;
-        
-        const transactions = JSON.parse(pendingTx);
-        if (transactions.length === 0) return false;
-        
-        const relevantTx = transactions.filter(tx => 
-          tx.collection === collection || 
-          (tx.type === collection && tx.data)); // Support both formats
-        
-        if (relevantTx.length === 0) return false;
-        
-        console.log(`Processing ${relevantTx.length} pending ${collection} transactions`);
-        
-        // Wait for network capabilities
-        let retries = 0;
-        while (retries < 3 && !navigator.onLine) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          retries++;
-        }
-        
-        if (!navigator.onLine) return false;
-        
-        // Process each transaction
-        for (const tx of relevantTx) {
-          try {
-            if (tx.collection === collection || tx.type === collection) {
-              const data = tx.data;
-              
-              // Use the appropriate data format depending on the collection
-              const docData = collection === 'deliveryLogs' 
-                ? { logs: data, updatedAt: serverTimestamp() }
-                : { ...data, updatedAt: serverTimestamp() };
-              
-              await setDoc(docRef, docData, { merge: true });
-              console.log(`Successfully processed ${collection} transaction`);
-            }
-          } catch (err) {
-            console.error(`Error processing ${collection} transaction:`, err);
-          }
-        }
-        
-        // Remove processed transactions of this type
-        const remainingTx = transactions.filter(tx => 
-          tx.collection !== collection && 
-          tx.type !== collection);
-        
-        if (remainingTx.length === 0) {
-          localStorage.removeItem(pendingKey);
-        } else {
-          localStorage.setItem(pendingKey, JSON.stringify(remainingTx));
-        }
-        
-        return true;
-      } catch (err) {
-        console.error(`Error processing pending ${collection} transactions:`, err);
-        return false;
-      }
+    // Use the shared queue processor so reconnects cannot discard failed writes.
+    const processPendingTransactions = async (uid) => {
+      const result = await syncData.processPendingTransactions(uid);
+      return result.success;
     };
-    
+
     // Handle online/offline events
     window.addEventListener('online', () => updateConnectionStatus(true));
     window.addEventListener('offline', () => updateConnectionStatus(false));
@@ -1108,7 +1051,7 @@ export const syncData = {
       }));
       
       // If online, save to Firestore
-      if (navigator.onLine) {
+      if (navigator.onLine && !localStorage.getItem(`${userId}-pendingTransactions`) && !pendingSyncs.has(userId)) {
         try {
           // Ensure network is enabled
           await enableNetwork(db);
@@ -1121,10 +1064,15 @@ export const syncData = {
           });
           
           // Force a server read to ensure we're in sync
-          const docSnap = await getDoc(docRef, { source: 'server' });
-          if (docSnap.exists()) {
-            // Update cache with server data
-            localStorage.setItem(`${userId}-${collection}`, JSON.stringify(docSnap.data()));
+          try {
+            const docSnap = await getDocFromServer(docRef);
+            if (docSnap.exists() && !localStorage.getItem(`${userId}-pendingTransactions`)) {
+              localStorage.setItem(`${userId}-${collection}`, JSON.stringify(docSnap.data()));
+            }
+          } catch (readError) {
+            // The write already succeeded; a failed confirmation read must not
+            // enqueue an old snapshot that could overwrite a newer device.
+            console.warn(`Could not confirm ${collection} after save:`, readError);
           }
           
           return { success: true, isOnline: true };
@@ -1168,144 +1116,44 @@ export const syncData = {
   // Process pending transactions with improved reliability and conflict resolution
   processPendingTransactions: async (userId) => {
     if (!navigator.onLine) return { success: false, reason: 'offline' };
-    
-    try {
-      const pendingKey = `${userId}-pendingTransactions`;
-      const pendingTx = localStorage.getItem(pendingKey);
-      
-      if (!pendingTx) return { success: true, count: 0 };
-      
-      const transactions = JSON.parse(pendingTx);
-      if (transactions.length === 0) return { success: true, count: 0 };
-      
-      console.log(`Processing ${transactions.length} pending transactions for user ${userId}`);
-      
-      // Sort transactions by timestamp and version to ensure proper order
-      const sortedTransactions = [...transactions].sort((a, b) => {
-        // First by sync version if available
-        if (a.syncVersion !== undefined && b.syncVersion !== undefined) {
-          return a.syncVersion - b.syncVersion;
+    if (pendingSyncs.has(userId)) return pendingSyncs.get(userId);
+    const run = (async () => {
+      const key = `${userId}-pendingTransactions`;
+      try {
+        const queued = JSON.parse(localStorage.getItem(key) || '[]');
+        if (!Array.isArray(queued)) throw new Error('Invalid pending queue');
+        // Assign IDs to older queue entries before awaiting any network operation.
+        const items = queued.map(tx => ({ ...tx, queueId: tx.queueId ||
+          `${Date.now()}-${Math.random().toString(36).slice(2)}` }));
+        if (items.length) localStorage.setItem(key, JSON.stringify(items));
+        let completed = 0;
+        for (const tx of items) {
+          const name = tx.collection || (tx.type === 'logs' ? 'deliveryLogs' : tx.type);
+          const payload = name === 'deliveryLogs'
+            ? { logs: Array.isArray(tx.data) ? tx.data : tx.data?.logs }
+            : tx.data;
+          if (!name || !payload || (name === 'deliveryLogs' && !Array.isArray(payload.logs))) {
+            throw new Error('Invalid pending transaction');
+          }
+          // Stop at the first failure: later snapshots must not overtake it.
+          await setDoc(doc(db, `users/${userId}/${name}/data`),
+            { ...payload, updatedAt: serverTimestamp() }, { merge: true });
+          const current = JSON.parse(localStorage.getItem(key) || '[]');
+          const remaining = current.filter(item => item.queueId !== tx.queueId);
+          if (remaining.length) localStorage.setItem(key, JSON.stringify(remaining));
+          else localStorage.removeItem(key);
+          completed++;
         }
-        // Then by timestamp
-        return new Date(a.timestamp) - new Date(b.timestamp);
-      });
-      
-      let successCount = 0;
-      let errorCount = 0;
-      let skippedCount = 0;
-      const processedIds = [];
-      const failedIds = [];
-      
-      // Process each transaction with conflict resolution
-      for (const tx of sortedTransactions) {
-        try {
-          // Skip transactions that have had too many attempts (> 5)
-          if (tx.attempts && tx.attempts > 5) {
-            console.warn(`Skipping transaction ${tx.txId} after ${tx.attempts} failed attempts`);
-            skippedCount++;
-            continue;
-          }
-          
-          const docRef = doc(db, `users/${userId}/${tx.collection}/data`);
-          
-          // Check current server state first to avoid conflicts
-          const docSnap = await getDoc(docRef, { source: 'server' });
-          
-          // Format data based on collection type
-          let docData;
-          if (tx.collection === 'deliveryLogs' || tx.type === 'logs') {
-            docData = { 
-              logs: tx.data,
-              updatedAt: serverTimestamp() 
-            };
-          } else {
-            docData = { 
-              ...tx.data, 
-              updatedAt: serverTimestamp() 
-            };
-          }
-          
-          // Apply the update with merge to avoid overwriting other fields
-          await setDoc(docRef, docData, { merge: true });
-          
-          // Mark as successfully processed
-          processedIds.push(tx.txId || `tx_${tx.timestamp}`);
-          successCount++;
-          
-          // Update local cache with confirmation of sync
-          if (docSnap.exists()) {
-            const serverData = docSnap.data();
-            try {
-              const collectionName = tx.collection || 
-                (tx.type === 'logs' ? 'deliveryLogs' : tx.type);
-              
-              if (collectionName) {
-                const localDataKey = `${userId}-${collectionName}`;
-                const localData = localStorage.getItem(localDataKey);
-                
-                if (localData) {
-                  const parsedLocalData = JSON.parse(localData);
-                  
-                  // Update metadata while preserving data
-                  localStorage.setItem(localDataKey, JSON.stringify({
-                    ...parsedLocalData,
-                    _syncMetadata: {
-                      ...(parsedLocalData._syncMetadata || {}),
-                      lastServerSync: Date.now(),
-                      syncSource: 'server',
-                      hasPendingWrites: false,
-                      serverConfirmed: true
-                    }
-                  }));
-                }
-              }
-            } catch (e) {
-              console.error('Error updating local cache after sync:', e);
-            }
-          }
-        } catch (err) {
-          console.error(`Error processing transaction:`, err, tx);
-          failedIds.push(tx.txId || `tx_${tx.timestamp}`);
-          errorCount++;
-          
-          // Update attempt count
-          tx.attempts = (tx.attempts || 0) + 1;
-          tx.lastAttempt = Date.now();
-          tx.lastError = err.message;
-        }
+        return { success: true, count: items.length, successCount: completed };
+      } catch (error) {
+        console.error('Error processing pending transactions:', error);
+        return { success: false, error: error.message };
       }
-      
-      // Update the pending transactions list
-      if (processedIds.length > 0 || failedIds.length > 0) {
-        // Keep only transactions that failed but haven't exceeded retry limit
-        const remainingTx = sortedTransactions.filter(tx => {
-          const txId = tx.txId || `tx_${tx.timestamp}`;
-          const failed = failedIds.includes(txId);
-          const tooManyAttempts = tx.attempts > 5;
-          
-          return failed && !tooManyAttempts;
-        });
-        
-        if (remainingTx.length === 0) {
-          localStorage.removeItem(pendingKey);
-        } else {
-          localStorage.setItem(pendingKey, JSON.stringify(remainingTx));
-        }
-      }
-      
-      return {
-        success: true,
-        count: transactions.length,
-        successCount,
-        errorCount,
-        skippedCount
-      };
-    } catch (error) {
-      console.error('Error processing pending transactions:', error);
-      return { success: false, error: error.message };
-    }
+    })();
+    pendingSyncs.set(userId, run);
+    try { return await run; } finally { pendingSyncs.delete(userId); }
   },
-  
+
   // Specific methods for delivery logs
   subscribeToDeliveryLogs: (userId, callback) => {
     return syncData.subscribeToCollection(userId, 'deliveryLogs', (data, status) => {
@@ -1336,7 +1184,10 @@ export const syncData = {
       console.log('Starting force refresh of all data...');
       
       // First process any pending transactions to ensure our changes are on the server
-      await syncData.processPendingTransactions(userId);
+      const pending = await syncData.processPendingTransactions(userId);
+      if (!pending.success || localStorage.getItem(`${userId}-pendingTransactions`)) {
+        return { success: false, reason: 'pending-transactions' };
+      }
       
       // Wait for any pending writes to complete
       try {
@@ -1348,6 +1199,7 @@ export const syncData = {
       
       const collections = ['deliveryLogs', 'settings'];
       const results = {};
+      let refreshedLogs;
       
       // Refresh all collections from server
       for (const collection of collections) {
@@ -1355,10 +1207,18 @@ export const syncData = {
           const docRef = doc(db, `users/${userId}/${collection}/data`);
           
           // Force a server read
-          const docSnap = await getDoc(docRef, { source: 'server' });
+          const docSnap = await getDocFromServer(docRef);
+          if (localStorage.getItem(`${userId}-pendingTransactions`)) {
+            throw new Error('New changes are waiting to sync');
+          }
           
           if (docSnap.exists()) {
             const serverData = docSnap.data();
+            if (collection === 'deliveryLogs') {
+              const logs = serverData.logs;
+              refreshedLogs = Array.isArray(logs) ? logs : logs?.logs;
+              if (!Array.isArray(refreshedLogs)) throw new Error('Invalid delivery log data');
+            }
             
             // Update localStorage with server data and metadata
             localStorage.setItem(`${userId}-${collection}`, JSON.stringify({
@@ -1373,17 +1233,9 @@ export const syncData = {
             
             results[collection] = { success: true };
           } else {
-            // Document doesn't exist - create it with default data
-            const defaultData = collection === 'deliveryLogs' 
-              ? { logs: [] } 
-              : { theme: 'system' };
-            
-            await setDoc(docRef, {
-              ...defaultData,
-              updatedAt: serverTimestamp()
-            });
-            
-            results[collection] = { success: true, created: true };
+            // A refresh must not create a document or overwrite a concurrent save.
+            if (collection === 'deliveryLogs') refreshedLogs = [];
+            results[collection] = { success: true, missing: true };
           }
         } catch (err) {
           console.error(`Error refreshing ${collection}:`, err);
@@ -1391,36 +1243,12 @@ export const syncData = {
         }
       }
       
-      // Clear any orphaned pending transactions after refresh
-      try {
-        const pendingKey = `${userId}-pendingTransactions`;
-        const pendingTx = localStorage.getItem(pendingKey);
-        
-        if (pendingTx) {
-          const transactions = JSON.parse(pendingTx);
-          
-          // Keep only recent transactions (< 1 hour old)
-          const oneHourAgo = Date.now() - (60 * 60 * 1000);
-          const recentTx = transactions.filter(tx => {
-            const txTime = new Date(tx.timestamp).getTime();
-            return txTime > oneHourAgo;
-          });
-          
-          if (recentTx.length === 0) {
-            localStorage.removeItem(pendingKey);
-          } else if (recentTx.length < transactions.length) {
-            localStorage.setItem(pendingKey, JSON.stringify(recentTx));
-          }
-        }
-      } catch (e) {
-        console.warn('Error cleaning up pending transactions:', e);
-      }
-      
       console.log('Force refresh completed:', results);
       
       return { 
-        success: true,
-        results
+        success: Object.values(results).every(result => result.success),
+        results,
+        logs: refreshedLogs
       };
     } catch (error) {
       console.error('Error force refreshing all data:', error);

@@ -109,14 +109,29 @@ export const DataProvider = ({ children }) => {
           let logsEmpty = true;
           if (userDoc.exists()) {
             const userData = userDoc.data();
-            const userLogs = userData.logs || [];
+            const savedLogs = userData.logs;
+            let userLogs = Array.isArray(savedLogs) ? savedLogs : savedLogs?.logs || [];
+            if (localStorage.getItem(`${user.uid}-pendingTransactions`)) {
+              const cached = JSON.parse(localStorage.getItem(`${user.uid}-deliveryLogs`) || '{}');
+              if (!Array.isArray(cached.logs)) throw new Error('Pending work could not be loaded');
+              userLogs = cached.logs;
+            }
             console.log("Successfully loaded logs:", userLogs.length);
             setLogs(userLogs);
             setIsNewUser(userLogs.length === 0);
             logsEmpty = userLogs.length === 0;
           } else {
-            setLogs([]);
-            setIsNewUser(true);
+            const hasPending = localStorage.getItem(`${user.uid}-pendingTransactions`);
+            if (hasPending) {
+              const cached = JSON.parse(localStorage.getItem(`${user.uid}-deliveryLogs`) || '{}');
+              if (!Array.isArray(cached.logs)) throw new Error('Pending work could not be loaded');
+              setLogs(cached.logs);
+              setIsNewUser(cached.logs.length === 0);
+              logsEmpty = cached.logs.length === 0;
+            } else {
+              setLogs([]);
+              setIsNewUser(true);
+            }
           }
 
           // Get payment config from main user document

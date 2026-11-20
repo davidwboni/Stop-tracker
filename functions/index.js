@@ -4,6 +4,7 @@ const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https")
 const { defineSecret } = require("firebase-functions/params");
 const crypto = require("crypto");
 const {betaAccess,reserveBetaRequest,DAILY_ACCOUNT_LIMIT,safeUsageCount} = require("./betaAccess");
+const { reconcileSubscription } = require("./subscriptionReconcile");
 
 admin.initializeApp();
 
@@ -151,9 +152,11 @@ exports.optimizeDriverRoute = onCall(
 
     const ent = await getEntitlement(request.auth.uid);
     const beta = !ent.isPro && betaAccess(request.auth);
+    let reservedFreeUse = null;
     if (!ent.isPro && !beta) {
-      const usage = (await admin.firestore().collection("usage").doc(request.auth.uid).get()).data() || {};
-      if (Number(usage.routeOptimizationUses || 0) >= 3) {
+      // Reserve before the billable call, including attempts that later fail.
+      reservedFreeUse = await consumeFreeUse(request.auth.uid, "routeOptimizationUses");
+      if (!reservedFreeUse.allowed) {
         throw new HttpsError("permission-denied", "Your 3 free route optimisations are used. Upgrade to Pro.");
       }
     }
@@ -252,11 +255,7 @@ exports.optimizeDriverRoute = onCall(
 
     let usageResult = { isPro: ent.isPro };
     if (!ent.isPro && !beta) {
-      const consumed = await consumeFreeUse(request.auth.uid, "routeOptimizationUses");
-      if (!consumed.allowed) {
-        throw new HttpsError("permission-denied", "Your 3 free route optimisations are used. Upgrade to Pro.");
-      }
-      usageResult = { isPro: false, used: consumed.used, remaining: Math.max(0, 3 - consumed.used) };
+      usageResult = { isPro: false, used: reservedFreeUse.used, remaining: Math.max(0, 3 - reservedFreeUse.used) };
     }
 
     return {
@@ -529,16 +528,11 @@ exports.stripeWebhook = onRequest(
       const sub = event.data.object;
       const uid = sub.metadata?.firebaseUid;
       if (uid) {
-        const active = ["active","trialing"].includes(sub.status);
-        await admin.firestore().collection("entitlements").doc(uid).set({
-          plan: active ? "pro" : "free",
-          subscriptionStatus: sub.status,
-          stripeCustomerId: String(sub.customer || ""),
-          stripeSubscriptionId: sub.id,
-          priceId: sub.items?.data?.[0]?.price?.id || null,
-          currentPeriodEnd: sub.items?.data?.[0]?.current_period_end || null,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        }, { merge: true });
+        await reconcileSubscription({
+          db: admin.firestore(), uid, customer: String(sub.customer || ""),
+          listSubscriptions: customer => stripeGet("subscriptions", { customer, status: "all", limit: 100 }),
+          timestamp: () => admin.firestore.FieldValue.serverTimestamp(),
+        });
       }
     }
     res.status(200).json({ received: true });
@@ -550,8 +544,8 @@ exports.createBillingPortal = onCall(
   async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "You must be signed in.");
     const ent = await admin.firestore().collection("entitlements").doc(request.auth.uid).get();
-    const user = await admin.firestore().collection("users").doc(request.auth.uid).get();
-    const customerId = ent.data()?.stripeCustomerId || user.data()?.stripeCustomerId;
+    // Only the server-owned entitlement can select a Stripe customer.
+    const customerId = ent.data()?.stripeCustomerId;
     if (!customerId) throw new HttpsError("failed-precondition", "No Stripe customer exists for this account.");
     const origin = trustedAppOrigin(request.data?.origin);
     const session = await stripePost("billing_portal/sessions", { customer: customerId, return_url: `${origin}/app/profile` });
